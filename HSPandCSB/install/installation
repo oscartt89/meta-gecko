@@ -1,0 +1,3 @@
+sudo apt-get update
+sudo apt-get install --reinstall --assume-yes libfreetype6 libfreetype6-dev libpng++-dev g++
+sudo dpkg -i libpngwriter0c2_0.5.3-3_amd64.deb libpngwriter0-dev_0.5.3-3_amd64.deb
