@@ -4,7 +4,7 @@
 #include <inttypes.h>
 //Structs required for the dotplot workflow
 #define MAXLID 200
-#define MAXLS 1000000000
+#define MAXLS 100000000
 
 //Struct for words program
 typedef struct {
