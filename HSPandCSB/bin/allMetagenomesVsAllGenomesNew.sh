@@ -67,10 +67,10 @@ do
 
 	# Check if dictionary already exist the dictionary
 	didntExists=0
-	if [[ ! -f intermediateFiles/dictionaries/${genoF}.d2hP ]]; then
-		if [[ ! -f intermediateFiles/dictionaries/${genoF}.d2hW ]]; then
-			if [[ ! -f intermediateFiles/dictionaries/${genoF}-*.d2hP ]]; then
-				if [[ ! -f intermediateFiles/dictionaries/${genoF}-*.d2hW ]]; then
+	if [[ ! -f ${genoF}.d2hP ]]; then
+		if [[ ! -f ${genoF}.d2hW ]]; then
+			if [[ ! -f ${genoF}-*.d2hP ]]; then
+				if [[ ! -f ${genoF}-*.d2hW ]]; then
 					didntExists=1
 					${BINDIR}/dictionary.sh ../../${genomeDir}/${genoF}.$EXT $WL &
 					#echo "Dictionary created: ${genoF}"
