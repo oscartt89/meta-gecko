@@ -22,11 +22,16 @@ if [ $# != 6 ]; then
 	exit -1
 fi
 
+
+############################## TAKE BINARIES PATH
 # Take bin directory
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+echo "----Taking files"
 echo "Metagenome files:"
 
+
+############################## TAKE GENOME AND METAGENOME FILES
 # Take all metagenome files
 for elem in $(ls -d ${metaDir}/*.$EXT | awk -F "/" '{print $NF}' | awk -F ".$EXT" '{print $1}')
 do
@@ -45,4 +50,55 @@ do
 	echo "   $elem"
 done
 
-a
+
+############################## CALCULATE GENOME DICTIONARIES
+echo ""
+echo "----Calculating dictionaries"
+
+	# Prepare workspace
+	mkdir intermediateFiles
+	mkdir intermediateFiles/dictionaries
+
+	cd intermediateFiles/dictionaries # Move to dictionaries folder
+
+for ((i=0 ; i < ${#genoFiles[@]} ; i++))
+do
+	genoF=${genoFiles[$i]}
+
+	# Check if dictionary already exist the dictionary
+	didntExists=0
+	if [[ ! -f intermediateFiles/dictionaries/${genoF}.d2hP ]]; then
+		if [[ ! -f intermediateFiles/dictionaries/${genoF}.d2hW ]]; then
+			if [[ ! -f intermediateFiles/dictionaries/${genoF}-*.d2hP ]]; then
+				if [[ ! -f intermediateFiles/dictionaries/${genoF}-*.d2hW ]]; then
+					didntExists=1
+					${BINDIR}/dictionary.sh ../../${genomeDir}/${genoF}.$EXT $WL &
+					#echo "Dictionary created: ${genoF}"
+				fi
+			fi
+		fi
+	fi
+	if [ $didntExists -eq 0 ]; then # 
+		echo "Dictionary already exists: ${genoF}"
+	fi
+done
+
+echo "Waiting for the calculation of the dictionaries"
+
+for job in `jobs -p`
+do
+    #echo $job
+    wait $job
+done
+
+cd ../../ # Go back to init directory
+
+
+############################## STUDY EACH {METAGENOME Vs GENOME} CASE
+for ((i=0 ; i < ${#metaFiles[@]} ; i++))
+do
+	for ((j=0 ; j < ${#genoFiles[@]} ; j++))
+	do
+		${BINDIR}/metagenomeVsGenome.sh ${metaDir}/${metaFiles[$i]}.$EXT ${genomeDir}/${genoFiles[$j]} ${L} ${S} ${WL}
+	done
+done
