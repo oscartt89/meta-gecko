@@ -55,9 +55,13 @@ done
 echo ""
 echo "----Calculating dictionaries"
 
-	# Prepare workspace
+# Prepare workspace
+if [[ ! -d intermediateFiles ]]; then
 	mkdir intermediateFiles
 	mkdir intermediateFiles/dictionaries
+elif [[ ! -d intermediateFiles/dictionaries ]];	then
+	mkdir intermediateFiles/dictionaries
+fi
 
 	cd intermediateFiles/dictionaries # Move to dictionaries folder
 
