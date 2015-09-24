@@ -61,6 +61,8 @@ echo "----Calculating dictionaries"
 
 	cd intermediateFiles/dictionaries # Move to dictionaries folder
 
+anyDictionaryCalculated=0
+
 for ((i=0 ; i < ${#genoFiles[@]} ; i++))
 do
 	genoF=${genoFiles[$i]}
@@ -72,6 +74,7 @@ do
 			if [[ ! -f ${genoF}-*.d2hP ]]; then
 				if [[ ! -f ${genoF}-*.d2hW ]]; then
 					didntExists=1
+					anyDictionaryCalculated=1
 					${BINDIR}/dictionary.sh ../../${genomeDir}/${genoF}.$EXT $WL &
 					#echo "Dictionary created: ${genoF}"
 				fi
@@ -83,13 +86,15 @@ do
 	fi
 done
 
-echo "Waiting for the calculation of the dictionaries"
+if [ $anyDictionaryCalculated -eq 1 ];	then
+	echo "Waiting for the calculation of the dictionaries"
 
-for job in `jobs -p`
-do
-    #echo $job
-    wait $job
-done
+	for job in `jobs -p`
+	do
+    	#echo $job
+    	wait $job
+	done
+fi
 
 cd ../../ # Go back to init directory
 
@@ -99,6 +104,6 @@ for ((i=0 ; i < ${#metaFiles[@]} ; i++))
 do
 	for ((j=0 ; j < ${#genoFiles[@]} ; j++))
 	do
-		${BINDIR}/metagenomeVsGenome.sh ${metaDir}/${metaFiles[$i]}.$EXT ${genomeDir}/${genoFiles[$j]} ${L} ${S} ${WL}
+		${BINDIR}/metagenomeVsGenome.sh ${metaDir}/${metaFiles[$i]}.$EXT ${genomeDir}/${genoFiles[$j]}.$EXT ${L} ${S} ${WL}
 	done
 done
