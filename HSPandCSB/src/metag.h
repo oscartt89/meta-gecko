@@ -20,3 +20,4 @@ struct Read{
 
 // Prototipes
 int countReads(FILE*);
+int seekRead(FILE*,int,char*);
