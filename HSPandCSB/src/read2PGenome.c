@@ -1,7 +1,9 @@
 /* @author Fernando Moreno Jabato <jabato@uma.es>
  * @date 28-Sept-2015
- * @description This file contains necessary functions for 
- *     handle metagenome files.
+ * @function read2PGenome (read to pseudo-genome)
+ * @description This file contains the implementation necessary for generate
+ *      fasta genome format files using specified reads from a metagenome
+ *      file given.
  * @license all rights reserved to BitLAB (http://www.bitlab-es.com/bitlab/)
  *     and to author. 
  */
@@ -34,8 +36,6 @@ int main(int ac, char **av){
 				readIndex,numReads );
 		return -1;
 	}
-
-	
 
 	// Take specific read 
 	char *read;

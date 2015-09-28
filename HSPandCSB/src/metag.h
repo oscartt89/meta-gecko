@@ -12,12 +12,6 @@
 
 #define MAXREADLENGTH 100000
 
-
-struct Read{
-	char *ID;    // Read ID.
-	char *seq;   // Sequence (read).
-};
-
 // Prototipes
 int countReads(FILE*);
 int seekRead(FILE*,int,char*);
