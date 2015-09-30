@@ -10,8 +10,21 @@
 #include "stdlib.h"
 #include "string.h"
 
-#define MAXREADLENGTH 100000
 
-// Prototipes
+#define MAXREADLENGTH 100000
+#define MAXFILENAMELENGTH 100
+
+struct Word{
+	char *sequence;
+	int pos;
+};
+
+struct WordList{
+	Word *precedentWord;
+	Word *word;
+};
+
+// Metagenome Prototipes
 int countReads(FILE*);
 int seekRead(FILE*,int,char*);
+int takeRead(FILE*,char*);
