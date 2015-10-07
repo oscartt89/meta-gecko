@@ -11,12 +11,17 @@
 
 int main(int ac, char **av){
 	FILE *meta, *out; //Metagenome file
-	int numReads;	
-	int readIndex = atoi(av[3]);
+	int numReads, readIndex;	
+	int useAllReads = 0;
+
+	if(strcmp(av[3],"-all"))
+		useAllReads = 1;
+	else
+		readIndex = atoi(av[3]);
 
 	// Check bad call error
 	if(ac!=4)
-		fprintf(stderr, "Bad call error. Use: %s metagenomeFile outputFile readIndex\n", av[0]);
+		fprintf(stderr, "Bad call error. Use: %s metagenomeFile outputFileName readIndex\nOR: metagenomeFile outputFileName -all", av[0]);
 
 	// Open input stream
 	if((meta = fopen(av[1],"r"))==NULL) {
@@ -33,7 +38,8 @@ int main(int ac, char **av){
 	// Check index out of bounds
 	if(readIndex <= 0 | readIndex > numReads){
 		fprintf(stderr, "Error: index of read given (%d) is out of bounds.\nNumber of reads=(%d)\n",
-				readIndex,numReads );
+				useAllReads? numReads : readIndex,
+				numReads );
 		return -1;
 	}
 
@@ -46,21 +52,38 @@ int main(int ac, char **av){
 			return -1;
 		}
 
-	// Seek specific read
-	int pointerPosition = seekRead(meta,readIndex,read);
+	
+	int initValue = useAllReads? 0 : readIndex;
+	int limit = useAllReads? numReads : readIndex+1;
+	char *outputF;
 
-	// Open output stream
-	if((out = fopen(av[2],"wt"))==NULL) {
-		fprintf(stderr,"Error opening output file. [%s]\n",av[2]);
+	if((outputF = (char*) malloc(MAXFILENAMELENGTH))==NULL){
+		fprintf(stderr, "Error: couldn't allocate space on disk for outputF char*. [%d]\n", MAXFILENAMELENGTH);
 		return -1;
 	}
 
-	// Create pseudo-genome file
-	fprintf(out, "%s\n", read);
+	for(int i = initValue; i < limit; ++i){
+		// Reset value
+		strcpy(outputF,av[2]);
+
+		// Seek specific read
+		seekRead(meta,readIndex,read);
+
+		// Open output stream
+		if((out = fopen(useAllReads? strcat(strcat(outputF,itoa(i)),".fasta") : strcat(outputF,".fasta"),"wt"))==NULL) {
+			fprintf(stderr,"Error opening output file. [%s.fasta]\n",av[2]);
+			return -1;
+		}
+
+		// Create pseudo-genome file
+		fprintf(out, "%s\n", read);
+
+		// Close stream
+		fclose(out);
+	}
 
 	// Close streams
 	fclose(meta);
-	fclose(out);
 
 	return 0;
 }

@@ -1,7 +1,7 @@
 /* @author Fernando Moreno Jabato <jabato@uma.es>
- * @date 24-Sept-2015
+ * @date 30-Sept-2015
  * @description This file is a header that includes all code 
- *     to handle metagenomes.
+ *     to handle and create dictionaries.
  * @license all rights reserved to BitLAB (http://www.bitlab-es.com/bitlab/)
  *     and to author. 
  */
@@ -9,14 +9,17 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-#include "dictionary.h"
 
+struct Word{
+	char *sequence;
+	int pos;
+};
 
-#define MAXREADLENGTH 100000
-#define MAXFILENAMELENGTH 100
+struct WordList{
+	Word *nextWord;
+	Word *word;
+};
 
-
-// Metagenome Prototipes
-int countReads(FILE*);
-int seekRead(FILE*,int,char*);
-int takeRead(FILE*,char*);
+// Dictionary prototipes
+void createDictionary(char*,int);
+void initWord(struct Word*, int wordLength);
