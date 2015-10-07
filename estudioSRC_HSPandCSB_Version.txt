@@ -1,0 +1,41 @@
+/////////////////////// WORDS.C
+1.- Comprueba si la llamada ha sido correcta, si es incorrecta lanza mensaje de error. NOTA: si lanza mensaje de error no aborta el el main.
+2.- Llama a main_FILE()
+3.- Abre los ficheros de entrada y salida y lee hasta encontrar el primer salto de línea (obvia comentario inicial).
+4.- Se crea una estructura "wnetry" (word entry) que almacena la siguiente información:
+	· Una instancia de Word: estas estructuras almacenan la información de un kmer guardando cada letra en un espacio binario de 2 bits y almacenan un máximo de 8 bytes -> 64 bits / 2 bits.letra = 32 letras => K(max) = 32
+	· Un int de 64bits para la posición: almacenamos una posición entre 0 y 2^64.
+	· Un int de 64 bits para la secuencia: utilizamos esto para identificar la secuencia en un fichero multisecuencia.
+5.- Unicializamos la secuencia (seqID) a cero.
+6.- Inicializamos las variables de control:
+	· index: mide la posición en el fichero.
+	· inEntry: mide el número de caracteres ACGT proceados seguidos!
+	· NW : number of well done. Número de secuencias bien acabadas.
+	· Tot: total de caracteres ACGT y NoACGT leidos.
+	· NoACGT: número de caracteres que no sean ACGT encontrados.
+	· NoC : mide número de lineas que no contienen secuencia.
+7.- Comenzamos lectura char a char mientras no lleguemos al final del fichero (WHILE)
+	7.1 Si no es un caracter letra (que tenga mayúscula y minúscula) se procede a saltar la línea (si es caracter de inicio de comentario ">") o a obviar el caracter (resto de casos).
+	7.2 Se llama a shift_word:
+		7.2.1 Se coje el array de unsigend chars y se desplaza la palabra entera desde el final hacia delante de dos en dos bits. Ejemplos:
+			>> Seq inicial (vacía) array de unsigned char[2]:
+				0000 0000 0000 0000 0000
+			>> Introducimos T = 11
+				0000 0000 0000 0000 0011
+			>> Introducimos A = 00
+				0000 0000 0000 0000 1100
+			>> Introducimos C = 01
+				0000 0000 0000 0011 0001
+			>> En este instante w[0] = 0000 0000 y w[1] = 0011 0001
+	7.3 Si es un caracter letra la procesamos:
+		-> A = 0 (b10) = 00 (b2_2)
+		-> C = 1 (b10) = 01 (b2_2)
+		-> G = 2 (b10) = 10 (b2_2)
+		-> T = 3 (b10) = 11 (b2_2)
+		-> NoACGT => inEntry=0 (final de secuencia correcta)
+	7.4 Se incrementa el indice de posicion (index) y el total.
+	7.5 Si tenemos una secuencia completa correcta (no hay ningún NoACGT en medio) la guardamos.
+		7.5.1 Se guarda la estructura wentry entera en el fichero binario (word+pos+sequency) 
+
+
+
