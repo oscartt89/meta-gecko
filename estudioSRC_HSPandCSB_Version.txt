@@ -38,4 +38,41 @@
 		7.5.1 Se guarda la estructura wentry entera en el fichero binario (word+pos+sequency) 
 
 
-
+/////////////////////// W2HD.C
+1.- Prepara variables:
+	· fname: nombre del fichero. Máximo 1024 caracteres.
+	· nWords: número de palabras. Máximo 2^64.
+	· wordSize: tamaño de las palabras = 8 <= 8 bytes = 64bits = 32 letras
+	· fw, fOut1, fOut2: fich entrada(words), ficheros d2hW y d2hP respectivamente.
+		- fw: fichero de words. [IN]
+		- fOut1: fichero d2hW. Almacena:
+			> Secuencia (en binario).
+			> Posición en el fichero d2hP de las localizaciones de eta secuencia.
+			> Número de veces que esta secuencia se repite.
+		- fOut2: fichero d2hP. Almacena:
+			> Posición en la secuencia.
+			> Identificador de la secuencia.
+	· we: estructura wentry.
+	· he: estructura hashentry.
+		- w [Word] : secuencia
+		- pos [uint64_t]: posicion en la secuencia. Se usara para almacenar la posición en el fichero d2hP.
+		- num [uint64_t]: numero de veces que se repite
+	· loc: estructura location.
+		- pos [uint64_t]: posición en la secuencia
+		- seq [uint64_t]: identificador de secuencia
+2.- Compureba bad call error.
+3.- Abre ficheros.
+4.- Lee la primera palabra y la guarda en WE
+5.- Copia la secuancia de la primera palabra en HE.
+6.- Comenzamos a leer las palabras:
+	6.1 Almacena posición y seqIndex de la primera seq en LOC.pos y LOC.seq
+	6.2 Si la nueva palabra es diferente de la almacenada en HE (cambio de word):
+		- Se escribe en el fichero (d2hW) la información actual de HE
+		- Se copia la nueva palabra en HE.
+		- Se inicializa el número de repeticiones a 0 y se guarda la posición de la nueva palabra en el fichero (d2hP).
+	6.3 Se escribe la nueva localización en el fichero d2hW.
+	6.4 Se incrementa el numero de repeticiones de HE y el total de palabras escritas en el fichero d2hW.
+	6.5 Se lee la nueva palabra.
+7.- Se escribe la última instancia (no cerrada) de HE en el fichero d2hP.
+8.- Se escribe por pantalla el número de palabras y el fichero generado.
+9.- Se cierran los canales de entrada y salida. 
