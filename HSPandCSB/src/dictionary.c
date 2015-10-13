@@ -109,7 +109,6 @@ int takeWords(wentry **words, char *IN){
 		if(inEntry >= (unsigned long)WORD_SIZE){ // Full well formed sequence 
 			temp.pos=index-WORD_SIZE;
 			NW++;
-			fprintf(stdout, "TEST%d\n", NW);
 			if(storeWord(words,&temp,NW) < 0) return -1;
 		}
 		c=fgetc(f);

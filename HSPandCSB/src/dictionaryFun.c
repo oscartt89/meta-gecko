@@ -12,7 +12,12 @@ void shift_word(word* w){
 }
 
 
-/*
+/* This method is used to store a wentry instance into an array of wentry. 
+ * @param wArr is the array of wentry** where the new wentry will be stored.
+ * @param word is the new word to be stored.
+ * @param length is the new length of the array.
+ * @return 0 if the process ends correctly. If something got wrong return a
+ * 		negative value.
  */
 int storeWord(wentry** wArr,wentry *word,int length){
 	// Take enough memory on array
@@ -31,8 +36,6 @@ int storeWord(wentry** wArr,wentry *word,int length){
 		free(wArr);
 		return -1;
 	}
-
-	fprintf(stdout, "TEST%d\n", length);
 
 	// Copy the new word
 	memcpy(wArr[length-1],word,sizeof(wentry));
