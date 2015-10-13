@@ -32,7 +32,8 @@ int main(int ac, char** av){
  * sequences and take the words.
  * @param words is an array of words.
  * @param IN is the path of the sequence file.
- * @return zero if everything was OK and a negative number in other cases.
+ * @return the number of elements stored on words if everything 
+ * 		was OK and a negative number in other cases.
  */
 int takeWords(wentry **words, char *IN){
  	// Variables
@@ -116,5 +117,7 @@ int takeWords(wentry **words, char *IN){
 
 	fclose(f); // Close input stream
 
-	return 0;
+	return NW;
 }//
+
+
