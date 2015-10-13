@@ -15,6 +15,12 @@ int main(int ac, char** av){
 	// Variables
 	wentry **words; // Array of words
 
+	if((words = malloc(sizeof(wentry*)*MAX_WORDS))==NULL){
+		fprintf(stderr, "Error initializing words array\n");
+		free(words);
+		return -1;
+	}
+
 	// Read file and take kmers
 	if(takeWords(words,av[1])<0) return -1; 
 

@@ -7,8 +7,9 @@
 #include <stdint.h> //unit64_t
 
 // VARIABLES
-static int WORD_SIZE = 32;
-static int BYTES_IN_WORD = 8;
+static const int  WORD_SIZE = 32;
+static const int BYTES_IN_WORD = 8;
+static const uint64_t MAX_WORDS = 1000000;
 
 //STRUCTS
 typedef struct {
