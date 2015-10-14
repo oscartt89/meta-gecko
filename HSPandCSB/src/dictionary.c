@@ -13,10 +13,10 @@ int main(int ac, char** av){
 	}
 
 	// Variables
-	wentry **words; // Array of words
+	wentry *words; // Array of words
 	int numWords = -1;
 
-	if((words = malloc(sizeof(wentry*)*MAX_WORDS))==NULL){
+	if((words = (wentry*) malloc(sizeof(wentry)*MAX_WORDS))==NULL){
 		fprintf(stderr, "Error initializing words array\n");
 		free(words);
 		return -1;

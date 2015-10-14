@@ -8,7 +8,7 @@
  * @return the number of elements stored on words if everything 
  * 		was OK and a negative number in other cases.
  */
-int takeWords(wentry **words, char *IN){
+int takeWords(wentry *words, char *IN){
  	// Variables
 	FILE *f;
 	char c;
@@ -113,7 +113,7 @@ void shift_word(word* w){
  * @return 0 if the process ends correctly. If something got wrong return a
  * 		negative value.
  */
-int storeWord(wentry** wArr,wentry *word,int length){
+int storeWord(wentry* wArr,wentry *word,int length){
 	// Take enough memory on array
 	if((length % MAX_WORDS) == 0){ // Limit of words
 		if(realloc(wArr,sizeof(wentry*)*(length + MAX_WORDS)) == NULL){
@@ -124,15 +124,8 @@ int storeWord(wentry** wArr,wentry *word,int length){
 		fprintf(stdout, "Memoria realocada\t%d\n",length);
 	}
 
-	// Take memory for new word
-	if((wArr[length-1] = (wentry*) malloc(sizeof(wentry)))==NULL){
-		fprintf(stderr, "Error allocating space for the new word\n");
-		free(wArr);
-		return -1;
-	}
-
 	// Copy the new word
-	memcpy(wArr[length-1],word,sizeof(wentry));
+	memcpy(&wArr[length-1],word,sizeof(wentry));
 
 	return 0;
 }
@@ -140,7 +133,7 @@ int storeWord(wentry** wArr,wentry *word,int length){
 
 /* 	
  */
-int quickSort(wentry** words, int left, int right){
+int quickSort(wentry* words, int left, int right){
 	int j;
 
 	if(left < right){
@@ -155,37 +148,40 @@ int quickSort(wentry** words, int left, int right){
 
 /*
  */
-int partition(wentry** words, int left, int right){
+int partition(wentry* words, int left, int right){
 	int  i, j;
 	wentry* pivot;
 	wentry* temp;
 
-//	if((pivot = (wentry*) malloc(sizeof(wentry*)))==NULL){
-//		fprintf(stderr, "Error allocating memory for pivot.\n");
-//		return -1;
-//	}
-//	if((temp = (wentry*) malloc(sizeof(wentry*)))==NULL){
-//		fprintf(stderr, "Error allocating memory for auxiliar variable.\n");
-//		return -1;
-//	}
+	if((pivot = (wentry*) malloc(sizeof(wentry)))==NULL){
+		fprintf(stderr, "Error allocating memory for pivot.\n");
+		return -1;
+	}
+	if((temp = (wentry*) malloc(sizeof(wentry)))==NULL){
+		fprintf(stderr, "Error allocating memory for auxiliar variable.\n");
+		return -1;
+	}
 
-	pivot = words[left];
+	memcpy(pivot,&words[left],sizeof(wentry));
 	i = left;
 	j = right+1;
 		
 	while(i >= j){
-		do ++i; while(wordComparator(words[i],pivot)<=0 && i <= right);
-		do --j; while(wordComparator(words[j],pivot) > 0);
+		do ++i; while(wordComparator(&words[i],pivot)<=0 && i <= right);
+		do --j; while(wordComparator(&words[j],pivot) > 0);
 		if(i < j){
-			temp = words[i];
-			words[i] = words[j];
-			words[j] = temp;
+			memcpy(temp,&words[i],sizeof(wentry));
+			memcpy(&words[i],&words[j],sizeof(wentry));
+			memcpy(&words[j],temp,sizeof(wentry));
 		}
 	}
 
-	temp = words[left];
-	words[left] = words[j];
-	words[j] = temp;
+	memcpy(temp,&words[left],sizeof(wentry));
+	memcpy(&words[left],&words[j],sizeof(wentry));
+	memcpy(&words[j],temp,sizeof(wentry));
+
+	free(temp);
+	free(pivot);
 	
 	return j;
 }
@@ -193,8 +189,8 @@ int partition(wentry** words, int left, int right){
 
 /* This function is used to compare two wentry instances. The criterion
  * used is:
- * 		1 - Compare sequences (alphabetically).
- * 		2 - Compare sequence index.
+ * 		1 - Compare sequence index.
+ * 		2 - Compare sequences (alphabetically).
  * 		3 - Compare position on sequence.
  * @param w1 word to be compared.
  * @param w2 word to be compared.
@@ -202,6 +198,9 @@ int partition(wentry** words, int left, int right){
  * 		if w2 is greater than w1 and zero if both are equal.
  */
 int wordComparator(wentry* w1,wentry* w2){
+	if(w1->seq > w2->seq) return 1;
+	else if(w1->seq < w2->seq) return -1;
+
 	if(w1->w.b[0] > w2->w.b[0]) return 1;
 	else if(w1->w.b[0] < w2->w.b[0]) return -1;
 
@@ -225,9 +224,6 @@ int wordComparator(wentry* w1,wentry* w2){
 
 	if(w1->w.b[7] > w2->w.b[7]) return 1;
 	else if(w1->w.b[7] < w2->w.b[7]) return -1;
-
-	if(w1->seq > w2->seq) return 1;
-	else if(w1->seq < w2->seq) return -1;
 
 	if(w1->pos > w2->pos) return 1;
 	return 0;

@@ -33,9 +33,9 @@ typedef struct {
 
 
 // FUNCTIONS
-int takewords(wentry**,char*);
+int takewords(wentry*,char*);
 void shift_word(word*);
-int storeWord(wentry**,wentry*,int);
-int partition(wentry**,int,int);
-int quickSort(wentry**,int,int);
+int storeWord(wentry*,wentry*,int);
+int partition(wentry*,int,int);
+int quickSort(wentry*,int,int);
 int wordComparator(wentry*,wentry*);
