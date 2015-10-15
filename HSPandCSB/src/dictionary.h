@@ -31,11 +31,43 @@ typedef struct {
     uint64_t seq;
 } wentry;
 
+typedef struct {
+    //Word compressed in binary format
+    word w;
+    //Ocurrence position in the sequence
+    uint64_t pos;
+    //Number of ocurrences inside the
+    //sequence. This is used to know the
+    //number of locations stored in the
+    //positions file
+    uint64_t num;
+} hashentry;
+
+typedef struct {
+    //Ocurrence position in the sequence
+    uint64_t pos;
+    //For multiple sequence files this var
+    //reflects in what sequence occurs the
+    //word
+    uint64_t seq;
+} location;
+
+typedef struct {
+    // Index of read
+    uint64_t readIndex;
+    // Position on word dictionary
+    uint64_t pos;
+    // Number of different kmers
+    uint64_t num;
+} read;
 
 // FUNCTIONS
-int takewords(wentry*,char*);
+int createDictionary(char*,char*);
+//
 void shift_word(word*);
 int storeWord(wentry*,wentry*,int);
 int partition(wentry*,int,int);
 int quickSort(wentry*,int,int);
 int wordComparator(wentry*,wentry*);
+void writeDic(wentry*,int,FILE*,FILE*,FILE*);
+int wordcmp(unsigned char*,unsigned char*,int); 
