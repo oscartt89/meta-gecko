@@ -90,13 +90,14 @@ int createDictionary(char *fIN, char *fOUT){
 				temp.seq++; // New sequence
 				inEntry = 0; // Reset buffer length
 				index++; //
+
+				if(NW > 0){
+					// Store read kmers taken
+					quickSort(words,0,NW-1); // Sort kmers
+					writeDic(words,NW,wDic,pDic,rDic);
+					NW = 0;
+				}
 			}
-
-			// Store read kmers taken
-			quickSort(words,0,NW-1); // Sort kmers
-			writeDic(words,NW,wDic,pDic,rDic);
-
-			NW = 0;
 
 			c=fgetc(metag); // First char of next sequence
 			continue;
@@ -130,6 +131,10 @@ int createDictionary(char *fIN, char *fOUT){
 		}
 		c=fgetc(metag);
 	}
+
+	// Store buffered kmers
+	quickSort(words,0,NW-1); // Sort kmers
+	writeDic(words,NW,wDic,pDic,rDic);
 
 	free(words);
 	fclose(metag);
