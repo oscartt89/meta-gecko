@@ -142,9 +142,9 @@ int wordComparator(wentry* w1,wentry* w2){
 void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 	//Variables
 	hashentry he;
-	location loc;
 	read re;
 	int i;
+	uint64_t loc;
 
 	// Read info
 	re.readIndex = words[0].seq;
@@ -157,8 +157,7 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 
 	// Write all
 	for(i=0 ; i<numWords; ++i){
-		loc.pos = words[i].pos;
-		loc.seq = words[i].seq;
+		loc = words[i].pos;
 		if(wordcmp(&he.w.b[0],&words[i].w.b[0],WORD_SIZE)!=0){ // New sequence
 			fwrite(&he,sizeof(hashentry),1,wDic); // Write kmer info
 			memcpy(&he.w.b[0],&words[i].w.b[0],8); // Tke new "current" kmer
@@ -168,7 +167,7 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 		}
 
 		// Write new location
-		fwrite(&loc,sizeof(location),1,pDic);
+		fwrite(&loc,sizeof(uint64_t),1,pDic);
 		he.num++;
 	}
 

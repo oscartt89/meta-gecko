@@ -45,15 +45,6 @@ typedef struct {
 } hashentry;
 
 typedef struct {
-    //Ocurrence position in the sequence
-    uint64_t pos;
-    //For multiple sequence files this var
-    //reflects in what sequence occurs the
-    //word
-    uint64_t seq;
-} location;
-
-typedef struct {
     // Index of read
     uint64_t readIndex;
     // Position on word dictionary
