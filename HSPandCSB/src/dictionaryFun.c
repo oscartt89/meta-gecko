@@ -56,40 +56,44 @@ int quickSort(wentry* words, int left, int right){
 /*
  */
 int partition(wentry* words, int left, int right){
-	int  i, j;
-	wentry* pivot;
-	wentry* temp;
+	int i = left;
+	int j = right+1;
+	wentry *t;
 
-	if((pivot = (wentry*) malloc(sizeof(wentry)))==NULL){
-		fprintf(stderr, "Error allocating memory for pivot.\n");
-		return -1;
-	}
-	if((temp = (wentry*) malloc(sizeof(wentry)))==NULL){
+	if((t = (wentry*) malloc(sizeof(wentry)))==NULL){
 		fprintf(stderr, "Error allocating memory for auxiliar variable.\n");
 		return -1;
 	}
 
-	memcpy(pivot,&words[left],sizeof(wentry));
-	i = left;
-	j = right+1;
-		
-	while(i >= j){
-		do ++i; while(wordComparator(&words[i],pivot)<=0 && i <= right);
-		do --j; while(wordComparator(&words[j],pivot) > 0);
-		if(i < j){
-			memcpy(temp,&words[i],sizeof(wentry));
-			memcpy(&words[i],&words[j],sizeof(wentry));
-			memcpy(&words[j],temp,sizeof(wentry));
-		}
+	// left sera el pivote
+	// y contendra la mediana de left, right y (left+right)/2
+	int mid = (int) (left+right)/2;
+
+	if(wordComparator(&words[mid],&words[right]))
+		SWAP(&words[mid],&words[right],t);
+
+	if(wordComparator(&words[mid],&words[left]))
+		SWAP(&words[mid],&words[left],t);
+
+	if(wordComparator(&words[left],&words[right]))
+		SWAP(&words[left],&words[right],t);
+
+	while(1){
+		do{
+			++i;
+		}while(!wordComparator(&words[i],&words[left]) && i <= right);
+
+		do{
+			--j;
+		}while(wordComparator(&words[j],&words[left]) && j >= left);
+
+		if( i >= j ) break;
+
+		SWAP(&words[i],&words[j],t);
 	}
 
-	memcpy(temp,&words[left],sizeof(wentry));
-	memcpy(&words[left],&words[j],sizeof(wentry));
-	memcpy(&words[j],temp,sizeof(wentry));
+	SWAP(&words[left],&words[j],t);
 
-	free(temp);
-	free(pivot);
-	
 	return j;
 }
 
@@ -186,4 +190,11 @@ int wordcmp(unsigned char *w1, unsigned char*w2, int n) {
 		if (w1[i]>w2[i]) return +1;
 	}
 	return 0;
+}
+
+
+inline void SWAP(wentry *w1,wentry *w2,wentry *t){
+	memcpy(t,w1,sizeof(wentry));
+	memcpy(w1,w2,sizeof(wentry));
+	memcpy(w2,t,sizeof(wentry));
 }

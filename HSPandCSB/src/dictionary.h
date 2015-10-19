@@ -71,3 +71,4 @@ int quickSort(wentry*,int,int);
 int wordComparator(wentry*,wentry*);
 void writeDic(wentry*,int,FILE*,FILE*,FILE*);
 int wordcmp(unsigned char*,unsigned char*,int); 
+inline void SWAP(wentry*,wentry*,wentry*);
