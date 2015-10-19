@@ -27,6 +27,14 @@ int createDictionary(char *fIN, char *fOUT){
 	FILE *metag, *wDic, *pDic, *rDic;
 	char c;
 
+	char *fname;
+	if((fname = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){
+		fprintf(stderr, "Error allocating memory for file name.\n");
+		return -1;
+	}
+
+	strcpy(fname,fOUT);
+
 
 	// Space for array of words
 	if((words = (wentry*) malloc(sizeof(wentry)*MAX_WORDS))==NULL){
@@ -42,23 +50,25 @@ int createDictionary(char *fIN, char *fOUT){
 	}
 
 	// Open word dicitonary file
-	if((wDic = fopen(strcat(fOUT,".metag.d2hW"),"wb"))==NULL){
+	if((wDic = fopen(strcat(fname,".metag.d2hW"),"wb"))==NULL){
 		fprintf(stderr, "Error opening words dictionary file.\n");
 		return -1;
 	}
+	strcpy(fname,fOUT);
 
 	// Open position dicitonary file
-	if((pDic = fopen(strcat(fOUT,".metag.d2hP"),"wb"))==NULL){
+	if((pDic = fopen(strcat(fname,".metag.d2hP"),"wb"))==NULL){
 		fprintf(stderr, "Error opening position dictionary file.\n");
 		return -1;
 	}
+	strcpy(fname,fOUT);
 
 	// Open read dicitonary file
-	if((rDic = fopen(strcat(fOUT,".metag.d2hR"),"wb"))==NULL){
+	if((rDic = fopen(strcat(fname,".metag.d2hR"),"wb"))==NULL){
 		fprintf(stderr, "Error opening reads dictionary file.\n");
 		return -1;
 	}
-
+	free(fname);
 
 	// READ SEQUENCES
 	// Fasta files starts with a comment or read info line. Avoid it.

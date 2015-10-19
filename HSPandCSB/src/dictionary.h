@@ -11,6 +11,7 @@ static const int  WORD_SIZE = 32;
 static const int BYTES_IN_WORD = 8;
 static const uint64_t MAX_WORDS = 1000000;
 static const int MAX_NUM_PROCS = 2;
+static const int MAX_FILE_LENGTH = 1024;
 
 //STRUCTS
 typedef struct {
