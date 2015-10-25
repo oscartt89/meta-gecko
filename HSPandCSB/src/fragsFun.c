@@ -6,7 +6,14 @@
 
 #include "frags.h"
 
-
+/* This function takes all genome dictionaries from a directory given
+ * @param genomeSetPath path to genome dictionaries folder.
+ * @param genomes is a dictionaryG array pointer where detected dictionaries
+ *    will be stored. Memory on this array will be deallocated before start
+ *    to store the new values.
+ * @return the number of dictionaries detected or a negative number if
+ *    something got wrong.
+ */
 int readGenomeSet(char* genomeSetPath,dictionaryG* genomes){
 	// Variables
 	DIR *gFolder;
@@ -16,6 +23,7 @@ int readGenomeSet(char* genomeSetPath,dictionaryG* genomes){
   FILE *WD, *PD;
 
   // Allocate memory for genome dirs
+  free(genomes);
   if((genomes = (dictionaryG*) malloc(sizeof(dictionaryG)*MAX_GENOME_SET))==NULL){
     fprintf(stderr, "Error allocating memory for genome dictionary set.\n");
     return -1;
@@ -35,6 +43,7 @@ int readGenomeSet(char* genomeSetPath,dictionaryG* genomes){
         fprintf(stderr, "Error reallicatin memory for genome dictionary set.\n");
         return -1;
       }
+      currentMax += MAX_GENOME_SET;
     }
 		// Files are sorted alphabetically
 		// Should appear first d2hP than d2hW
