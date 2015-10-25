@@ -9,7 +9,7 @@
 
 // VARIABLES
 #define MAX_NAME_L 1024
-#define MAX_GENOME_SET 20
+#define MAX_GENOME_SET 40
 static const uint64_t MAX_WORDS = 1000000; // Common with dictionary.h variable
 
 
@@ -74,4 +74,4 @@ typedef struct {
 } dictionaryM; // Metagenome dictionary
 
 // FUNCTIONS
-int readGenomeSet(char*,wentry**,int*);
+int readGenomeSet(char*,dictionaryG*);

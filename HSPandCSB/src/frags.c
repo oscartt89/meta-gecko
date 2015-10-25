@@ -14,12 +14,11 @@ int main(int ac, char** av){
 	}
 
 	// Variables
-	wentry** dictionaries;
-	int* lengths;
+	dictionaryG* dicGSet;
+	int numGenomes;
 
 	// Load genome set dictionaries
-	if(readGenomeSet(av[1],dictionaries,lengths)<0) return -1;
+	if((numGenomes=readGenomeSet(av[1],dicGSet))<0) return -1;
 	
-
 	return 0;
 }
