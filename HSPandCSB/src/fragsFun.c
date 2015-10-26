@@ -76,3 +76,84 @@ int readGenomeSet(char* genomeSetPath,dictionaryG* genomes){
 
   return numGenomes;
 }
+
+
+/* This function takes all metagenome dictionaries from a directory given.
+ * @param metagSetPath path to metagenome dictionaries folder.
+ * @param metagenomes is a dictionaryM array pointer where detected dictionaries
+ *    will be stored. Memory on this array will be deallocated before start
+ *    to store the new values.
+ * @return the number of dictionaries detected or a negative number if
+ *    something got wrong.
+ */
+int readMetagenomeSet(char* metagSetPath,dictionaryM* metagenomes){
+  // Variables
+  DIR *mFolder;
+  struct dirent *ent;
+  char *wD, *pD, *rD;
+  int numMetags = 0, currentMax = MAX_METAGENOME_SET;
+  FILE *WD, *PD;
+
+  // Allocate memory for genome dirs
+  free(metagenomes);
+  if((metagenomes = (dictionaryM*) malloc(sizeof(dictionaryM)*MAX_METAGENOME_SET))==NULL){
+    fprintf(stderr, "Error allocating memory for metagenome dictionary set.\n");
+    return -1;
+  }
+
+  // Open metagenomes folder
+  if((mFolder = opendir(metagSetPath))==NULL){
+    fprintf(stderr, "Error opening metagenomes folder.\n");
+    return -1;
+  }
+
+  // Take metagenome dictionary files
+  while((ent = readdir(mFolder))!=NULL){
+    // Check for memory
+    if(numMetags>=currentMax){
+      if((metagenomes = realloc(metagenomes,sizeof(dictionaryM)*(currentMax + MAX_METAGENOME_SET)))==NULL){
+        fprintf(stderr, "Error reallicatin memory for metagenome dictionary set.\n");
+        return -1;
+      }
+      currentMax += MAX_METAGENOME_SET;
+    }
+    // Files are sorted alphabetically
+    // Should appear first d2hP, then d2hR and d2hW
+    if(strstr(ent->d_name,".metag.d2hP")!=NULL){ // New dictionary
+      // Save name
+      memcpy(metagenomes[numMetags].name,ent->d_name,strlen(ent->d_name)-11);
+      // Save location dictionary
+      memcpy(metagenomes[numMetags].P,ent->d_name,sizeof(ent->d_name));
+      //Next file should be d2hR dictionary
+      if((ent = readdir(mFolder))==NULL){
+        fprintf(stderr, "Error: incomplete metagenome triplet dictionary. End of file list.\n");
+        return -1;
+      }
+      if(strstr(ent->d_name,".metag.d2hR")!=NULL){
+        // Save read dictionary
+        memcpy(metagenomes[numMetags].R,ent->d_name,sizeof(ent->d_name));
+        // Now should appear words dictionary
+        if((ent = readdir(mFolder))==NULL){
+          fprintf(stderr, "Error: incomplete metagenome triplet dictionary. End of file list.\n");
+          return -1;
+        }
+        if(strstr(ent->d_name,".metag.d2hW")!=NULL){
+          // Save words dictionary
+          memcpy(metagenomes[numMetags].W,ent->d_name,sizeof(ent->d_name));
+          numMetags++; 
+        }else{
+          fprintf(stderr, "Error: incomplete metagenome triple dictionary. Word dictionary not found.\n");
+          return -1;  
+        }
+      }else{
+        fprintf(stderr, "Error: incomplete metagenome triple dictionary. Read dictionary not found.\n");
+        return -1;
+      }
+    }
+  }
+
+  // Close dir
+  closedir(mFolder);
+
+  return numMetags;
+}

@@ -15,10 +15,15 @@ int main(int ac, char** av){
 
 	// Variables
 	dictionaryG* dicGSet;
-	int numGenomes;
+	dictionaryM* dicMSet;
+	int numGenomes,numMetags;
 
 	// Load genome set dictionaries
 	if((numGenomes=readGenomeSet(av[1],dicGSet))<0) return -1;
-	
+	// Load metagenome set dictionaries
+	if((numMetags=readMetagenomeSet(av[2],dicMSet))<0) return -1;
+
+	fprintf(stdout, "%d\n", numMetags);
+
 	return 0;
 }
