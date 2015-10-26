@@ -46,6 +46,8 @@ int readGenomeSet(char* genomeSetPath,dictionaryG* genomes){
       currentMax += MAX_GENOME_SET;
     }
 		// Files are sorted alphabetically
+    // Check it's not a metagenome dictionary
+    if(strstr(ent->d_name,".metag.d2h")!=NULL) continue;
 		// Should appear first d2hP than d2hW
 		if(strstr(ent->d_name,".d2hP")!=NULL){ // New dictionary
 			// Save name
@@ -57,11 +59,11 @@ int readGenomeSet(char* genomeSetPath,dictionaryG* genomes){
 				fprintf(stderr, "Error: incomplete genome pair dictionary. End of file list.\n");
 				return -1;
 			}
-			if(strstr(ent->d_name,".d2hW")!=NULL){
+			if(strstr(ent->d_name,".d2hW")!=NULL && strstr(ent->d_name,".metag.d2h")==NULL){
 				// Save word dictionary
 				memcpy(genomes[numGenomes].W,ent->d_name,sizeof(ent->d_name));
 				numGenomes++;
-			}else if(strstr(ent->d_name,".metag.d2hR")!=NULL){
+			}else if(strstr(ent->d_name,".metag.d2h")!=NULL){
         fprintf(stderr, "Error: it's a metagenome dictionary.\n");
         return -1;
       }else{

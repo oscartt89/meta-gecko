@@ -20,10 +20,16 @@ int main(int ac, char** av){
 
 	// Load genome set dictionaries
 	if((numGenomes=readGenomeSet(av[1],dicGSet))<0) return -1;
+	else if(numGenomes==0){
+		fprintf(stderr, "No genome dictionaries detected.\n");
+		return -1;
+	}
 	// Load metagenome set dictionaries
 	if((numMetags=readMetagenomeSet(av[2],dicMSet))<0) return -1;
-
-	fprintf(stdout, "%d\n", numMetags);
+	else if(numMetags==0){
+		fprintf(stderr, "No metagenome dictionaries detected.\n");
+		return -1;
+	}
 
 	return 0;
 }
