@@ -158,7 +158,7 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 	// Write all
 	for(i=0 ; i<numWords; ++i){
 		loc = words[i].pos;
-		if(wordcmp(&he.w.b[0],&words[i].w.b[0],WORD_SIZE)!=0){ // New sequence
+		if(wordcmp(&he.w.b[0],&words[i].w.b[0],WORD_SIZE/8)!=0){ // New sequence
 			fwrite(&he,sizeof(hashentry),1,wDic); // Write kmer info
 			memcpy(&he.w.b[0],&words[i].w.b[0],8); // Tke new "current" kmer
 			he.pos=ftell(pDic); // Take position of kmer locations on pDic
