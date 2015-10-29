@@ -12,7 +12,8 @@
 #define MAX_GENOME_SET 40
 #define MAX_METAGENOME_SET 10
 static const uint64_t MAX_WORDS = 1000000; // Common with dictionary.h variable
-
+#define BYTES_WORD 8
+#define BITS_NUCLEOTIDE 2
 
 // STRUCTS
 typedef struct {
@@ -74,6 +75,32 @@ typedef struct {
 	char R[MAX_NAME_L];
 } dictionaryM; // Metagenome dictionary
 
+typedef struct {
+    //Ocurrence position in the sequence
+    uint64_t pos;
+    //For multiple sequence files this var
+    //reflects in what sequence occurs the
+    //word
+    uint64_t seq;
+} location; // Struct for genome d2hP files
+
+typedef struct{
+    // Start position of hit on seq1
+    uint64_t start1;
+    // Start position of hit on seq2
+    uint64_t start2;
+    // Length of hit
+    uint64_t length;
+    // Sequence 1
+    uint64_t seq1;
+    // Sequence 2;
+    uint64_t seq2;
+} hit;
+
 // FUNCTIONS
-int readGenomeSet(char*,dictionaryG*);
-int readMetagenomeSet(char*,dictionaryM*);
+int readGenomeSet(char*,dictionaryG**);
+int readMetagenomeSet(char*,dictionaryM**);
+int loadRead(FILE*,FILE*,FILE*,wentry**);
+int loadGenome(dictionaryG,wentry**);
+int hits(wentry*,wentry*,hit**,uint64_t,uint64_t);
+int wordcmp(unsigned char *,unsigned char*,int); // Copied for dictionaryFun.c
