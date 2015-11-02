@@ -29,28 +29,28 @@ typedef struct {
     //For multiple sequence files this var
     //reflects in what sequence occurs the
     //word
-    uint64_t seq;
+    uint32_t seq;
 } wentry;
 
 typedef struct {
     //Word compressed in binary format
     word w;
-    //Ocurrence position in the sequence
+    //Position of first location on Positions Dictionary
     uint64_t pos;
     //Number of ocurrences inside the
     //sequence. This is used to know the
     //number of locations stored in the
     //positions file
-    uint64_t num;
+    uint16_t num;
 } hashentry;
 
 typedef struct {
     // Index of read
-    uint64_t readIndex;
+    uint32_t readIndex;
     // Position on word dictionary
     uint64_t pos;
     // Number of different kmers
-    uint64_t num;
+    uint16_t num;
 } read;
 
 // FUNCTIONS
