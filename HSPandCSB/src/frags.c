@@ -71,7 +71,7 @@ int main(int ac, char** av){
 					// For now only 100% are allowed on hits
 				if((numHits = hits(metag,geno,&hitsA,numWM,numWG))<0) return -1;
 				// Sort hits
-
+				if(quickSort(hitsA,0,numHits-1)<0) return -1;
 				// Filter hits. Calculte fragments
 
 				free(hitsA); // Free unnecesary space

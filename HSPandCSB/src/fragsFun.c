@@ -347,3 +347,102 @@ int wordcmp(unsigned char *w1, unsigned char*w2, int n) {
   }
   return 0;
 }
+
+
+/*  
+ */
+int quickSort(hit* hits, int left, int right){
+  int j;
+
+  if(left < right){
+    // divide and conquer
+    if((j = partition(hits, left, right))<0) return -1;
+    quickSort(hits, left, j-1);
+    quickSort(hits, j+1, right);
+  }
+  return 0;
+}
+
+
+/*
+ */
+int partition(hit* hits, int left, int right){
+  int i = left;
+  int j = right+1;
+  hit *t;
+
+  if((t = (hit*) malloc(sizeof(hit)))==NULL){
+    fprintf(stderr, "Error allocating memory for auxiliar variable.\n");
+    return -1;
+  }
+
+  // left sera el pivote
+  // y contendra la mediana de left, right y (left+right)/2
+  int mid = (int) (left+right)/2;
+
+  if(hitComparator(&hits[mid],&hits[right]))
+    SWAP(&hits[mid],&hits[right],t);
+
+  if(hitComparator(&hits[mid],&hits[left]))
+    SWAP(&hits[mid],&hits[left],t);
+
+  if(hitComparator(&hits[left],&hits[right]))
+    SWAP(&hits[left],&hits[right],t);
+
+  while(1){
+    do{
+      ++i;
+    }while(!hitComparator(&hits[i],&hits[left]) && i <= right);
+
+    do{
+      --j;
+    }while(hitComparator(&hits[j],&hits[left]) && j >= left);
+
+    if( i >= j ) break;
+
+    SWAP(&hits[i],&hits[j],t);
+  }
+
+  SWAP(&hits[left],&hits[j],t);
+
+  return j;
+}
+
+
+/* This function is used to compare two hit instances. The criterion
+ * used is:
+ *    1 - Compare sequence 1 index.
+ *    2 - Compare sequence 2 index.
+ *    3 - Compare sequence 1 start.
+ *    4 - Compare sequence 2 start.
+ *    2 - Compare length.
+ * @param h1 hit to be compared.
+ * @param h2 hit to be compared.
+ * @return a positive number if h1 is greater than h2, a negative number
+ *    if h2 is greater than h1 and zero if both are equal.
+ */
+int hitComparator(hit* h1,hit* h2){
+  if(h1->seq1 > h2->seq1) return 1;
+  else if(h1->seq1 < h2->seq1) return -1;
+
+  if(h1->seq2 > h2->seq2) return 1;
+  else if(h1->seq2 < h2->seq2) return -1;
+
+  if(h1->start1 > h2->start1) return 1;
+  else if(h1->start1 < h2->start1) return -1;
+
+  if(h1->start2 > h2->start2) return 1;
+  else if(h1->start2 < h2->start2) return -1;
+
+  if(h1->length > h2->length) return 1;
+  else if(h1->length < h2->length) return -1;
+
+  return 0;
+}
+
+
+inline void SWAP(hit *h1,hit *h2,hit *t){
+  memcpy(t,h1,sizeof(hit));
+  memcpy(h1,h2,sizeof(hit));
+  memcpy(h2,t,sizeof(hit));
+}

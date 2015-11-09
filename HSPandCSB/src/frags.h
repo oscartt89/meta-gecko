@@ -103,4 +103,8 @@ int readMetagenomeSet(char*,dictionaryM**);
 int loadRead(FILE*,FILE*,FILE*,wentry**);
 int loadGenome(dictionaryG,wentry**);
 int hits(wentry*,wentry*,hit**,uint64_t,uint64_t);
-int wordcmp(unsigned char *,unsigned char*,int); // Copied for dictionaryFun.c
+int wordcmp(unsigned char *,unsigned char*,int); // Copied from dictionaryFun.c
+int quickSort(hit*,int,int); // Copied from ""
+int partition(hit*,int,int);// "" "" ""
+int hitComparator(hit*,hit*); // "" "" ""
+inline void SWAP(hit*,hit*,hit*);
