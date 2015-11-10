@@ -8,8 +8,8 @@
 #include "frags.h"
 
 int main(int ac, char** av){
-	if(ac!=4){
-		fprintf(stderr,"USE: %s genomeSetFolder metagenomeFolder out\n",av[0]);
+	if(ac!=5){
+		fprintf(stderr,"USE: %s genomeSetFolder metagenomeFolder similarityThreshold out\n",av[0]);
 		return -1;
 	}
 
@@ -17,7 +17,17 @@ int main(int ac, char** av){
 	dictionaryG* dicGSet;
 	dictionaryM* dicMSet;
 	hit *hitsA;
-	int numGenomes,numMetags,numHits;
+	frag *frags;
+	int numGenomes,numMetags,numHits,numFrags;
+	char *outputName;
+
+	// Allocate space for outputName variable
+	if((outputName = malloc(sizeof(char)*MAX_NAME_L))==NULL){
+		fprintf(stderr, "Error allocating space for outputFile name.\n");
+		return -1;
+	}
+
+	strcpy(outputName,av[4]);
 
 	// Load genome set dictionaries
 	if((numGenomes=readGenomeSet(av[1],&dicGSet))<0) return -1;
@@ -36,7 +46,7 @@ int main(int ac, char** av){
 	// Compare each read with each genome
 		//Necessary variables
 		int i=0,j,numWM,numWG;
-		FILE *dR, *dW, *dP;
+		FILE *dR, *dW, *dP, *fOut;
 		wentry *metag, *geno;
 
 	while(i<numMetags){
@@ -66,21 +76,35 @@ int main(int ac, char** av){
 			// Compare with each genome
 			for(j=0; j<numGenomes; ++j){
 				// Load genome
-				if((numWG = loadGenome(dicGSet[i],&geno))<0) return -1;
+				if((numWG = loadGenome(dicGSet[j],&geno))<0) return -1;
 				// Calc hits
 					// For now only 100% are allowed on hits
 				if((numHits = hits(metag,geno,&hitsA,numWM,numWG))<0) return -1;
 				// Sort hits
 				if(quickSort(hitsA,0,numHits-1)<0) return -1;
 				// Filter hits. Calculte fragments
-
+				if((numFrags=calculateFragments(hitsA,&frags,numHits,atoi(av[3])))<0) return -1;
 				free(hitsA); // Free unnecesary space
+				// Write frags file
+					// Open output stream
+					strcat(outputName,&dicMSet[i].name[0]);
+					strcat(outputName,"_");
+					strcat(outputName,&dicGSet[j].name[0]);
+					strcat(outputName,".frags");
+					if((fOut = fopen(outputName,"wb"))==NULL){
+						fprintf(stderr, "Error opening output fragment file. [%s]\n", outputName);
+						return -1;
+					}
+					strcpy(outputName,av[4]); //Reset name
 
-				// Wirte frags file
+				int k;
+				for(k=0; k<numFrags; ++k)
+					fwrite(&frags[k],sizeof(frag),1,fOut);
+				
+				fclose(fOut);
 
 				// Free space
 				free(geno);
-				
 			}
 
 			free(metag); // Free space

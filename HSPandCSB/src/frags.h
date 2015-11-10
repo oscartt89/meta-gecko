@@ -97,6 +97,21 @@ typedef struct{
     uint64_t seq2;
 } hit;
 
+typedef struct{
+    // Start position of fragment on seqX
+    uint64_t start;
+    // Diagonal
+    int64_t diag;
+    // Length of fragment
+    uint64_t length;
+    // Similarity
+    uint8_t S;
+    // Sequence X
+    uint64_t seqX;
+    // Sequence Y;
+    uint64_t seqY;
+} frag;
+
 // FUNCTIONS
 int readGenomeSet(char*,dictionaryG**);
 int readMetagenomeSet(char*,dictionaryM**);
@@ -108,3 +123,4 @@ int quickSort(hit*,int,int); // Copied from ""
 int partition(hit*,int,int);// "" "" ""
 int hitComparator(hit*,hit*); // "" "" ""
 inline void SWAP(hit*,hit*,hit*);
+int calculateFragments(hit*,frag**,int,int);

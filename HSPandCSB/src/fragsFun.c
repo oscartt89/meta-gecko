@@ -441,8 +441,81 @@ int hitComparator(hit* h1,hit* h2){
 }
 
 
+/*
+ */
 inline void SWAP(hit *h1,hit *h2,hit *t){
   memcpy(t,h1,sizeof(hit));
   memcpy(h1,h2,sizeof(hit));
   memcpy(h2,t,sizeof(hit));
 }
+
+
+/*
+ */
+int calculateFragments(hit* hits, frag** frags, int numHits,int SThreshold){
+  // Variables
+  int numFragments = 0;
+  
+  // Take space for frags
+  if((*frags = (frag*) malloc(sizeof(frag)*numHits))==NULL){
+    fprintf(stderr, "Error allocating space for fragments array.\n");
+    return -1;
+  }
+
+  // Calculate fragments
+    // First instance
+    frags[numFragments]->start = hits[0].start1; 
+    frags[numFragments]->seqX = hits[0].seq1;
+    frags[numFragments]->seqY = hits[0].seq2;
+    frags[numFragments]->length = hits[0].length;
+    frags[numFragments]->S = 100;
+    frags[numFragments]->diag = hits[0].start2 - hits[0].start1;
+
+
+  int i;
+  uint64_t fragEnd,dist,oldLength,newLength;
+  uint8_t oldS, newS;
+  for(i=1; i<numHits; i++){
+    // If hits are equal discard one
+    if(hitComparator(&hits[i],&hits[i-1])==0) continue;
+
+    // Sequence change
+    if(hits[i].seq1 != frags[numFragments]->seqX | hits[i].seq2 != frags[numFragments]->seqY){
+      // New fragment
+      numFragments++;
+      // Init new fragment
+      frags[numFragments]->start = hits[i].start1; 
+      frags[numFragments]->seqX = hits[i].seq1;
+      frags[numFragments]->seqY = hits[i].seq2;
+      frags[numFragments]->length = hits[i].length;
+      frags[numFragments]->S = 100;
+      frags[numFragments]->diag = hits[i].start2 - hits[i].start1;
+      // Go to next hit
+      continue;
+    }
+
+    // IF same sequences -> same diagonal
+    fragEnd = frags[numFragments]->start + frags[numFragments]->length;
+    newLength = hits[i].start1 + hits[i].length - frags[numFragments]->start;
+    oldLength = frags[numFragments]->length;
+    oldS = frags[numFragments]->S;
+    dist = fragEnd - hits[i].start1;
+      dist = dist < 0 ? 0 : dist;
+    newS = (newLength - (dist + oldLength - oldLength*oldS))/newLength;
+
+    if(newS >= SThreshold){ // Correct fragment, update
+      frags[numFragments]->length = newLength;
+      frags[numFragments]->S = newS;
+    }else{ // Not enough quality, create new framgent
+      numFragments++;
+      frags[numFragments]->start = hits[i].start1;
+      frags[numFragments]->diag = hits[i].start2 - hits[i].start1;
+      frags[numFragments]->length = hits[i].length;
+      frags[numFragments]->seqX = hits[i].seq1;
+      frags[numFragments]->seqY = hits[i].seq2;
+      frags[numFragments]->S = 100;
+    }
+  }
+
+  return numFragments;
+} 
