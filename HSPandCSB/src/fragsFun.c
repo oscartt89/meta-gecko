@@ -308,7 +308,7 @@ int loadGenome(dictionaryG genome,wentry** kmers,int WL){
 
 /*
  */
-int hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2){
+int hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
   int numHits = 0;
 
@@ -322,12 +322,12 @@ int hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2){
   int i,j;
   for(i=0;i<numW1;++i)
     for(j=0;j<numW2;++j)
-      if(wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],BYTES_WORD)==0){
+      if(wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],WL)==0){
         // Store position
         hits[numHits]->start1 = w1[i].pos;
         hits[numHits]->start2 = w2[j].pos;
         // Store length
-        hits[numHits]->length = (BYTES_WORD * 4)/ BITS_NUCLEOTIDE; 
+        hits[numHits]->length = (WL * 4)/ BITS_NUCLEOTIDE; 
         // Store sequences indexes
         hits[numHits]->seq1 = w1[i].seq;
         hits[numHits]->seq2 = w2[j].seq;

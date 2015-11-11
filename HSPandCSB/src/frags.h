@@ -134,7 +134,7 @@ int readGenomeSet(char*,dictionaryG**);
 int readMetagenomeSet(char*,dictionaryM**);
 int loadRead(FILE*,FILE*,FILE*,wentry**,int);
 int loadGenome(dictionaryG,wentry**,int);
-int hits(wentry*,wentry*,hit**,uint64_t,uint64_t);
+int hits(wentry*,wentry*,hit**,uint64_t,uint64_t,int);
 int wordcmp(unsigned char *,unsigned char*,int); // Copied from dictionaryFun.c
 int quickSort(hit*,int,int); // Copied from ""
 int partition(hit*,int,int);// "" "" ""
