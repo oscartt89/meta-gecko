@@ -454,24 +454,26 @@ inline void SWAP(hit *h1,hit *h2,hit *t){
 
 /*
  */
-int calculateFragments(hit* hits, frag** frags, int numHits, int SThreshold, int minLength){
+int calculateFragments(hit* hits, FragFile** frags, int numHits, int SThreshold, int minLength){
   // Variables
   int numFragments = 0;
   
   // Take space for frags
-  if((*frags = (frag*) malloc(sizeof(frag)*numHits))==NULL){
+  if((*frags = (FragFile*) malloc(sizeof(FragFile)*numHits))==NULL){
     fprintf(stderr, "Error allocating space for fragments array.\n");
     return -1;
   }
 
   // Calculate fragments
     // First instance
-    frags[numFragments]->start = hits[0].start1; 
+    frags[numFragments]->xStart = hits[0].start1;
+    frags[numFragments]->yStart = hits[0].start2; 
     frags[numFragments]->seqX = hits[0].seq1;
     frags[numFragments]->seqY = hits[0].seq2;
     frags[numFragments]->length = hits[0].length;
-    frags[numFragments]->S = 100;
-    frags[numFragments]->diag = hits[0].start2 - hits[0].start1;
+    frags[numFragments]->similarity = 100;
+    frags[numFragments]->diag = hits[0].start1 - hits[0].start2;
+    frags[numFragments]->ident = hits[0].length;
 
 
   int i;
@@ -483,41 +485,46 @@ int calculateFragments(hit* hits, frag** frags, int numHits, int SThreshold, int
 
     // Sequence change
     if(hits[i].seq1 != frags[numFragments]->seqX | hits[i].seq2 != frags[numFragments]->seqY){
-      // New fragment
-      numFragments++;
+      if(frags[numFragments]->length >= minLength)
+        numFragments++;
       // Init new fragment
-      frags[numFragments]->start = hits[i].start1; 
+      frags[numFragments]->xStart = hits[i].start1;
+      frags[numFragments]->yStart = hits[i].start2; 
       frags[numFragments]->seqX = hits[i].seq1;
       frags[numFragments]->seqY = hits[i].seq2;
       frags[numFragments]->length = hits[i].length;
-      frags[numFragments]->S = 100;
-      frags[numFragments]->diag = hits[i].start2 - hits[i].start1;
+      frags[numFragments]->similarity = 100;
+      frags[numFragments]->diag = hits[i].start1 - hits[i].start2;
+      frags[numFragments]->ident = hits[0].length;
       // Go to next hit
       continue;
     }
 
     // IF same sequences -> same diagonal
-    fragEnd = frags[numFragments]->start + frags[numFragments]->length;
-    newLength = hits[i].start1 + hits[i].length - frags[numFragments]->start;
+    fragEnd = frags[numFragments]->xStart + frags[numFragments]->length;
+    newLength = hits[i].start1 + hits[i].length - frags[numFragments]->xStart;
     oldLength = frags[numFragments]->length;
-    oldS = frags[numFragments]->S;
+    oldS = frags[numFragments]->similarity;
     dist = fragEnd - hits[i].start1;
       dist = dist < 0 ? 0 : dist;
-    newS = (newLength - (dist + oldLength - oldLength*oldS))/newLength;
+    newS = (newLength - (dist + oldLength - oldLength*oldS))/newLength * 100;
 
     if(newS >= SThreshold){ // Correct fragment, update
       frags[numFragments]->length = newLength;
-      frags[numFragments]->S = newS;
+      frags[numFragments]->similarity = newS;
+      frags[numFragments]->ident += newLength - oldLength - dist;
     }else{ // Not enough quality, create new framgent
       if(frags[numFragments]->length >= minLength)
         numFragments++;
       //else overwrite actual fragment (invalid length)
-      frags[numFragments]->start = hits[i].start1;
-      frags[numFragments]->diag = hits[i].start2 - hits[i].start1;
+      frags[numFragments]->xStart = hits[i].start1;
+      frags[numFragments]->yStart = hits[i].start2;
+      frags[numFragments]->diag = hits[i].start1 - hits[i].start2;
       frags[numFragments]->length = hits[i].length;
       frags[numFragments]->seqX = hits[i].seq1;
       frags[numFragments]->seqY = hits[i].seq2;
-      frags[numFragments]->S = 100;
+      frags[numFragments]->similarity = 100;
+      frags[numFragments]->ident = hits[i].length;
     }
   }
 

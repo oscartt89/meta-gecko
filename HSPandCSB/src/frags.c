@@ -17,7 +17,7 @@ int main(int ac, char** av){
 	dictionaryG* dicGSet;
 	dictionaryM* dicMSet;
 	hit *hitsA;
-	frag *frags;
+	FragFile *frags;
 	FILE *fOut;
 	int numGenomes,numMetags,numHits,numFrags;
 
@@ -86,7 +86,7 @@ int main(int ac, char** av){
 				if((numFrags=calculateFragments(hitsA,&frags,numHits,atoi(av[3]),atoi(av[4])))<0) return -1;
 				free(hitsA); // Free unnecesary space
 				// Write frags file
-				fwrite(&frags[0],sizeof(frag),numFrags,fOut);
+				fwrite(&frags[0],sizeof(FragFile),numFrags,fOut);
 				
 				// Free space
 				free(geno);
