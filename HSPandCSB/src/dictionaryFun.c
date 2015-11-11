@@ -94,6 +94,8 @@ int partition(wentry* words, int left, int right){
 
 	SWAP(&words[left],&words[j],t);
 
+	free(t);
+
 	return j;
 }
 
