@@ -143,8 +143,10 @@ int createDictionary(char *fIN, char *fOUT){
 	}
 
 	// Store buffered kmers
-	quickSort(words,0,NW-1); // Sort kmers
-	writeDic(words,NW,wDic,pDic,rDic);
+	if(NW > 0){
+		quickSort(words,0,NW-1); // Sort kmers
+		writeDic(words,NW,wDic,pDic,rDic);
+	}
 
 	free(words);
 	fclose(metag);

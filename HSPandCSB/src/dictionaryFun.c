@@ -94,6 +94,8 @@ int partition(wentry* words, int left, int right){
 
 	SWAP(&words[left],&words[j],t);
 
+	free(t);
+
 	return j;
 }
 
@@ -144,7 +146,8 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 	hashentry he;
 	read re;
 	int i;
-	uint64_t loc;
+	uint16_t loc;
+	uint64_t lastLoc = 0;
 
 	// Read info
 	re.readIndex = words[0].seq;
@@ -157,8 +160,8 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 
 	// Write all
 	for(i=0 ; i<numWords; ++i){
-		loc = words[i].pos;
-		if(wordcmp(&he.w.b[0],&words[i].w.b[0],WORD_SIZE)!=0){ // New sequence
+		loc = words[i].pos - lastLoc; // Location is relative to last location
+		if(wordcmp(&he.w.b[0],&words[i].w.b[0],BYTES_IN_WORD)!=0){ // New sequence
 			fwrite(&he,sizeof(hashentry),1,wDic); // Write kmer info
 			memcpy(&he.w.b[0],&words[i].w.b[0],8); // Tke new "current" kmer
 			he.pos=ftell(pDic); // Take position of kmer locations on pDic
@@ -167,7 +170,8 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 		}
 
 		// Write new location
-		fwrite(&loc,sizeof(uint64_t),1,pDic);
+		fwrite(&loc,sizeof(uint16_t),1,pDic);
+		lastLoc = words[i].pos;
 		he.num++;
 	}
 
