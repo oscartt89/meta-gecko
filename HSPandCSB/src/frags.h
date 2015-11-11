@@ -116,8 +116,6 @@ typedef struct{
     uint64_t seqX;
     // Sequence Y;
     uint64_t seqY;
-    //sequence number in the 'Y' file
-//    uint64_t seqY;
     //synteny block id
 //    int64_t block;
     //'f' for the forward strain and 'r' for the reverse
@@ -134,8 +132,8 @@ typedef struct{
 // FUNCTIONS
 int readGenomeSet(char*,dictionaryG**);
 int readMetagenomeSet(char*,dictionaryM**);
-int loadRead(FILE*,FILE*,FILE*,wentry**);
-int loadGenome(dictionaryG,wentry**);
+int loadRead(FILE*,FILE*,FILE*,wentry**,int);
+int loadGenome(dictionaryG,wentry**,int);
 int hits(wentry*,wentry*,hit**,uint64_t,uint64_t);
 int wordcmp(unsigned char *,unsigned char*,int); // Copied from dictionaryFun.c
 int quickSort(hit*,int,int); // Copied from ""

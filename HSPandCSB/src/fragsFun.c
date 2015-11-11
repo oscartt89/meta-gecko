@@ -179,10 +179,11 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
  *  @param dW: words dictionary.
  *  @param dP: positions dictionary.
  *  @param kmers: array of wentry where words will be allocated.
+ *  @param WL: word length.
  *  @return: number wentry instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
-int loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers){
+int loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
   // Variables
   READ r;
   hashentry he;
@@ -225,7 +226,7 @@ int loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers){
       }
       fprintf(stderr, "TEST\n");
       // Store sequence
-      memcpy(&kmers[numKmers]->w.b[0],&he.w.b[0],8); // ## Programa se para en ejecución al cabo de unas iteraciones 
+      memcpy(&kmers[numKmers]->w.b[0],&he.w.b[0],WL); // ## Programa se para en ejecución al cabo de unas iteraciones 
       //Store seq index
       kmers[numKmers]->seq = r.readIndex;
       // Take pos
@@ -245,10 +246,11 @@ int loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers){
  * it in a wentry array given.
  *  @param genome: genome dictionary structure.
  *  @param kmers: array of wentry where words will be allocated.
+ *  @param WL: word length.
  *  @return: number wentry instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
-int loadGenome(dictionaryG genome,wentry** kmers){
+int loadGenome(dictionaryG genome,wentry** kmers,int WL){
   // Variables
   hashentry he;
   location lo;
@@ -287,7 +289,7 @@ int loadGenome(dictionaryG genome,wentry** kmers){
 
     for(i=0;i<he.num;++i){
       // Store sequence
-      memcpy(&kmers[numKmers]->w.b[0],&he.w.b[0],8);
+      memcpy(&kmers[numKmers]->w.b[0],&he.w.b[0],WL);
       // Read location
       fread(&lo,sizeof(location),1,dP);
       // Store sequence index

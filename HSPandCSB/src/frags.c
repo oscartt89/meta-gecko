@@ -8,8 +8,8 @@
 #include "frags.h"
 
 int main(int ac, char** av){
-	if(ac!=6){
-		fprintf(stderr,"USE: %s genomeSetFolder metagenomeFolder similarityThreshold minLength out\n",av[0]);
+	if(ac!=7){
+		fprintf(stderr,"USE: %s genomeSetFolder metagenomeFolder similarityThreshold minLength wordLength out\n",av[0]);
 		return -1;
 	}
 
@@ -37,7 +37,7 @@ int main(int ac, char** av){
 	}
 
 	// Open output file fragment
-	if((fOut = fopen(strcat(av[5],".frags"),"wb"))==NULL){
+	if((fOut = fopen(strcat(av[6],".frags"),"wb"))==NULL){
 		fprintf(stderr, "Error opening output fragment file. [%s]\n", av[5]);
 		return -1;
 	}
@@ -72,11 +72,11 @@ int main(int ac, char** av){
 		// Compare each read with each genome
 		while(!feof(dR)){
 			// Load read
-			if((numWM = loadRead(dR,dW,dP,&metag))<0) return -1;
+			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
 			// Compare with each genome
 			for(j=0; j<numGenomes; ++j){
 				// Load genome
-				if((numWG = loadGenome(dicGSet[j],&geno))<0) return -1;
+				if((numWG = loadGenome(dicGSet[j],&geno,atoi(av[5])))<0) return -1;
 				// Calc hits
 					// For now only 100% are allowed on hits
 				if((numHits = hits(metag,geno,&hitsA,numWM,numWG))<0) return -1;
