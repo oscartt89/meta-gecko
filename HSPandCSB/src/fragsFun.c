@@ -405,6 +405,8 @@ int partition(hit* hits, int left, int right){
 
   SWAP(&hits[left],&hits[j],t);
 
+  free(t);
+
   return j;
 }
 
@@ -452,7 +454,7 @@ inline void SWAP(hit *h1,hit *h2,hit *t){
 
 /*
  */
-int calculateFragments(hit* hits, frag** frags, int numHits,int SThreshold){
+int calculateFragments(hit* hits, frag** frags, int numHits, int SThreshold, int minLength){
   // Variables
   int numFragments = 0;
   
@@ -507,7 +509,9 @@ int calculateFragments(hit* hits, frag** frags, int numHits,int SThreshold){
       frags[numFragments]->length = newLength;
       frags[numFragments]->S = newS;
     }else{ // Not enough quality, create new framgent
-      numFragments++;
+      if(frags[numFragments] >= minLength)
+        numFragments++;
+      //else overwrite actual fragment (invalid length)
       frags[numFragments]->start = hits[i].start1;
       frags[numFragments]->diag = hits[i].start2 - hits[i].start1;
       frags[numFragments]->length = hits[i].length;

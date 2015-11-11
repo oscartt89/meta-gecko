@@ -123,4 +123,4 @@ int quickSort(hit*,int,int); // Copied from ""
 int partition(hit*,int,int);// "" "" ""
 int hitComparator(hit*,hit*); // "" "" ""
 inline void SWAP(hit*,hit*,hit*);
-int calculateFragments(hit*,frag**,int,int);
+int calculateFragments(hit*,frag**,int,int,int);

@@ -8,8 +8,8 @@
 #include "frags.h"
 
 int main(int ac, char** av){
-	if(ac!=5){
-		fprintf(stderr,"USE: %s genomeSetFolder metagenomeFolder similarityThreshold out\n",av[0]);
+	if(ac!=6){
+		fprintf(stderr,"USE: %s genomeSetFolder metagenomeFolder similarityThreshold minLength out\n",av[0]);
 		return -1;
 	}
 
@@ -27,7 +27,7 @@ int main(int ac, char** av){
 		return -1;
 	}
 
-	strcpy(outputName,av[4]);
+	strcpy(outputName,av[5]);
 
 	// Load genome set dictionaries
 	if((numGenomes=readGenomeSet(av[1],&dicGSet))<0) return -1;
@@ -83,7 +83,7 @@ int main(int ac, char** av){
 				// Sort hits
 				if(quickSort(hitsA,0,numHits-1)<0) return -1;
 				// Filter hits. Calculte fragments
-				if((numFrags=calculateFragments(hitsA,&frags,numHits,atoi(av[3])))<0) return -1;
+				if((numFrags=calculateFragments(hitsA,&frags,numHits,atoi(av[3]),atoi(av[4])))<0) return -1;
 				free(hitsA); // Free unnecesary space
 				// Write frags file
 					// Open output stream
@@ -95,11 +95,9 @@ int main(int ac, char** av){
 						fprintf(stderr, "Error opening output fragment file. [%s]\n", outputName);
 						return -1;
 					}
-					strcpy(outputName,av[4]); //Reset name
-
-				int k;
-				for(k=0; k<numFrags; ++k)
-					fwrite(&frags[k],sizeof(frag),1,fOut);
+					strcpy(outputName,av[5]); //Reset name
+			
+				fwrite(&frags[k],sizeof(frag),numFrags,fOut);
 				
 				fclose(fOut);
 
