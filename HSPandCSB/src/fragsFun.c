@@ -509,7 +509,7 @@ int calculateFragments(hit* hits, frag** frags, int numHits, int SThreshold, int
       frags[numFragments]->length = newLength;
       frags[numFragments]->S = newS;
     }else{ // Not enough quality, create new framgent
-      if(frags[numFragments] >= minLength)
+      if(frags[numFragments]->length >= minLength)
         numFragments++;
       //else overwrite actual fragment (invalid length)
       frags[numFragments]->start = hits[i].start1;

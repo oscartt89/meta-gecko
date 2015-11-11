@@ -18,16 +18,9 @@ int main(int ac, char** av){
 	dictionaryM* dicMSet;
 	hit *hitsA;
 	frag *frags;
+	FILE *fOut;
 	int numGenomes,numMetags,numHits,numFrags;
-	char *outputName;
 
-	// Allocate space for outputName variable
-	if((outputName = malloc(sizeof(char)*MAX_NAME_L))==NULL){
-		fprintf(stderr, "Error allocating space for outputFile name.\n");
-		return -1;
-	}
-
-	strcpy(outputName,av[5]);
 
 	// Load genome set dictionaries
 	if((numGenomes=readGenomeSet(av[1],&dicGSet))<0) return -1;
@@ -43,10 +36,16 @@ int main(int ac, char** av){
 		return -1;
 	}
 
+	// Open output file fragment
+	if((fOut = fopen(strcat(av[5],".frags"),"wb"))==NULL){
+		fprintf(stderr, "Error opening output fragment file. [%s]\n", av[5]);
+		return -1;
+	}
+
 	// Compare each read with each genome
 		//Necessary variables
 		int i=0,j,numWM,numWG;
-		FILE *dR, *dW, *dP, *fOut;
+		FILE *dR, *dW, *dP;
 		wentry *metag, *geno;
 
 	while(i<numMetags){
@@ -69,6 +68,7 @@ int main(int ac, char** av){
 			return -1;
 		}
 		
+
 		// Compare each read with each genome
 		while(!feof(dR)){
 			// Load read
@@ -86,21 +86,8 @@ int main(int ac, char** av){
 				if((numFrags=calculateFragments(hitsA,&frags,numHits,atoi(av[3]),atoi(av[4])))<0) return -1;
 				free(hitsA); // Free unnecesary space
 				// Write frags file
-					// Open output stream
-					strcat(outputName,&dicMSet[i].name[0]);
-					strcat(outputName,"_");
-					strcat(outputName,&dicGSet[j].name[0]);
-					strcat(outputName,".frags");
-					if((fOut = fopen(outputName,"wb"))==NULL){
-						fprintf(stderr, "Error opening output fragment file. [%s]\n", outputName);
-						return -1;
-					}
-					strcpy(outputName,av[5]); //Reset name
-			
-				fwrite(&frags[k],sizeof(frag),numFrags,fOut);
+				fwrite(&frags[0],sizeof(frag),numFrags,fOut);
 				
-				fclose(fOut);
-
 				// Free space
 				free(geno);
 			}
@@ -111,9 +98,11 @@ int main(int ac, char** av){
 		fclose(dR);
 		fclose(dW);
 		fclose(dP);
+
 		++i;		
 	}// for
 
+	fclose(fOut);
 	free(dicMSet);
 	free(dicGSet);
 
