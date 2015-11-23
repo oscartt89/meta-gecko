@@ -72,22 +72,22 @@ int createDictionary(char *fIN, char *fOUT){
 
 	// READ SEQUENCES
 	// Fasta files starts with a comment or read info line. Avoid it.
-	c = fgetc(metag);
-	while(feof(metag) & c != '\n')
-		c = fgetc(metag);
+//	c = fgetc(metag);
+//	while(feof(metag) & c != '\n')
+//		c = fgetc(metag);
 
 	// Check
 	if(feof(metag)){
-		fprintf(stderr, "Error reading metagenome file. Not sequence found.\n");
+		fprintf(stderr, "Error reading metagenome file. No sequence found.\n");
 		return -1;
 	}
 
 	// Necessary variables
-	unsigned long index = 0;
+	unsigned long index = 0; // Index on sequence
 	unsigned long inEntry = 0; // Length of the well formed sequence stored on the buffer
 	unsigned long NW = 0; // Number of well done sequences
 	wentry temp; // Buffer
-	temp.seq = 0;
+	temp.seq = -1;
 
 	// Read sequences
 	c = fgetc(metag);
@@ -99,7 +99,7 @@ int createDictionary(char *fIN, char *fOUT){
 					c = fgetc(metag);
 				temp.seq++; // New sequence
 				inEntry = 0; // Reset buffer length
-				index++; //
+				index=0; // Reset index
 
 				if(NW > 0){
 					// Store read kmers taken

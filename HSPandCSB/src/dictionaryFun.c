@@ -135,6 +135,8 @@ int wordComparator(wentry* w1,wentry* w2){
 	else if(w1->w.b[7] < w2->w.b[7]) return -1;
 
 	if(w1->pos > w2->pos) return 1;
+	else if(w1->pos < w2->pos) return -1;
+
 	return 0;
 }
 
@@ -146,32 +148,28 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 	hashentry he;
 	read re;
 	int i;
-	uint16_t loc;
-	uint64_t lastLoc = 0;
 
 	// Read info
 	re.readIndex = words[0].seq;
 	re.num = 0;
 	re.pos = ftell(wDic);
 	// First word
-	memcpy(&he.w.b[0],&words[0].w.b[0],8);
+	memcpy(&he.w.b[0],&words[0].w.b[0],BYTES_IN_WORD);
 	he.pos=ftell(pDic);
 	he.num=0;
 
 	// Write all
 	for(i=0 ; i<numWords; ++i){
-		loc = words[i].pos - lastLoc; // Location is relative to last location
 		if(wordcmp(&he.w.b[0],&words[i].w.b[0],BYTES_IN_WORD)!=0){ // New sequence
 			fwrite(&he,sizeof(hashentry),1,wDic); // Write kmer info
-			memcpy(&he.w.b[0],&words[i].w.b[0],8); // Tke new "current" kmer
+			memcpy(&he.w.b[0],&words[i].w.b[0],BYTES_IN_WORD); // Tke new "current" kmer
 			he.pos=ftell(pDic); // Take position of kmer locations on pDic
 			he.num=0;
 			re.num++;
 		}
 
 		// Write new location
-		fwrite(&loc,sizeof(uint16_t),1,pDic);
-		lastLoc = words[i].pos;
+		fwrite(&words[i].pos,sizeof(uint64_t),1,pDic);
 		he.num++;
 	}
 
