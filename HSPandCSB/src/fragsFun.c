@@ -322,11 +322,12 @@ uint64_t loadGenome(dictionaryG genome,wentry** kmers,int WL){
 uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
   uint64_t numHits = 0;
-  uint64_t currentSize = (numW1*numW2)/4;
+  int aux = 4;
+  uint64_t currentSize = (numW1*numW2)/aux;
 
   // Memory for hits
   if((*hits = (hit*) malloc(sizeof(hit)*currentSize))==NULL){
-    fprintf(stderr, "Error allocating memory for hits array.\n"); // ## Programa lanza excepción al cabo de unas iteraciones -> Exceso de memoria solicitada, optimizar!
+    fprintf(stderr, "Error allocating memory for hits array.\n");
     return -1;
   }
 
@@ -335,11 +336,11 @@ uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,in
   for(i=0;i<numW1;++i)
     for(j=0;j<numW2;++j){
       if(numHits >= currentSize){ // Realloc memory if it's necessary 
-        if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+(numW1*numW2)/4)))==NULL){
-          fprintf(stderr, "Error reallocating memory for hits array.\n"); // ## Programa lanza excepción al cabo de unas iteraciones -> Exceso de memoria solicitada, optimizar!
+        if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+(numW1*numW2)/aux)))==NULL){
+          fprintf(stderr, "Error reallocating memory for hits array.\n");
           return -1;
         }else
-          currentSize += numW1*numW2/3; // Update "current size"
+          currentSize += numW1*numW2/aux; // Update "current size"
       }
 
       if(wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],(WL*BITS_NUCLEOTIDE)/8)==0){ // Same word (hit)
@@ -491,32 +492,17 @@ uint64_t groupHits(hit* hits,uint64_t numHits){
 //fprintf(stdout, "\nCASE%i\t%d",i,newNumHits);
 ///////////////////////////////////////////////////////////////////
     if(hits[i].seq1 == hits[newNumHits].seq1 &
-       hits[i].seq2 == hits[newNumHits].seq2){ // Same sequences
+       hits[i].seq2 == hits[newNumHits].seq2 &
+       (hits[i].start1-hits[i].start2) == (hits[newNumHits].start1-hits[newNumHits].start2) &
+       (hits[newNumHits].start1 + hits[newNumHits].length) >= hits[i].start1){ // Same sequences & Same diag & collapsable
 ///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "\tEQ - ");
+//fprintf(stdout, "\tEQ - COLLAPSE");
 ///////////////////////////////////////////////////////////////////
-        collapsable = hits[newNumHits].start1 + hits[newNumHits].length >= hits[i].start1? 1 : 0;
-        if(collapsable){
-///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "COLLAPSE");
-///////////////////////////////////////////////////////////////////
-          // Collapse
-          newEnd = hits[i].start1 + hits[i].length;
-          hits[newNumHits].length = newEnd - hits[newNumHits].start1;   
-        }else{
-///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "NO COLLAPSE");
-///////////////////////////////////////////////////////////////////
-          newNumHits++;
-          hits[newNumHits].start1 = hits[i].start1;
-          hits[newNumHits].start2 = hits[i].start2;
-          hits[newNumHits].length = hits[i].length;
-          hits[newNumHits].seq1 = hits[i].seq1;
-          hits[newNumHits].seq2 = hits[i].seq2;
-        }        
+        newEnd = hits[i].start1 + hits[i].length;
+        hits[newNumHits].length = newEnd - hits[newNumHits].start1;   
     }else{ // No collapsable
 ///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "DF - NO COLLAPSE");
+//fprintf(stdout, "NO COLLAPSE");
 ///////////////////////////////////////////////////////////////////
       newNumHits++;
       hits[newNumHits].start1 = hits[i].start1;
@@ -541,13 +527,18 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
   // Calculate fragments
     // First instance
     frag.xStart = hits[0].start1;
-    frag.yStart = hits[0].start2; 
+    frag.yStart = hits[0].start2;
     frag.seqX = hits[0].seq1;
     frag.seqY = hits[0].seq2;
     frag.length = hits[0].length;
+    frag.xEnd = hits[0].start1 + hits[0].length;
+    frag.yEnd = hits[0].start2 + hits[0].length;
     frag.similarity = 100;
     frag.diag = hits[0].start1 - hits[0].start2;
     frag.ident = hits[0].length;
+    frag.block = 0; // Don't change for now
+    frag.strand = 'f'; // Reverse not implemented yet
+    frag.score = 4*hits[0].length;
 
 
   int i;
@@ -558,49 +549,90 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
     if(hitComparator(&hits[i],&hits[i-1])==0) continue;
 
     // Sequence change
-    if(hits[i].seq1 != frag.seqX | hits[i].seq2 != frag.seqY){
+    if(hits[i].seq1 != frag.seqX | hits[i].seq2 != frag.seqY){ // Different sequences
       if(frag.length >= minLength){ // Good enough -> write
+        // Update values
+        frag.xEnd = frag.xStart + frag.length;
+        frag.yEnd = frag.yStart + frag.length;
+        frag.score = (2*frag.ident - frag.length)*4;
+        // Write fragment
         fwrite(&frag,sizeof(FragFile),1,out);
         numFragments++;
       }      
       // Init new fragment
       frag.xStart = hits[i].start1;
-      frag.yStart = hits[i].start2; 
+      frag.yStart = hits[i].start2;
+      frag.xEnd = hits[i].start1 + hits[i].length;
+      frag.yEnd = hits[i].start2 + hits[i].length; 
       frag.seqX = hits[i].seq1;
       frag.seqY = hits[i].seq2;
       frag.length = hits[i].length;
       frag.similarity = 100;
       frag.diag = hits[i].start1 - hits[i].start2;
-      frag.ident = hits[0].length;
+      frag.ident = hits[i].length;
+      frag.score = 4*hits[i].length;
+      // Dont alter block and strand for now
       continue;
     }
 
-    // IF same sequences -> same diagonal
-    fragEnd = frag.xStart + frag.length;
-    newLength = hits[i].start1 + hits[i].length - frag.xStart;
-    oldLength = frag.length;
-    oldS = frag.similarity;
-    dist = fragEnd - hits[i].start1;
-    newS = (newLength - (dist + oldLength - oldLength*oldS))/newLength * 100;
+    // IF same sequences
+    if((hits[i].start1 - hits[i].start2) == frag.diag){ // Same diag
+      fragEnd = frag.xStart + frag.length;
+      newLength = hits[i].start1 + hits[i].length - frag.xStart;
+      oldLength = frag.length;
+      oldS = frag.similarity;
+      dist = fragEnd - hits[i].start1;
+      newS = (newLength - (dist + oldLength - oldLength*oldS))/newLength * 100;
 
-    if(newS >= SThreshold){ // Correct fragment, update
-      frag.length = newLength;
-      frag.similarity = newS;
-      frag.ident += newLength - oldLength - dist;
-    }else{ // Not enough quality (of new fragment), create new framgent
-      if(frag.length >= minLength){ // 
-        fwrite(&frag,sizeof(FragFile),1,out);
-        numFragments++;
+      if(newS >= SThreshold){ // Correct fragment, update
+        frag.length = newLength;
+        frag.similarity = newS;
+        frag.ident += newLength - oldLength - dist;
+      }else{ // Not enough quality (of new fragment), create new framgent
+        if(frag.length >= minLength){ // 
+          // Update values
+          frag.xEnd = frag.xStart + frag.length;
+          frag.yEnd = frag.yStart + frag.length;
+          frag.score = (2*frag.ident - frag.length)*4;
+          // Write fragment
+          fwrite(&frag,sizeof(FragFile),1,out);
+          numFragments++;
+        }
+        //else overwrite actual fragment (invalid length)
+        frag.xStart = hits[i].start1;
+        frag.yStart = hits[i].start2;
+        frag.xEnd = hits[i].start1 + hits[i].length;
+        frag.yEnd = hits[i].start2 + hits[i].length; 
+        frag.seqX = hits[i].seq1;
+        frag.seqY = hits[i].seq2;
+        frag.length = hits[i].length;
+        frag.similarity = 100;
+        frag.diag = hits[i].start1 - hits[i].start2;
+        frag.ident = hits[i].length;
+        frag.score = 4*hits[i].length;
       }
-      //else overwrite actual fragment (invalid length)
-      frag.xStart = hits[i].start1;
-      frag.yStart = hits[i].start2;
-      frag.diag = hits[i].start1 - hits[i].start2;
-      frag.length = hits[i].length;
-      frag.seqX = hits[i].seq1;
-      frag.seqY = hits[i].seq2;
-      frag.similarity = 100;
-      frag.ident = hits[i].length;
+    }else{ // Diff diag
+      if(frag.length >= minLength){ // 
+          // Update values
+          frag.xEnd = frag.xStart + frag.length;
+          frag.yEnd = frag.yStart + frag.length;
+          frag.score = (2*frag.ident - frag.length)*4;
+          // Write fragment
+          fwrite(&frag,sizeof(FragFile),1,out);
+          numFragments++;
+        }
+        //else overwrite actual fragment (invalid length)
+        frag.xStart = hits[i].start1;
+        frag.yStart = hits[i].start2;
+        frag.xEnd = hits[i].start1 + hits[i].length;
+        frag.yEnd = hits[i].start2 + hits[i].length; 
+        frag.seqX = hits[i].seq1;
+        frag.seqY = hits[i].seq2;
+        frag.length = hits[i].length;
+        frag.similarity = 100;
+        frag.diag = hits[i].start1 - hits[i].start2;
+        frag.ident = hits[i].length;
+        frag.score = 4*hits[i].length;
     }
   }
 

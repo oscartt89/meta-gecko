@@ -110,36 +110,43 @@ typedef struct{
 } hit;
 
 typedef struct{
-    // Start position of fragment on seqX
-    uint64_t xStart;
-    // Start position of fragment on seqY
-    uint64_t yStart;
-    // Diagonal (posX - posY)
+    //Diagonal where the frag is located
+    //This value is calculated as:
+    //posX - posY
     int64_t diag;
-    // Length of fragment
-    uint64_t length;
+    //Start position in sequence X
+    uint64_t xStart;
+    //Start position in Sequence Y
+    uint64_t yStart;
     //End position in Sequence X
-//    uint64_t xEnd;
+    uint64_t xEnd;
     //End position in Sequence Y
-//    uint64_t yEnd;
-    // Similarity
-    uint8_t similarity;
-    // Sequence X
-    uint64_t seqX;
-    // Sequence Y;
-    uint64_t seqY;
-    //synteny block id
-//    int64_t block;
-    //'f' for the forward strain and 'r' for the reverse
-//    char strand;
+    uint64_t yEnd;
+    //Fragment Length
+    //For ungaped aligment is:
+    //xEnd-xStart+1
+    uint64_t length;
     //Number of identities in the
     //fragment
     uint64_t ident;
     //Score of the fragment. This
     //depends on the score matrix
     //used
-//    uint64_t score;
-} FragFile;
+    uint64_t score;
+    //Percentage of similarity. This
+    //is calculated as score/scoreMax
+    //Where score max is the maximum
+    //score possible
+    float similarity;
+    //sequence number in the 'X' file
+    uint64_t seqX;
+    //sequence number in the 'Y' file
+    uint64_t seqY;
+    //synteny block id
+    int64_t block;
+    //'f' for the forward strain and 'r' for the reverse
+    char strand;
+}FragFile;
 
 // FUNCTIONS
 int readGenomeSet(char*,dictionaryG**);

@@ -117,7 +117,8 @@ fprintf(stdout, "\tG_Hits: %d",numGHits);
 ///////////////////////////////////////////////////////////////////
 fprintf(stdout, "\tFrags: %d",numFrags);
 ///////////////////////////////////////////////////////////////////
-					}
+					}else
+						free(hitsA);
 					// Write frags file
 	//				fwrite(&frags[0],sizeof(FragFile),numFrags,fOut);
 				}
