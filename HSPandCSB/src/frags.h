@@ -31,7 +31,7 @@ typedef struct {
     //For multiple sequence files this var
     //reflects in what sequence occurs the
     //word
-    uint64_t seq;
+    uint32_t seq;
 } wentry;
 
 typedef struct {
@@ -47,12 +47,24 @@ typedef struct {
 } hashentry;
 
 typedef struct {
+    //Word compressed in binary format
+    word w;
+    //Ocurrence position in the sequence
+    uint64_t pos;
+    //Number of ocurrences inside the
+    //sequence. This is used to know the
+    //number of locations stored in the
+    //positions file
+    uint16_t num;
+} hashentryNew;
+
+typedef struct {
     // Index of read
-    uint64_t readIndex;
+    uint32_t readIndex;
     // Position on word dictionary
     uint64_t pos;
     // Number of different kmers
-    uint64_t num;
+    uint16_t num;
 } READ; // "read" is used on dirent.h
 
 typedef struct {
@@ -92,9 +104,9 @@ typedef struct{
     // Length of hit
     uint64_t length;
     // Sequence 1
-    uint64_t seq1;
+    uint32_t seq1;
     // Sequence 2;
-    uint64_t seq2;
+    uint32_t seq2;
 } hit;
 
 typedef struct{
@@ -132,12 +144,13 @@ typedef struct{
 // FUNCTIONS
 int readGenomeSet(char*,dictionaryG**);
 int readMetagenomeSet(char*,dictionaryM**);
-int loadRead(FILE*,FILE*,FILE*,wentry**,int);
-int loadGenome(dictionaryG,wentry**,int);
-int hits(wentry*,wentry*,hit**,uint64_t,uint64_t,int);
+uint64_t loadRead(FILE*,FILE*,FILE*,wentry**,int);
+uint64_t loadGenome(dictionaryG,wentry**,int);
+uint64_t hits(wentry*,wentry*,hit**,uint64_t,uint64_t,int);
 int wordcmp(unsigned char *,unsigned char*,int); // Copied from dictionaryFun.c
 int quickSort(hit*,int,int); // Copied from ""
 int partition(hit*,int,int);// "" "" ""
 int hitComparator(hit*,hit*); // "" "" ""
 inline void SWAP(hit*,hit*,hit*);
-int calculateFragments(hit*,FragFile**,int,int,int);
+uint64_t groupHits(hit*,uint64_t);
+int calculateFragments(hit*,uint64_t,int,int,FILE*);

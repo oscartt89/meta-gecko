@@ -103,11 +103,11 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
   FILE *WD, *PD;
 
   // Allocate memory for genome dirs
-  free(*metagenomes);
   if((*metagenomes = (dictionaryM*) malloc(sizeof(dictionaryM)*MAX_METAGENOME_SET))==NULL){
     fprintf(stderr, "Error allocating memory for metagenome dictionary set.\n");
     return -1;
   }
+
 
   // Open metagenomes folder
   if((mFolder = opendir(metagSetPath))==NULL){
@@ -183,17 +183,17 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
  *  @return: number wentry instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
-int loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
+uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
   // Variables
   READ r;
-  hashentry he;
-  int numKmers = 0;
+  hashentryNew he;
+  uint64_t numKmers = 0;
 
   // Load read
   fread(&r,sizeof(READ),1,dR); 
 
   // KMERS space
-  if((*kmers = (wentry*) malloc(sizeof(wentry)*MAX_WORDS))==NULL){
+  if((*kmers = malloc(sizeof(wentry)*MAX_WORDS))==NULL){
     fprintf(stderr , "Error allocating space for metagenome KMERS.\n");
     return -1;
   }
@@ -203,36 +203,42 @@ int loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
 
   // Load kmers in wentry array
   int i,j;
+  uint16_t loc;
   uint64_t pos;
 
-  fprintf(stderr, "R.num:%d\n",r.num);
   for(i=0;i<r.num;++i){
     if(feof(dW)){
       fprintf(stderr, "Error reading hashentry. Premature end of file.\n");
       return -1;
     }
     // Read hashentry
-    fread(&he,sizeof(hashentry),1,dW);
+    fread(&he,sizeof(hashentryNew),1,dW);
 
     // Positionate on positions dictionary
     fseek(dP,he.pos,SEEK_SET);
 
-    fprintf(stderr, "H.num:%d\n",he.num);
     // Take locations
     for(j=0;j<he.num;++j){
       if(feof(dW)){
         fprintf(stderr, "Error reading position. Premature end of file.\n");
         return -1;
       }
-      fprintf(stderr, "TEST\n");
+
       // Store sequence
-      memcpy(&kmers[numKmers]->w.b[0],&he.w.b[0],WL); // ## Programa se para en ejecución al cabo de unas iteraciones 
+      memcpy(&(*kmers)[numKmers].w.b[0],&he.w.b[0],(WL*BITS_NUCLEOTIDE)/8);
       //Store seq index
-      kmers[numKmers]->seq = r.readIndex;
+      (*kmers)[numKmers].seq = r.readIndex;
       // Take pos
-      fread(&pos,sizeof(uint64_t),1,dP);
+      fread(&loc,sizeof(uint16_t),1,dP);
       //Store pos
-      kmers[numKmers]->pos = pos;
+      if(j==0){
+        (*kmers)[numKmers].pos = loc;
+        pos = loc;
+      }else{
+        (*kmers)[numKmers].pos = pos + loc;
+        pos += loc;
+      }
+
       // Update num kmers
       numKmers++;
     }
@@ -250,11 +256,11 @@ int loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
  *  @return: number wentry instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
-int loadGenome(dictionaryG genome,wentry** kmers,int WL){
+uint64_t loadGenome(dictionaryG genome,wentry** kmers,int WL){
   // Variables
   hashentry he;
   location lo;
-  int numKmers = 0, currentMax = MAX_WORDS;
+  uint64_t numKmers = 0, currentMax = MAX_WORDS;
   FILE *dW, *dP;
 
   // KMERS space
@@ -288,19 +294,24 @@ int loadGenome(dictionaryG genome,wentry** kmers,int WL){
     }
 
     for(i=0;i<he.num;++i){
+
+
       // Store sequence
-      memcpy(&kmers[numKmers]->w.b[0],&he.w.b[0],WL);
+      memcpy(&(*kmers)[numKmers].w.b[0],&he.w.b[0],(WL*BITS_NUCLEOTIDE)/8);
       // Read location
       fread(&lo,sizeof(location),1,dP);
       // Store sequence index
-      kmers[numKmers]->seq = lo.seq;
+      (*kmers)[numKmers].seq = lo.seq;
       // Store position
-      kmers[numKmers]->pos = lo.pos;
+      (*kmers)[numKmers].pos = lo.pos;
       // Update num of kmers
       numKmers++;
     }
     fread(&he,sizeof(hashentry),1,dW);    
   }
+
+  fclose(dW);
+  fclose(dP);
 
   return numKmers;
 }
@@ -308,32 +319,42 @@ int loadGenome(dictionaryG genome,wentry** kmers,int WL){
 
 /*
  */
-int hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
+uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
-  int numHits = 0;
+  uint64_t numHits = 0;
+  uint64_t currentSize = (numW1*numW2)/4;
 
   // Memory for hits
-  if((*hits = (hit*) malloc(sizeof(hit)*numW1*numW2))){
-    fprintf(stderr, "Error allocating memory for hits array.\n");
+  if((*hits = (hit*) malloc(sizeof(hit)*currentSize))==NULL){
+    fprintf(stderr, "Error allocating memory for hits array.\n"); // ## Programa lanza excepción al cabo de unas iteraciones -> Exceso de memoria solicitada, optimizar!
     return -1;
   }
 
   // Compare all reads
   int i,j;
   for(i=0;i<numW1;++i)
-    for(j=0;j<numW2;++j)
-      if(wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],WL)==0){
+    for(j=0;j<numW2;++j){
+      if(numHits >= currentSize){ // Realloc memory if it's necessary 
+        if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+(numW1*numW2)/4)))==NULL){
+          fprintf(stderr, "Error reallocating memory for hits array.\n"); // ## Programa lanza excepción al cabo de unas iteraciones -> Exceso de memoria solicitada, optimizar!
+          return -1;
+        }else
+          currentSize += numW1*numW2/3; // Update "current size"
+      }
+
+      if(wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],(WL*BITS_NUCLEOTIDE)/8)==0){ // Same word (hit)
         // Store position
-        hits[numHits]->start1 = w1[i].pos;
-        hits[numHits]->start2 = w2[j].pos;
+        (*hits)[numHits].start1 = w1[i].pos;
+        (*hits)[numHits].start2 = w2[j].pos;
         // Store length
-        hits[numHits]->length = (WL * 4)/ BITS_NUCLEOTIDE; 
+        (*hits)[numHits].length = WL; 
         // Store sequences indexes
-        hits[numHits]->seq1 = w1[i].seq;
-        hits[numHits]->seq2 = w2[j].seq;
+        (*hits)[numHits].seq1 = w1[i].seq;
+        (*hits)[numHits].seq2 = w2[j].seq;
         // Update number of hits
         numHits++;
       }
+    }
 
   return numHits;
 }
@@ -456,26 +477,77 @@ inline void SWAP(hit *h1,hit *h2,hit *t){
 
 /*
  */
-int calculateFragments(hit* hits, FragFile** frags, int numHits, int SThreshold, int minLength){
+uint64_t groupHits(hit* hits,uint64_t numHits){
+  // Variables
+  uint64_t newNumHits = 0;
+
+  // Hits must be ordered
+  // Group hits
+  int i, collapsable;
+  uint64_t newEnd;
+
+  for(i=1;i<numHits;++i){    
+///////////////////////////////////////////////////////////////////
+//fprintf(stdout, "\nCASE%i\t%d",i,newNumHits);
+///////////////////////////////////////////////////////////////////
+    if(hits[i].seq1 == hits[newNumHits].seq1 &
+       hits[i].seq2 == hits[newNumHits].seq2){ // Same sequences
+///////////////////////////////////////////////////////////////////
+//fprintf(stdout, "\tEQ - ");
+///////////////////////////////////////////////////////////////////
+        collapsable = hits[newNumHits].start1 + hits[newNumHits].length >= hits[i].start1? 1 : 0;
+        if(collapsable){
+///////////////////////////////////////////////////////////////////
+//fprintf(stdout, "COLLAPSE");
+///////////////////////////////////////////////////////////////////
+          // Collapse
+          newEnd = hits[i].start1 + hits[i].length;
+          hits[newNumHits].length = newEnd - hits[newNumHits].start1;   
+        }else{
+///////////////////////////////////////////////////////////////////
+//fprintf(stdout, "NO COLLAPSE");
+///////////////////////////////////////////////////////////////////
+          newNumHits++;
+          hits[newNumHits].start1 = hits[i].start1;
+          hits[newNumHits].start2 = hits[i].start2;
+          hits[newNumHits].length = hits[i].length;
+          hits[newNumHits].seq1 = hits[i].seq1;
+          hits[newNumHits].seq2 = hits[i].seq2;
+        }        
+    }else{ // No collapsable
+///////////////////////////////////////////////////////////////////
+//fprintf(stdout, "DF - NO COLLAPSE");
+///////////////////////////////////////////////////////////////////
+      newNumHits++;
+      hits[newNumHits].start1 = hits[i].start1;
+      hits[newNumHits].start2 = hits[i].start2;
+      hits[newNumHits].length = hits[i].length;
+      hits[newNumHits].seq1 = hits[i].seq1;
+      hits[newNumHits].seq2 = hits[i].seq2;
+    }
+  }// ROF
+
+  return newNumHits+1;
+}
+
+
+/*
+ */
+int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLength, FILE *out){
   // Variables
   int numFragments = 0;
+  FragFile frag;
   
-  // Take space for frags
-  if((*frags = (FragFile*) malloc(sizeof(FragFile)*numHits))==NULL){
-    fprintf(stderr, "Error allocating space for fragments array.\n");
-    return -1;
-  }
-
   // Calculate fragments
     // First instance
-    frags[numFragments]->xStart = hits[0].start1;
-    frags[numFragments]->yStart = hits[0].start2; 
-    frags[numFragments]->seqX = hits[0].seq1;
-    frags[numFragments]->seqY = hits[0].seq2;
-    frags[numFragments]->length = hits[0].length;
-    frags[numFragments]->similarity = 100;
-    frags[numFragments]->diag = hits[0].start1 - hits[0].start2;
-    frags[numFragments]->ident = hits[0].length;
+    frag.xStart = hits[0].start1;
+    frag.yStart = hits[0].start2; 
+    frag.seqX = hits[0].seq1;
+    frag.seqY = hits[0].seq2;
+    frag.length = hits[0].length;
+    frag.similarity = 100;
+    frag.diag = hits[0].start1 - hits[0].start2;
+    frag.ident = hits[0].length;
 
 
   int i;
@@ -486,47 +558,49 @@ int calculateFragments(hit* hits, FragFile** frags, int numHits, int SThreshold,
     if(hitComparator(&hits[i],&hits[i-1])==0) continue;
 
     // Sequence change
-    if(hits[i].seq1 != frags[numFragments]->seqX | hits[i].seq2 != frags[numFragments]->seqY){
-      if(frags[numFragments]->length >= minLength)
+    if(hits[i].seq1 != frag.seqX | hits[i].seq2 != frag.seqY){
+      if(frag.length >= minLength){ // Good enough -> write
+        fwrite(&frag,sizeof(FragFile),1,out);
         numFragments++;
+      }      
       // Init new fragment
-      frags[numFragments]->xStart = hits[i].start1;
-      frags[numFragments]->yStart = hits[i].start2; 
-      frags[numFragments]->seqX = hits[i].seq1;
-      frags[numFragments]->seqY = hits[i].seq2;
-      frags[numFragments]->length = hits[i].length;
-      frags[numFragments]->similarity = 100;
-      frags[numFragments]->diag = hits[i].start1 - hits[i].start2;
-      frags[numFragments]->ident = hits[0].length;
-      // Go to next hit
+      frag.xStart = hits[i].start1;
+      frag.yStart = hits[i].start2; 
+      frag.seqX = hits[i].seq1;
+      frag.seqY = hits[i].seq2;
+      frag.length = hits[i].length;
+      frag.similarity = 100;
+      frag.diag = hits[i].start1 - hits[i].start2;
+      frag.ident = hits[0].length;
       continue;
     }
 
     // IF same sequences -> same diagonal
-    fragEnd = frags[numFragments]->xStart + frags[numFragments]->length;
-    newLength = hits[i].start1 + hits[i].length - frags[numFragments]->xStart;
-    oldLength = frags[numFragments]->length;
-    oldS = frags[numFragments]->similarity;
+    fragEnd = frag.xStart + frag.length;
+    newLength = hits[i].start1 + hits[i].length - frag.xStart;
+    oldLength = frag.length;
+    oldS = frag.similarity;
     dist = fragEnd - hits[i].start1;
-      dist = dist < 0 ? 0 : dist;
     newS = (newLength - (dist + oldLength - oldLength*oldS))/newLength * 100;
 
     if(newS >= SThreshold){ // Correct fragment, update
-      frags[numFragments]->length = newLength;
-      frags[numFragments]->similarity = newS;
-      frags[numFragments]->ident += newLength - oldLength - dist;
-    }else{ // Not enough quality, create new framgent
-      if(frags[numFragments]->length >= minLength)
+      frag.length = newLength;
+      frag.similarity = newS;
+      frag.ident += newLength - oldLength - dist;
+    }else{ // Not enough quality (of new fragment), create new framgent
+      if(frag.length >= minLength){ // 
+        fwrite(&frag,sizeof(FragFile),1,out);
         numFragments++;
+      }
       //else overwrite actual fragment (invalid length)
-      frags[numFragments]->xStart = hits[i].start1;
-      frags[numFragments]->yStart = hits[i].start2;
-      frags[numFragments]->diag = hits[i].start1 - hits[i].start2;
-      frags[numFragments]->length = hits[i].length;
-      frags[numFragments]->seqX = hits[i].seq1;
-      frags[numFragments]->seqY = hits[i].seq2;
-      frags[numFragments]->similarity = 100;
-      frags[numFragments]->ident = hits[i].length;
+      frag.xStart = hits[i].start1;
+      frag.yStart = hits[i].start2;
+      frag.diag = hits[i].start1 - hits[i].start2;
+      frag.length = hits[i].length;
+      frag.seqX = hits[i].seq1;
+      frag.seqY = hits[i].seq2;
+      frag.similarity = 100;
+      frag.ident = hits[i].length;
     }
   }
 

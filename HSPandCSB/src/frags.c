@@ -17,10 +17,9 @@ int main(int ac, char** av){
 	dictionaryG* dicGSet;
 	dictionaryM* dicMSet;
 	hit *hitsA;
-	FragFile *frags;
+//	FragFile *frags;
 	FILE *fOut;
-	int numGenomes,numMetags,numHits,numFrags;
-
+	uint64_t numGenomes,numMetags,numHits,numGHits,numFrags;
 
 	// Load genome set dictionaries
 	if((numGenomes=readGenomeSet(av[1],&dicGSet))<0) return -1;
@@ -28,6 +27,7 @@ int main(int ac, char** av){
 		fprintf(stderr, "No genome dictionaries detected.\n");
 		return -1;
 	}
+
 	// Load metagenome set dictionaries
 	if((numMetags=readMetagenomeSet(av[2],&dicMSet))<0) return -1;
 	else if(numMetags==0){
@@ -36,15 +36,23 @@ int main(int ac, char** av){
 		return -1;
 	}
 
+///////////////////////////////////////////////////////////////////
+fprintf(stdout, "TEST::M=%d::G=%d\n",numMetags,numGenomes);
+///////////////////////////////////////////////////////////////////
+
+
 	// Open output file fragment
-	if((fOut = fopen(strcat(av[6],".frags"),"wb"))==NULL){
-		fprintf(stderr, "Error opening output fragment file. [%s]\n", av[5]);
+	char *outF = av[6];
+	strcat(outF,".fr");
+	if((fOut = fopen(outF,"wb"))==NULL){
+		fprintf(stderr, "Error opening output fragment file. [%s]\n", av[6]);
 		return -1;
 	}
 
 	// Compare each read with each genome
 		//Necessary variables
-		int i=0,j,numWM,numWG;
+		uint64_t numWM,numWG;
+		int i=0,j;
 		FILE *dR, *dW, *dP;
 		wentry *metag, *geno;
 
@@ -67,29 +75,56 @@ int main(int ac, char** av){
 			fprintf(stderr, "Any of the metagenome dictionaries are empty.\n");
 			return -1;
 		}
-		
 
 		// Compare each read with each genome
 		while(!feof(dR)){
 			// Load read
 			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
+
 			// Compare with each genome
-			for(j=0; j<numGenomes; ++j){
+			for(j=0; j<numGenomes & numWM>0; ++j){
+///////////////////////////////////////////////////////////////////
+fprintf(stdout, "WM: %d", numWM);
+///////////////////////////////////////////////////////////////////
 				// Load genome
 				if((numWG = loadGenome(dicGSet[j],&geno,atoi(av[5])))<0) return -1;
-				// Calc hits
-					// For now only 100% are allowed on hits
-				if((numHits = hits(metag,geno,&hitsA,numWM,numWG,atoi(av[5])))<0) return -1;
-				// Sort hits
-				if(quickSort(hitsA,0,numHits-1)<0) return -1;
-				// Filter hits. Calculte fragments
-				if((numFrags=calculateFragments(hitsA,&frags,numHits,atoi(av[3]),atoi(av[4])))<0) return -1;
-				free(hitsA); // Free unnecesary space
-				// Write frags file
-				fwrite(&frags[0],sizeof(FragFile),numFrags,fOut);
-				
-				// Free space
-				free(geno);
+///////////////////////////////////////////////////////////////////
+fprintf(stdout, "\tWG: %d", numWG);
+///////////////////////////////////////////////////////////////////
+				// Calc hits 
+				if(numWG > 0){
+					// For now only 100% are allowed on hits -> No gaps
+					if((numHits = hits(metag,geno,&hitsA,numWM,numWG,atoi(av[5])))<0) return -1;
+///////////////////////////////////////////////////////////////////
+fprintf(stdout, "\tHits: %d",numHits);
+///////////////////////////////////////////////////////////////////
+					// Free space
+					free(geno);
+					// Sort hits
+					if(quickSort(hitsA,0,numHits-1)<0) return -1;
+///////////////////////////////////////////////////////////////////
+fwrite(&hitsA[0],sizeof(hit),numHits,fOut);
+///////////////////////////////////////////////////////////////////
+					// Group hits
+					if(numHits>0){
+						if((numGHits=groupHits(hitsA,numHits))<0) return -1;
+///////////////////////////////////////////////////////////////////
+fprintf(stdout, "\tG_Hits: %d",numGHits);
+///////////////////////////////////////////////////////////////////
+					// Filter hits. Calculte fragments
+						if((numFrags=calculateFragments(hitsA,numGHits,atoi(av[3]),atoi(av[4]),fOut))<0) return -1;
+						free(hitsA); // Free unnecesary space
+///////////////////////////////////////////////////////////////////
+fprintf(stdout, "\tFrags: %d",numFrags);
+///////////////////////////////////////////////////////////////////
+					}
+					// Write frags file
+	//				fwrite(&frags[0],sizeof(FragFile),numFrags,fOut);
+				}
+///////////////////////////////////////////////////////////////////
+fprintf(stdout, "\n");
+///////////////////////////////////////////////////////////////////
+
 			}
 
 			free(metag); // Free space
@@ -101,7 +136,6 @@ int main(int ac, char** av){
 
 		++i;		
 	}// for
-
 	fclose(fOut);
 	free(dicMSet);
 	free(dicGSet);
