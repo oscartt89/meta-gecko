@@ -37,7 +37,7 @@ int main(int ac, char** av){
 	}
 
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "TEST::M=%d::G=%d\n",numMetags,numGenomes);
+//fprintf(stdout, "TEST::M=%d::G=%d\n",numMetags,numGenomes);
 ///////////////////////////////////////////////////////////////////
 
 
@@ -51,12 +51,13 @@ fprintf(stdout, "TEST::M=%d::G=%d\n",numMetags,numGenomes);
 
 	// Compare each read with each genome
 		//Necessary variables
-		uint64_t numWM,numWG;
-		int i=0,j;
+		uint64_t numWM,numWG=-1;
+		int i=0,j,k=1;
 		FILE *dR, *dW, *dP;
 		wentry *metag, *geno;
 
 	while(i<numMetags){
+fprintf(stdout, "LMG\n");
 		// Open dictionaries
 		if((dR = fopen(&dicMSet[i].R[0],"rb"))==NULL){
 			fprintf(stderr, "Error opening read dictionary. [%s]\n", &dicMSet[i].R);
@@ -76,46 +77,55 @@ fprintf(stdout, "TEST::M=%d::G=%d\n",numMetags,numGenomes);
 			return -1;
 		}
 
+
+		// Special case
+		if(numGenomes == 1)
+			if((numWG = loadGenome(dicGSet[0],&geno,atoi(av[5])))<0) return -1;
+
+
 		// Compare each read with each genome
 		while(!feof(dR)){
 			// Load read
+fprintf(stderr, "\tLR\t%d\n",k);
 			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
-
+++k;
 			// Compare with each genome
 			for(j=0; j<numGenomes & numWM>0; ++j){
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "WM: %d", numWM);
+//fprintf(stdout, "WM: %d", numWM);
 ///////////////////////////////////////////////////////////////////
 				// Load genome
-				if((numWG = loadGenome(dicGSet[j],&geno,atoi(av[5])))<0) return -1;
+				if(numGenomes > 1)
+					if((numWG = loadGenome(dicGSet[j],&geno,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tWG: %d", numWG);
+//fprintf(stdout, "\tWG: %d", numWG);
 ///////////////////////////////////////////////////////////////////
 				// Calc hits 
 				if(numWG > 0){
 					// For now only 100% are allowed on hits -> No gaps
 					if((numHits = hits(metag,geno,&hitsA,numWM,numWG,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tHits: %d",numHits);
+//fprintf(stdout, "\tHits: %d",numHits);
 ///////////////////////////////////////////////////////////////////
-					// Free space
-					free(geno);
+					if(numGenomes > 1)
+						// Free space
+						free(geno);
 					// Sort hits
 					if(quickSort(hitsA,0,numHits-1)<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fwrite(&hitsA[0],sizeof(hit),numHits,fOut);
+//fwrite(&hitsA[0],sizeof(hit),numHits,fOut);
 ///////////////////////////////////////////////////////////////////
 					// Group hits
 					if(numHits>0){
 						if((numGHits=groupHits(hitsA,numHits))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tG_Hits: %d",numGHits);
+//fprintf(stdout, "\tG_Hits: %d",numGHits);
 ///////////////////////////////////////////////////////////////////
 					// Filter hits. Calculte fragments
 						if((numFrags=calculateFragments(hitsA,numGHits,atoi(av[3]),atoi(av[4]),fOut))<0) return -1;
 						free(hitsA); // Free unnecesary space
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tFrags: %d",numFrags);
+//fprintf(stdout, "\tFrags: %d",numFrags);
 ///////////////////////////////////////////////////////////////////
 					}else
 						free(hitsA);
@@ -123,13 +133,15 @@ fprintf(stdout, "\tFrags: %d",numFrags);
 	//				fwrite(&frags[0],sizeof(FragFile),numFrags,fOut);
 				}
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\n");
+//fprintf(stdout, "\n");
 ///////////////////////////////////////////////////////////////////
 
 			}
 
 			free(metag); // Free space
 		}
+
+		if(numGenomes == 1) free(geno);
 
 		fclose(dR);
 		fclose(dW);

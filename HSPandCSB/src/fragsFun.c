@@ -322,7 +322,7 @@ uint64_t loadGenome(dictionaryG genome,wentry** kmers,int WL){
 uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
   uint64_t numHits = 0;
-  int aux = 4;
+  int aux = 10;
   uint64_t currentSize = (numW1*numW2)/aux;
 
   // Memory for hits
@@ -332,9 +332,10 @@ uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,in
   }
 
   // Compare all reads
-  int i,j;
-  for(i=0;i<numW1;++i)
-    for(j=0;j<numW2;++j){
+  int i,j,comp;
+  for(i=0;i<numW1;++i){
+    comp = 0; // Reset value
+    for(j=0;j<numW2 & comp >= 0;++j){
       if(numHits >= currentSize){ // Realloc memory if it's necessary 
         if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+(numW1*numW2)/aux)))==NULL){
           fprintf(stderr, "Error reallocating memory for hits array.\n");
@@ -343,7 +344,9 @@ uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,in
           currentSize += numW1*numW2/aux; // Update "current size"
       }
 
-      if(wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],(WL*BITS_NUCLEOTIDE)/8)==0){ // Same word (hit)
+      comp = wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],(WL*BITS_NUCLEOTIDE)/8);
+
+      if(comp==0){ // Same word (hit)
         // Store position
         (*hits)[numHits].start1 = w1[i].pos;
         (*hits)[numHits].start2 = w2[j].pos;
@@ -356,6 +359,7 @@ uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,in
         numHits++;
       }
     }
+  }
 
   return numHits;
 }
@@ -544,6 +548,15 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
   int i;
   uint64_t fragEnd,dist,oldLength,newLength;
   uint8_t oldS, newS;
+
+  // Exception
+  if(numHits == 1 & SThreshold <= 100 & minLength <= frag.length){
+    // Write fragment
+      fwrite(&frag,sizeof(FragFile),1,out);
+      numFragments++;
+  }
+
+
   for(i=1; i<numHits; i++){
     // If hits are equal discard one
     if(hitComparator(&hits[i],&hits[i-1])==0) continue;
