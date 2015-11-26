@@ -41,7 +41,7 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
     // Check for memory
     if(numGenomes>=currentMax){
       if((*genomes = realloc(*genomes,sizeof(dictionaryG)*(currentMax + MAX_GENOME_SET)))==NULL){
-        fprintf(stderr, "Error reallicatin memory for genome dictionary set.\n");
+        fprintf(stderr, "Error reallocating memory for genome dictionary set.\n");
         return -1;
       }
       currentMax += MAX_GENOME_SET;
@@ -183,7 +183,7 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
  *  @return: number wentry instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
-uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
+uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
   // Variables
   READ r;
   hashentryNew he;
@@ -193,7 +193,7 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
   fread(&r,sizeof(READ),1,dR); 
 
   // KMERS space
-  if((*kmers = malloc(sizeof(wentry)*MAX_WORDS))==NULL){
+  if((*kmers = malloc(sizeof(HE)*MAX_WORDS))==NULL){
     fprintf(stderr , "Error allocating space for metagenome KMERS.\n");
     return -1;
   }
@@ -203,8 +203,7 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
 
   // Load kmers in wentry array
   int i,j;
-  uint16_t loc;
-  uint64_t pos;
+  uint64_t loc;
 
   for(i=0;i<r.num;++i){
     if(feof(dW)){
@@ -217,31 +216,32 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
     // Positionate on positions dictionary
     fseek(dP,he.pos,SEEK_SET);
 
+    // Store sequence
+    memcpy(&(*kmers)[numKmers].w.b[0],&he.w.b[0],(WL*BITS_NUCLEOTIDE)/8);
+    // Store seq index
+    (*kmers)[numKmers].seq = r.readIndex;
+    // Store num instances
+    (*kmers)[numKmers].num = he.num;
+
+    // Locations array space
+    if(((*kmers)[numKmers].locations = (uint64_t*) malloc(sizeof(uint64_t)*MAX_WORDS))==NULL){
+      fprintf(stderr , "Error allocating space for metagenome KMER locations.\n");
+      return -1;
+    }
+
     // Take locations
     for(j=0;j<he.num;++j){
       if(feof(dW)){
         fprintf(stderr, "Error reading position. Premature end of file.\n");
         return -1;
       }
-
-      // Store sequence
-      memcpy(&(*kmers)[numKmers].w.b[0],&he.w.b[0],(WL*BITS_NUCLEOTIDE)/8);
-      //Store seq index
-      (*kmers)[numKmers].seq = r.readIndex;
       // Take pos
-      fread(&loc,sizeof(uint16_t),1,dP);
-      //Store pos
-      if(j==0){
-        (*kmers)[numKmers].pos = loc;
-        pos = loc;
-      }else{
-        (*kmers)[numKmers].pos = pos + loc;
-        pos += loc;
-      }
-
-      // Update num kmers
-      numKmers++;
+      fread(&loc,sizeof(uint64_t),1,dP);
+      // Store position
+      (*kmers)[numKmers].locations[j] = loc;
     }
+        // Update num kmers
+    numKmers++;
   }
 
   return numKmers;
@@ -251,12 +251,13 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,wentry** kmers,int WL){
 /* This function all words from a genome dictionary and load
  * it in a wentry array given.
  *  @param genome: genome dictionary structure.
- *  @param kmers: array of wentry where words will be allocated.
+ *  @param kmers: array of HE where hashentry read will be allocated.
+ *  @param locations: array of array of integers where locations will be allocated.
  *  @param WL: word length.
  *  @return: number wentry instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
-uint64_t loadGenome(dictionaryG genome,wentry** kmers,int WL){
+uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
   // Variables
   hashentry he;
   location lo;
@@ -264,10 +265,11 @@ uint64_t loadGenome(dictionaryG genome,wentry** kmers,int WL){
   FILE *dW, *dP;
 
   // KMERS space
-  if((*kmers = (wentry*) malloc(sizeof(wentry)*MAX_WORDS))==NULL){
+  if((*kmers = (HE*) malloc(sizeof(HE)*MAX_WORDS))==NULL){
     fprintf(stderr , "Error allocating space for metagenome KMERS.\n");
     return -1;
   }
+
   // Open dictionaries
   if((dW = fopen(&genome.W[0],"rb"))==NULL){
     fprintf(stderr, "Error opening genome word dictionary. [%s]\n",&genome.W[0]);
@@ -286,27 +288,38 @@ uint64_t loadGenome(dictionaryG genome,wentry** kmers,int WL){
   while(!feof(dW)){
     // Num of kmers exceeded
     if(numKmers >= currentMax){
-      if((*kmers = realloc(*kmers,sizeof(wentry)*(currentMax + MAX_WORDS)))==NULL){
-        fprintf(stderr, "Error reallocating memory for genome wentry set.\n");
+      if((*kmers = realloc(*kmers,sizeof(hashentry)*(currentMax + MAX_WORDS)))==NULL){
+        fprintf(stderr, "Error reallocating memory for genome hashentry set.\n");
         return -1;
       }
       currentMax += MAX_WORDS;
     }
 
+    // Store sequence
+    memcpy(&(*kmers)[numKmers].w.b[0],&he.w.b[0],(WL*BITS_NUCLEOTIDE)/8);
+    (*kmers)[numKmers].seq = numKmers;
+    (*kmers)[numKmers].num = he.num;
+
+    // Locations array space
+    if(((*kmers)[numKmers].locations = (uint64_t*) malloc(sizeof(uint64_t)*MAX_WORDS))==NULL){
+      fprintf(stderr , "Error allocating space for metagenome KMER locations.\n");
+      return -1;
+    }
+
+    // Take locations
     for(i=0;i<he.num;++i){
-
-
-      // Store sequence
-      memcpy(&(*kmers)[numKmers].w.b[0],&he.w.b[0],(WL*BITS_NUCLEOTIDE)/8);
       // Read location
       fread(&lo,sizeof(location),1,dP);
-      // Store sequence index
-      (*kmers)[numKmers].seq = lo.seq;
+      
+      if(i == 0){
+        // Store sequence index
+        (*kmers)[numKmers].seq = lo.seq;
+      }
       // Store position
-      (*kmers)[numKmers].pos = lo.pos;
-      // Update num of kmers
-      numKmers++;
+      (*kmers)[numKmers].locations[i] = lo.pos;
     }
+    // Update num of kmers
+    numKmers++;
     fread(&he,sizeof(hashentry),1,dW);    
   }
 
@@ -319,7 +332,7 @@ uint64_t loadGenome(dictionaryG genome,wentry** kmers,int WL){
 
 /*
  */
-uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
+uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
   uint64_t numHits = 0;
   int aux = 10;
@@ -332,10 +345,10 @@ uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,in
   }
 
   // Compare all reads
-  int i,j,comp;
+  int i,j,comp,lastIndex=0;
   for(i=0;i<numW1;++i){
     comp = 0; // Reset value
-    for(j=0;j<numW2 & comp >= 0;++j){
+    for(j=lastIndex;j<numW2 & comp >= 0;++j){
       if(numHits >= currentSize){ // Realloc memory if it's necessary 
         if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+(numW1*numW2)/aux)))==NULL){
           fprintf(stderr, "Error reallocating memory for hits array.\n");
@@ -347,16 +360,21 @@ uint64_t hits(wentry* w1,wentry* w2,hit** hits,uint64_t numW1, uint64_t numW2,in
       comp = wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],(WL*BITS_NUCLEOTIDE)/8);
 
       if(comp==0){ // Same word (hit)
-        // Store position
-        (*hits)[numHits].start1 = w1[i].pos;
-        (*hits)[numHits].start2 = w2[j].pos;
-        // Store length
-        (*hits)[numHits].length = WL; 
-        // Store sequences indexes
-        (*hits)[numHits].seq1 = w1[i].seq;
-        (*hits)[numHits].seq2 = w2[j].seq;
-        // Update number of hits
-        numHits++;
+        int k,h;
+        for(k=0; k < w1[i].num;++i)
+          for(h=0; h < w2[j].num;++i){
+            // Store position
+            (*hits)[numHits].start1 = w1[i].locations[k];
+            (*hits)[numHits].start2 = w2[j].locations[h];
+            // Store length
+            (*hits)[numHits].length = WL; 
+            // Store sequences indexes
+            (*hits)[numHits].seq1 = w1[i].locations[k];
+            (*hits)[numHits].seq2 = w2[j].locations[h];
+            // Update number of hits
+            numHits++;
+          }
+        lastIndex = j; // Next iterance starts here
       }
     }
   }

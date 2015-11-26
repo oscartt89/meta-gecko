@@ -52,12 +52,11 @@ int main(int ac, char** av){
 	// Compare each read with each genome
 		//Necessary variables
 		uint64_t numWM,numWG=-1;
-		int i=0,j,k=1;
+		int i=0,j;
 		FILE *dR, *dW, *dP;
-		wentry *metag, *geno;
+		HE *metag, *geno;
 
 	while(i<numMetags){
-fprintf(stdout, "LMG\n");
 		// Open dictionaries
 		if((dR = fopen(&dicMSet[i].R[0],"rb"))==NULL){
 			fprintf(stderr, "Error opening read dictionary. [%s]\n", &dicMSet[i].R);
@@ -86,9 +85,7 @@ fprintf(stdout, "LMG\n");
 		// Compare each read with each genome
 		while(!feof(dR)){
 			// Load read
-fprintf(stderr, "\tLR\t%d\n",k);
 			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
-++k;
 			// Compare with each genome
 			for(j=0; j<numGenomes & numWM>0; ++j){
 ///////////////////////////////////////////////////////////////////

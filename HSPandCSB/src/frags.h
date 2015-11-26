@@ -11,7 +11,8 @@
 #define MAX_NAME_L 1024
 #define MAX_GENOME_SET 40
 #define MAX_METAGENOME_SET 10
-static const uint64_t MAX_WORDS = 1000000; // Common with dictionary.h variable
+static const uint64_t MAX_WORDS = 10000; // Common with dictionary.h variable
+static const int MAX_HE = 10000; 
 #define BYTES_WORD 8
 #define BITS_NUCLEOTIDE 2
 
@@ -37,7 +38,7 @@ typedef struct {
 typedef struct {
     //Word compressed in binary format
     word w;
-    //Ocurrence position in the sequence
+    //Ocurrence position in the position dictionary
     uint64_t pos;
     //Number of ocurrences inside the
     //sequence. This is used to know the
@@ -49,7 +50,7 @@ typedef struct {
 typedef struct {
     //Word compressed in binary format
     word w;
-    //Ocurrence position in the sequence
+    //Ocurrence position in the position dictionary
     uint64_t pos;
     //Number of ocurrences inside the
     //sequence. This is used to know the
@@ -57,6 +58,17 @@ typedef struct {
     //positions file
     uint16_t num;
 } hashentryNew;
+
+typedef struct{
+    // Word compressed in binary format
+    word w;
+    // Sequence
+    uint32_t seq;
+    // Num of instances on location array
+    uint16_t num;
+    // Locations
+    uint64_t* locations;
+}HE;
 
 typedef struct {
     // Index of read
@@ -151,9 +163,9 @@ typedef struct{
 // FUNCTIONS
 int readGenomeSet(char*,dictionaryG**);
 int readMetagenomeSet(char*,dictionaryM**);
-uint64_t loadRead(FILE*,FILE*,FILE*,wentry**,int);
-uint64_t loadGenome(dictionaryG,wentry**,int);
-uint64_t hits(wentry*,wentry*,hit**,uint64_t,uint64_t,int);
+uint64_t loadRead(FILE*,FILE*,FILE*,HE**,int);
+uint64_t loadGenome(dictionaryG,HE**,int);
+uint64_t hits(HE*,HE*,hit**,uint64_t,uint64_t,int);
 int wordcmp(unsigned char *,unsigned char*,int); // Copied from dictionaryFun.c
 int quickSort(hit*,int,int); // Copied from ""
 int partition(hit*,int,int);// "" "" ""
