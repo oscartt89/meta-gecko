@@ -1,7 +1,8 @@
 #include "dictionary.h"
 
 
-/*
+/* This function is used to shift bits in a unsigned char array
+ *	@param w: word structure where char array to be shifted is stored.
  */
 void shift_word(word* w){
 	int i;
@@ -38,115 +39,17 @@ int storeWord(wentry* wArr,wentry *word,int length){
 }
 
 
-/* 	
- */
-int quickSort(wentry* words, int left, int right){
-	int j;
-
-	if(left < right){
-		// divide and conquer
-		if((j = partition(words, left, right))<0) return -1;
-		quickSort(words, left, j-1);
-		quickSort(words, j+1, right);
-	}
-	return 0;
-}
-
-
-/*
- */
-int partition(wentry* words, int left, int right){
-	int i = left;
-	int j = right+1;
-	wentry *t;
-
-	if((t = (wentry*) malloc(sizeof(wentry)))==NULL){
-		fprintf(stderr, "Error allocating memory for auxiliar variable.\n");
-		return -1;
-	}
-
-	// left sera el pivote
-	// y contendra la mediana de left, right y (left+right)/2
-	int mid = (int) (left+right)/2;
-
-	if(wordComparator(&words[mid],&words[right]))
-		SWAP(&words[mid],&words[right],t);
-
-	if(wordComparator(&words[mid],&words[left]))
-		SWAP(&words[mid],&words[left],t);
-
-	if(wordComparator(&words[left],&words[right]))
-		SWAP(&words[left],&words[right],t);
-
-	while(1){
-		do{
-			++i;
-		}while(!wordComparator(&words[i],&words[left]) && i <= right);
-
-		do{
-			--j;
-		}while(wordComparator(&words[j],&words[left]) && j >= left);
-
-		if( i >= j ) break;
-
-		SWAP(&words[i],&words[j],t);
-	}
-
-	SWAP(&words[left],&words[j],t);
-
-	free(t);
-
-	return j;
-}
-
-
-/* This function is used to compare two wentry instances. The criterion
- * used is:
- * 		1 - Compare sequences (alphabetically).
- * 		2 - Compare position on sequence.
- * @param w1 word to be compared.
- * @param w2 word to be compared.
- * @return a positive number if w1 is greater than w2, a negative number
- * 		if w2 is greater than w1 and zero if both are equal.
- */
-int wordComparator(wentry* w1,wentry* w2){
-	if(w1->w.b[0] > w2->w.b[0]) return 1;
-	else if(w1->w.b[0] < w2->w.b[0]) return -1;
-
-	if(w1->w.b[1] > w2->w.b[1]) return 1;
-	else if(w1->w.b[1] < w2->w.b[1]) return -1;
-
-	if(w1->w.b[2] > w2->w.b[2]) return 1;
-	else if(w1->w.b[2] < w2->w.b[2]) return -1;
-
-	if(w1->w.b[3] > w2->w.b[3]) return 1;
-	else if(w1->w.b[3] < w2->w.b[3]) return -1;
-
-	if(w1->w.b[4] > w2->w.b[4]) return 1;
-	else if(w1->w.b[4] < w2->w.b[4]) return -1;
-
-	if(w1->w.b[5] > w2->w.b[5]) return 1;
-	else if(w1->w.b[5] < w2->w.b[5]) return -1;
-
-	if(w1->w.b[6] > w2->w.b[6]) return 1;
-	else if(w1->w.b[6] < w2->w.b[6]) return -1;
-
-	if(w1->w.b[7] > w2->w.b[7]) return 1;
-	else if(w1->w.b[7] < w2->w.b[7]) return -1;
-
-	if(w1->pos > w2->pos) return 1;
-	else if(w1->pos < w2->pos) return -1;
-
-	return 0;
-}
-
-
-/*
+/* This function is used to write an array of words in a new dictionary.
+ *	@param words: array of wentry instances that will be written on the dictionary.
+ *	@param numWords: number of instances on words array.
+ *	@param wDic: words dictionary file pointer.
+ *	@param pDic: positions dictionary file pointer.
+ *	@param rDic: reads dictionary file pointer.
  */
 void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 	//Variables
 	hashentry he;
-	read re;
+	Read re;
 	int i;
 
 	// Read info
@@ -178,24 +81,5 @@ void writeDic(wentry* words,int numWords,FILE *wDic,FILE *pDic,FILE *rDic){
 	re.num++;
 
 	// Write Read information
-	fwrite(&re,sizeof(read),1,rDic);
-}
-
-
-/*
- */
-int wordcmp(unsigned char *w1, unsigned char*w2, int n) {
-	int i;
-	for (i=0;i<n;i++) {
-		if (w1[i]<w2[i]) return -1;
-		if (w1[i]>w2[i]) return +1;
-	}
-	return 0;
-}
-
-
-inline void SWAP(wentry *w1,wentry *w2,wentry *t){
-	memcpy(t,w1,sizeof(wentry));
-	memcpy(w1,w2,sizeof(wentry));
-	memcpy(w2,t,sizeof(wentry));
+	fwrite(&re,sizeof(Read),1,rDic);
 }

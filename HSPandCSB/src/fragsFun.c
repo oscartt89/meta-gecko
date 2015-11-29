@@ -19,20 +19,20 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
 	DIR *gFolder;
 	struct dirent *ent;
 	char *wD, *pD;
-  char file[MAX_NAME_L];
+  char file[MAX_FILE_LENGTH];
 	int numGenomes = 0, currentMax = MAX_GENOME_SET;
   FILE *WD, *PD;
 
   // Allocate memory for genome dirs
   free(*genomes);
   if((*genomes = (dictionaryG*) malloc(sizeof(dictionaryG)*MAX_GENOME_SET))==NULL){
-    fprintf(stderr, "Error allocating memory for genome dictionary set.\n");
+    fprintf(stderr, "readGenomeSet:: Error allocating memory for genome dictionary set.\n");
     return -1;
   }
 
 	// Open genomes folder
 	if((gFolder = opendir(genomeSetPath))==NULL){
-		fprintf(stderr, "Error opening genomes folder.\n");
+		fprintf(stderr, "readGenomeSet:: Error opening genomes folder.\n");
 		return -1;
   }
 
@@ -41,7 +41,7 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
     // Check for memory
     if(numGenomes>=currentMax){
       if((*genomes = realloc(*genomes,sizeof(dictionaryG)*(currentMax + MAX_GENOME_SET)))==NULL){
-        fprintf(stderr, "Error reallocating memory for genome dictionary set.\n");
+        fprintf(stderr, "readGenomeSet:: Error reallocating memory for genome dictionary set.\n");
         return -1;
       }
       currentMax += MAX_GENOME_SET;
@@ -59,7 +59,7 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
 			strcpy(genomes[numGenomes]->P,&file[0]);
 			//Next file should be d2hW dictionary
 			if((ent = readdir(gFolder))==NULL){
-				fprintf(stderr, "Error: incomplete genome pair dictionary. End of file list.\n");
+				fprintf(stderr, "readGenomeSet:: Error: incomplete genome pair dictionary. End of file list.\n");
 				return -1;
 			}
 			if(strstr(ent->d_name,".d2hW")!=NULL && strstr(ent->d_name,".metag.d2h")==NULL){
@@ -69,10 +69,10 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
 				strcpy(genomes[numGenomes]->W,&file[0]);
 				numGenomes++;
 			}else if(strstr(ent->d_name,".metag.d2h")!=NULL){
-        fprintf(stderr, "Error: it's a metagenome dictionary.\n");
+        fprintf(stderr, "readGenomeSet:: Error: it's a metagenome dictionary.\n");
         return -1;
       }else{
-				fprintf(stderr, "Error: incomplete genome pair dictionary.\n");
+				fprintf(stderr, "readGenomeSet:: Error: incomplete genome pair dictionary.\n");
 				return -1;
 			}
 		}
@@ -98,20 +98,20 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
   DIR *mFolder;
   struct dirent *ent;
   char *wD, *pD, *rD;
-  char file[MAX_NAME_L];
+  char file[MAX_FILE_LENGTH];
   int numMetags = 0, currentMax = MAX_METAGENOME_SET;
   FILE *WD, *PD;
 
   // Allocate memory for genome dirs
   if((*metagenomes = (dictionaryM*) malloc(sizeof(dictionaryM)*MAX_METAGENOME_SET))==NULL){
-    fprintf(stderr, "Error allocating memory for metagenome dictionary set.\n");
+    fprintf(stderr, "readMetagenomeSet:: Error allocating memory for metagenome dictionary set.\n");
     return -1;
   }
 
 
   // Open metagenomes folder
   if((mFolder = opendir(metagSetPath))==NULL){
-    fprintf(stderr, "Error opening metagenomes folder.\n");
+    fprintf(stderr, "readMetagenomeSet:: Error opening metagenomes folder.\n");
     return -1;
   }
 
@@ -120,11 +120,12 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
     // Check for memory
     if(numMetags>=currentMax){
       if((*metagenomes = realloc(*metagenomes,sizeof(dictionaryM)*(currentMax + MAX_METAGENOME_SET)))==NULL){
-        fprintf(stderr, "Error reallocatin memory for metagenome dictionary set.\n");
+        fprintf(stderr, "readMetagenomeSet:: Error reallocating memory for metagenome dictionary set.\n");
         return -1;
       }
       currentMax += MAX_METAGENOME_SET;
     }
+
     // Files are sorted alphabetically
     // Should appear first d2hP, then d2hR and d2hW
     if(strstr(ent->d_name,".metag.d2hP")!=NULL){ // New dictionary
@@ -136,7 +137,7 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
       strcpy(&metagenomes[numMetags]->P[0],&file[0]);
       //Next file should be d2hR dictionary
       if((ent = readdir(mFolder))==NULL){
-        fprintf(stderr, "Error: incomplete metagenome triplet dictionary. End of file list.\n");
+        fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triplet dictionary. End of file list.\n");
         return -1;
       }
       if(strstr(ent->d_name,".metag.d2hR")!=NULL){
@@ -146,7 +147,7 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
         strcpy(&metagenomes[numMetags]->R[0],&file[0]);
         // Now should appear words dictionary
         if((ent = readdir(mFolder))==NULL){
-          fprintf(stderr, "Error: incomplete metagenome triplet dictionary. End of file list.\n");
+          fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triplet dictionary. End of file list.\n");
           return -1;
         }
         if(strstr(ent->d_name,".metag.d2hW")!=NULL){
@@ -156,11 +157,11 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
           strcpy(&metagenomes[numMetags]->W[0],&file[0]);
           numMetags++; 
         }else{
-          fprintf(stderr, "Error: incomplete metagenome triple dictionary. Word dictionary not found.\n");
+          fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triple dictionary. Word dictionary not found.\n");
           return -1;  
         }
       }else{
-        fprintf(stderr, "Error: incomplete metagenome triple dictionary. Read dictionary not found.\n");
+        fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triple dictionary. Read dictionary not found.\n");
         return -1;
       }
     }
@@ -174,44 +175,44 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
 
 
 /* This function takes a read from read dictionary given and
- * load all the words of this read in a wentry array given too.
+ * load all the words of this read in a HE array given too.
  *  @param dR: reads dictionary.
  *  @param dW: words dictionary.
  *  @param dP: positions dictionary.
- *  @param kmers: array of wentry where words will be allocated.
+ *  @param kmers: array of HE where words will be allocated.
  *  @param WL: word length.
- *  @return: number wentry instances allocated on kmers.
+ *  @return: number HE instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
 uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
   // Variables
-  READ r;
-  hashentryNew he;
+  Read r;
+  hashentry he;
   uint64_t numKmers = 0;
 
   // Load read
-  fread(&r,sizeof(READ),1,dR); 
+  fread(&r,sizeof(read),1,dR); 
 
   // KMERS space
   if((*kmers = malloc(sizeof(HE)*MAX_WORDS))==NULL){
-    fprintf(stderr , "Error allocating space for metagenome KMERS.\n");
+    fprintf(stderr , "loadRead:: Error allocating space for metagenome KMERS.\n");
     return -1;
   }
 
   // Positionate on word dictionary
   fseek(dW,r.pos,SEEK_SET);
 
-  // Load kmers in wentry array
+  // Load kmers in HE array
   int i,j;
   uint64_t loc;
 
   for(i=0;i<r.num;++i){
     if(feof(dW)){
-      fprintf(stderr, "Error reading hashentry. Premature end of file.\n");
+      fprintf(stderr, "loadRead:: Error reading hashentry. Premature end of file.\n");
       return -1;
     }
     // Read hashentry
-    fread(&he,sizeof(hashentryNew),1,dW);
+    fread(&he,sizeof(hashentry),1,dW);
 
     // Positionate on positions dictionary
     fseek(dP,he.pos,SEEK_SET);
@@ -222,25 +223,23 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
     (*kmers)[numKmers].seq = r.readIndex;
     // Store num instances
     (*kmers)[numKmers].num = he.num;
-
     // Locations array space
-    if(((*kmers)[numKmers].locations = (uint64_t*) malloc(sizeof(uint64_t)*MAX_WORDS))==NULL){
-      fprintf(stderr , "Error allocating space for metagenome KMER locations.\n");
+    if(((*kmers)[numKmers].locations = (uint64_t*) malloc(sizeof(uint64_t)*he.num))==NULL){
+      fprintf(stderr , "loadRead:: Error allocating space for metagenome KMER locations.(%i)\n",he.num);
       return -1;
     }
 
     // Take locations
-    for(j=0;j<he.num;++j){
-      if(feof(dW)){
-        fprintf(stderr, "Error reading position. Premature end of file.\n");
-        return -1;
-      }
-      // Take pos
-      fread(&loc,sizeof(uint64_t),1,dP);
-      // Store position
-      (*kmers)[numKmers].locations[j] = loc;
+    int read;
+    if(feof(dW)){
+      fprintf(stderr, "loadRead:: Error reading position. Premature end of file.\n");
+      return -1;
     }
-        // Update num kmers
+    // Take pos
+    if((read=fread((*kmers)[numKmers].locations,sizeof(uint64_t),he.num,dP)) != he.num){
+      fprintf(stderr, "loadRead:: Error reading locations (%i/%i)\n", read, he.num);
+    }
+    // Update num kmers
     numKmers++;
   }
 
@@ -248,35 +247,35 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
 }
 
 
-/* This function all words from a genome dictionary and load
- * it in a wentry array given.
+/* This function read all words from a genome dictionary and load
+ * it in a wHE array given.
  *  @param genome: genome dictionary structure.
  *  @param kmers: array of HE where hashentry read will be allocated.
  *  @param locations: array of array of integers where locations will be allocated.
  *  @param WL: word length.
- *  @return: number wentry instances allocated on kmers.
+ *  @return: number HE instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
 uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
   // Variables
-  hashentry he;
+  hashentryOld he;
   location lo;
   uint64_t numKmers = 0, currentMax = MAX_WORDS;
   FILE *dW, *dP;
 
   // KMERS space
   if((*kmers = (HE*) malloc(sizeof(HE)*MAX_WORDS))==NULL){
-    fprintf(stderr , "Error allocating space for metagenome KMERS.\n");
+    fprintf(stderr , "loadGenome:: Error allocating space for metagenome KMERS.\n");
     return -1;
   }
 
   // Open dictionaries
   if((dW = fopen(&genome.W[0],"rb"))==NULL){
-    fprintf(stderr, "Error opening genome word dictionary. [%s]\n",&genome.W[0]);
+    fprintf(stderr, "loadGenome:: Error opening genome word dictionary. [%s]\n",&genome.W[0]);
     return -1;
   }
   if((dP = fopen(&genome.P[0],"rb"))==NULL){
-    fprintf(stderr, "Error opening genome posotion dictionary. [%s]\n",&genome.P[0]);
+    fprintf(stderr, "loadGenome:: Error opening genome posotion dictionary. [%s]\n",&genome.P[0]);
     return -1;
   }
 
@@ -289,7 +288,7 @@ uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
     // Num of kmers exceeded
     if(numKmers >= currentMax){
       if((*kmers = realloc(*kmers,sizeof(hashentry)*(currentMax + MAX_WORDS)))==NULL){
-        fprintf(stderr, "Error reallocating memory for genome hashentry set.\n");
+        fprintf(stderr, "loadGenome:: Error reallocating memory for genome hashentry set.\n");
         return -1;
       }
       currentMax += MAX_WORDS;
@@ -301,8 +300,8 @@ uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
     (*kmers)[numKmers].num = he.num;
 
     // Locations array space
-    if(((*kmers)[numKmers].locations = (uint64_t*) malloc(sizeof(uint64_t)*MAX_WORDS))==NULL){
-      fprintf(stderr , "Error allocating space for metagenome KMER locations.\n");
+    if(((*kmers)[numKmers].locations = (uint64_t*) malloc(sizeof(uint64_t)*he.num))==NULL){
+      fprintf(stderr , "loadGenome:: Error allocating space for metagenome KMER locations.\n");
       return -1;
     }
 
@@ -330,17 +329,23 @@ uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
 }
 
 
-/*
+/* This function calculate all matchs between two HE arrays given.
+ *  @param w1: HE array to be compared.
+ *  @param w2: HE array to be compared.
+ *  @param numW1: Number of instances on w1.
+ *  @param numW2: number of instances on w2.
+ *  @param WL: words length.
+ *  @return: number of hits/matches founded.
  */
 uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
   uint64_t numHits = 0;
   int aux = 10;
-  uint64_t currentSize = (numW1*numW2)/aux;
+  uint64_t currentSize = MAX_HITS;
 
   // Memory for hits
   if((*hits = (hit*) malloc(sizeof(hit)*currentSize))==NULL){
-    fprintf(stderr, "Error allocating memory for hits array.\n");
+    fprintf(stderr, "hits:: Error allocating memory for hits array.\n");
     return -1;
   }
 
@@ -348,13 +353,13 @@ uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   int i,j,comp,lastIndex=0;
   for(i=0;i<numW1;++i){
     comp = 0; // Reset value
-    for(j=lastIndex;j<numW2 & comp >= 0;++j){
+    for(j=lastIndex;j<numW2 & comp > 0;++j){
       if(numHits >= currentSize){ // Realloc memory if it's necessary 
-        if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+(numW1*numW2)/aux)))==NULL){
-          fprintf(stderr, "Error reallocating memory for hits array.\n");
+        if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+MAX_HITS)))==NULL){
+          fprintf(stderr, "hits:: Error reallocating memory for hits array.\n");
           return -1;
         }else
-          currentSize += numW1*numW2/aux; // Update "current size"
+          currentSize += MAX_HITS; // Update "current size"
       }
 
       comp = wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],(WL*BITS_NUCLEOTIDE)/8);
@@ -383,122 +388,11 @@ uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
 }
 
 
-/*
- */
-int wordcmp(unsigned char *w1, unsigned char*w2, int n) {
-  int i;
-  for (i=0;i<n;i++) {
-    if (w1[i]<w2[i]) return -1;
-    if (w1[i]>w2[i]) return +1;
-  }
-  return 0;
-}
-
-
-/*  
- */
-int quickSort(hit* hits, int left, int right){
-  int j;
-
-  if(left < right){
-    // divide and conquer
-    if((j = partition(hits, left, right))<0) return -1;
-    quickSort(hits, left, j-1);
-    quickSort(hits, j+1, right);
-  }
-  return 0;
-}
-
-
-/*
- */
-int partition(hit* hits, int left, int right){
-  int i = left;
-  int j = right+1;
-  hit *t;
-
-  if((t = (hit*) malloc(sizeof(hit)))==NULL){
-    fprintf(stderr, "Error allocating memory for auxiliar variable.\n");
-    return -1;
-  }
-
-  // left sera el pivote
-  // y contendra la mediana de left, right y (left+right)/2
-  int mid = (int) (left+right)/2;
-
-  if(hitComparator(&hits[mid],&hits[right]))
-    SWAP(&hits[mid],&hits[right],t);
-
-  if(hitComparator(&hits[mid],&hits[left]))
-    SWAP(&hits[mid],&hits[left],t);
-
-  if(hitComparator(&hits[left],&hits[right]))
-    SWAP(&hits[left],&hits[right],t);
-
-  while(1){
-    do{
-      ++i;
-    }while(!hitComparator(&hits[i],&hits[left]) && i <= right);
-
-    do{
-      --j;
-    }while(hitComparator(&hits[j],&hits[left]) && j >= left);
-
-    if( i >= j ) break;
-
-    SWAP(&hits[i],&hits[j],t);
-  }
-
-  SWAP(&hits[left],&hits[j],t);
-
-  free(t);
-
-  return j;
-}
-
-
-/* This function is used to compare two hit instances. The criterion
- * used is:
- *    1 - Compare sequence 1 index.
- *    2 - Compare sequence 2 index.
- *    3 - Compare sequence 1 start.
- *    4 - Compare sequence 2 start.
- *    2 - Compare length.
- * @param h1 hit to be compared.
- * @param h2 hit to be compared.
- * @return a positive number if h1 is greater than h2, a negative number
- *    if h2 is greater than h1 and zero if both are equal.
- */
-int hitComparator(hit* h1,hit* h2){
-  if(h1->seq1 > h2->seq1) return 1;
-  else if(h1->seq1 < h2->seq1) return -1;
-
-  if(h1->seq2 > h2->seq2) return 1;
-  else if(h1->seq2 < h2->seq2) return -1;
-
-  if(h1->start1 > h2->start1) return 1;
-  else if(h1->start1 < h2->start1) return -1;
-
-  if(h1->start2 > h2->start2) return 1;
-  else if(h1->start2 < h2->start2) return -1;
-
-  if(h1->length > h2->length) return 1;
-  else if(h1->length < h2->length) return -1;
-
-  return 0;
-}
-
-
-/*
- */
-inline void SWAP(hit *h1,hit *h2,hit *t){
-  memcpy(t,h1,sizeof(hit));
-  memcpy(h1,h2,sizeof(hit));
-  memcpy(h2,t,sizeof(hit));
-}
-
-
-/*
+/* Function used to group hits that are in the same diagonal and don't have gaps
+ * between them.
+ *  @param hits: array of hits that will be studied.
+ *  @param numHits: number of hits stored on hits array.
+ *  @return: new number of hits (grouped hits).
  */
 uint64_t groupHits(hit* hits,uint64_t numHits){
   // Variables
@@ -510,22 +404,15 @@ uint64_t groupHits(hit* hits,uint64_t numHits){
   uint64_t newEnd;
 
   for(i=1;i<numHits;++i){    
-///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "\nCASE%i\t%d",i,newNumHits);
-///////////////////////////////////////////////////////////////////
-    if(hits[i].seq1 == hits[newNumHits].seq1 &
-       hits[i].seq2 == hits[newNumHits].seq2 &
-       (hits[i].start1-hits[i].start2) == (hits[newNumHits].start1-hits[newNumHits].start2) &
-       (hits[newNumHits].start1 + hits[newNumHits].length) >= hits[i].start1){ // Same sequences & Same diag & collapsable
-///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "\tEQ - COLLAPSE");
-///////////////////////////////////////////////////////////////////
+
+    if(hits[i].seq1 == hits[newNumHits].seq1 & // Same seqX
+       hits[i].seq2 == hits[newNumHits].seq2 & // Same seqY => Same diagonal
+       (hits[newNumHits].start1 + hits[newNumHits].length) >= hits[i].start1){ // End of current hit is after next hit start => Collapsable
+        // Calc new length
         newEnd = hits[i].start1 + hits[i].length;
         hits[newNumHits].length = newEnd - hits[newNumHits].start1;   
     }else{ // No collapsable
-///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "NO COLLAPSE");
-///////////////////////////////////////////////////////////////////
+      // Change current hit
       newNumHits++;
       hits[newNumHits].start1 = hits[i].start1;
       hits[newNumHits].start2 = hits[i].start2;
@@ -539,7 +426,12 @@ uint64_t groupHits(hit* hits,uint64_t numHits){
 }
 
 
-/*
+/* This function is used to calculate fragments that satisfy some thresholds given.
+ *  @param hits. array of hits that will be studied.
+ *  @param numHits: number of instances on hits array.
+ *  @param SThreshold: value of similarity threshold.
+ *  @param minLength: value of length threshold.
+ *  @param out: file where fragments will be written.
  */
 int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLength, FILE *out){
   // Variables
@@ -548,19 +440,9 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
   
   // Calculate fragments
     // First instance
-    frag.xStart = hits[0].start1;
-    frag.yStart = hits[0].start2;
-    frag.seqX = hits[0].seq1;
-    frag.seqY = hits[0].seq2;
-    frag.length = hits[0].length;
-    frag.xEnd = hits[0].start1 + hits[0].length;
-    frag.yEnd = hits[0].start2 + hits[0].length;
-    frag.similarity = 100;
-    frag.diag = hits[0].start1 - hits[0].start2;
-    frag.ident = hits[0].length;
+    storeFragFile(&frag,&hits[0],100);
     frag.block = 0; // Don't change for now
     frag.strand = 'f'; // Reverse not implemented yet
-    frag.score = 4*hits[0].length;
 
 
   int i;
@@ -591,17 +473,7 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
         numFragments++;
       }      
       // Init new fragment
-      frag.xStart = hits[i].start1;
-      frag.yStart = hits[i].start2;
-      frag.xEnd = hits[i].start1 + hits[i].length;
-      frag.yEnd = hits[i].start2 + hits[i].length; 
-      frag.seqX = hits[i].seq1;
-      frag.seqY = hits[i].seq2;
-      frag.length = hits[i].length;
-      frag.similarity = 100;
-      frag.diag = hits[i].start1 - hits[i].start2;
-      frag.ident = hits[i].length;
-      frag.score = 4*hits[i].length;
+      storeFragFile(&frag,&hits[i],100);
       // Dont alter block and strand for now
       continue;
     }
@@ -630,17 +502,7 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
           numFragments++;
         }
         //else overwrite actual fragment (invalid length)
-        frag.xStart = hits[i].start1;
-        frag.yStart = hits[i].start2;
-        frag.xEnd = hits[i].start1 + hits[i].length;
-        frag.yEnd = hits[i].start2 + hits[i].length; 
-        frag.seqX = hits[i].seq1;
-        frag.seqY = hits[i].seq2;
-        frag.length = hits[i].length;
-        frag.similarity = 100;
-        frag.diag = hits[i].start1 - hits[i].start2;
-        frag.ident = hits[i].length;
-        frag.score = 4*hits[i].length;
+        storeFragFile(&frag,&hits[i],100);
       }
     }else{ // Diff diag
       if(frag.length >= minLength){ // 
@@ -653,19 +515,29 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
           numFragments++;
         }
         //else overwrite actual fragment (invalid length)
-        frag.xStart = hits[i].start1;
-        frag.yStart = hits[i].start2;
-        frag.xEnd = hits[i].start1 + hits[i].length;
-        frag.yEnd = hits[i].start2 + hits[i].length; 
-        frag.seqX = hits[i].seq1;
-        frag.seqY = hits[i].seq2;
-        frag.length = hits[i].length;
-        frag.similarity = 100;
-        frag.diag = hits[i].start1 - hits[i].start2;
-        frag.ident = hits[i].length;
-        frag.score = 4*hits[i].length;
+        storeFragFile(&frag,&hits[i],100);
     }
   }
 
   return numFragments;
 } 
+
+
+/* This function is used to store necessary info in a FragFile instance.
+ *  @param frag: FragFile instance where info will be stored.
+ *  @param h: hit used to calculate necessary info.
+ *  @param s: similarity that will be stored on FragFile instance.
+ */
+inline void storeFragFile(FragFile* frag,hit* h,float s){
+  frag->xStart = h->start1;
+  frag->yStart = h->start2;
+  frag->xEnd = h->start1 + h->length;
+  frag->yEnd = h->start2 + h->length; 
+  frag->seqX = h->seq1;
+  frag->seqY = h->seq2;
+  frag->length = h->length;
+  frag->similarity = s;
+  frag->diag = h->start1 - h->start2;
+  frag->ident = h->length;
+  frag->score = SCORE * h->length;
+}

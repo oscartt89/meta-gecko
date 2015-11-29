@@ -29,7 +29,7 @@ int createDictionary(char *fIN, char *fOUT){
 
 	char *fname;
 	if((fname = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){
-		fprintf(stderr, "Error allocating memory for file name.\n");
+		fprintf(stderr, "createDictionary:: Error allocating memory for file name.\n");
 		return -1;
 	}
 
@@ -38,34 +38,34 @@ int createDictionary(char *fIN, char *fOUT){
 
 	// Space for array of words
 	if((words = (wentry*) malloc(sizeof(wentry)*MAX_WORDS))==NULL){
-		fprintf(stderr, "Error initializing words array\n");
+		fprintf(stderr, "createDictionary:: Error initializing words array\n");
 		free(words);
 		return -1;
 	}
 
 	// Open input file
 	if((metag = fopen(fIN,"rt"))==NULL){
-		fprintf(stderr, "Error opening metagenome file.\n");
+		fprintf(stderr, "createDictionary:: Error opening metagenome file.\n");
 		return -1;
 	}
 
 	// Open word dicitonary file
 	if((wDic = fopen(strcat(fname,".metag.d2hW"),"wb"))==NULL){
-		fprintf(stderr, "Error opening words dictionary file.\n");
+		fprintf(stderr, "createDictionary:: Error opening words dictionary file.\n");
 		return -1;
 	}
 	strcpy(fname,fOUT);
 
 	// Open position dicitonary file
 	if((pDic = fopen(strcat(fname,".metag.d2hP"),"wb"))==NULL){
-		fprintf(stderr, "Error opening position dictionary file.\n");
+		fprintf(stderr, "createDictionary:: Error opening position dictionary file.\n");
 		return -1;
 	}
 	strcpy(fname,fOUT);
 
 	// Open read dicitonary file
 	if((rDic = fopen(strcat(fname,".metag.d2hR"),"wb"))==NULL){
-		fprintf(stderr, "Error opening reads dictionary file.\n");
+		fprintf(stderr, "createDictionary:: Error opening reads dictionary file.\n");
 		return -1;
 	}
 	free(fname);
@@ -78,7 +78,7 @@ int createDictionary(char *fIN, char *fOUT){
 
 	// Check
 	if(feof(metag)){
-		fprintf(stderr, "Error reading metagenome file. No sequence found.\n");
+		fprintf(stderr, "createDictionary:: Error reading metagenome file. No sequence found.\n");
 		return -1;
 	}
 
@@ -103,7 +103,7 @@ int createDictionary(char *fIN, char *fOUT){
 
 				if(NW > 0){
 					// Store read kmers taken
-					quickSort(words,0,NW-1); // Sort kmers
+					quickSort_W(words,0,NW-1); // Sort kmers
 					writeDic(words,NW,wDic,pDic,rDic);
 					NW = 0;
 				}
@@ -144,7 +144,7 @@ int createDictionary(char *fIN, char *fOUT){
 
 	// Store buffered kmers
 	if(NW > 0){
-		quickSort(words,0,NW-1); // Sort kmers
+		quickSort_W(words,0,NW-1); // Sort kmers
 		writeDic(words,NW,wDic,pDic,rDic);
 	}
 
