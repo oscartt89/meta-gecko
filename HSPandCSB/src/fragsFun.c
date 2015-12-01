@@ -191,7 +191,7 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
   uint64_t numKmers = 0;
 
   // Load read
-  fread(&r,sizeof(read),1,dR); 
+  fread(&r,sizeof(Read),1,dR); 
 
   // KMERS space
   if((*kmers = malloc(sizeof(HE)*MAX_WORDS))==NULL){
@@ -230,14 +230,14 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
     }
 
     // Take locations
-    int read;
+    int r;
     if(feof(dW)){
       fprintf(stderr, "loadRead:: Error reading position. Premature end of file.\n");
       return -1;
     }
     // Take pos
-    if((read=fread((*kmers)[numKmers].locations,sizeof(uint64_t),he.num,dP)) != he.num){
-      fprintf(stderr, "loadRead:: Error reading locations (%i/%i)\n", read, he.num);
+    if((r=fread((*kmers)[numKmers].locations,sizeof(uint64_t),he.num,dP)) != he.num){
+      fprintf(stderr, "loadRead:: Error reading locations (%i/%i)\n", r, he.num);
     }
     // Update num kmers
     numKmers++;
@@ -280,14 +280,14 @@ uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
   }
 
   // Read first word
-  fread(&he,sizeof(hashentry),1,dW);
+  fread(&he,sizeof(hashentryOld),1,dW);
 
   // Read words
   int i;
   while(!feof(dW)){
     // Num of kmers exceeded
     if(numKmers >= currentMax){
-      if((*kmers = realloc(*kmers,sizeof(hashentry)*(currentMax + MAX_WORDS)))==NULL){
+      if((*kmers = realloc(*kmers,sizeof(hashentryOld)*(currentMax + MAX_WORDS)))==NULL){
         fprintf(stderr, "loadGenome:: Error reallocating memory for genome hashentry set.\n");
         return -1;
       }
@@ -340,7 +340,6 @@ uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
 uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
   uint64_t numHits = 0;
-  int aux = 10;
   uint64_t currentSize = MAX_HITS;
 
   // Memory for hits
@@ -350,24 +349,23 @@ uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   }
 
   // Compare all reads
-  int i,j,comp,lastIndex=0;
+  int i,j=0,comp;
   for(i=0;i<numW1;++i){
-    comp = 0; // Reset value
-    for(j=lastIndex;j<numW2 & comp > 0;++j){
-      if(numHits >= currentSize){ // Realloc memory if it's necessary 
-        if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+MAX_HITS)))==NULL){
-          fprintf(stderr, "hits:: Error reallocating memory for hits array.\n");
-          return -1;
-        }else
-          currentSize += MAX_HITS; // Update "current size"
-      }
-
+    comp = 1; // Reset value
+    for(;j<numW2 && comp > 0;++j){
       comp = wordcmp(&w1[i].w.b[0],&w2[j].w.b[0],(WL*BITS_NUCLEOTIDE)/8);
-
       if(comp==0){ // Same word (hit)
         int k,h;
-        for(k=0; k < w1[i].num;++i)
-          for(h=0; h < w2[j].num;++i){
+        for(k=0; k < w1[i].num;++k){
+          for(h=0; h < w2[j].num;++h){
+            if(numHits >= currentSize){ // Realloc memory if it's necessary 
+              if((*hits = (hit*) realloc(*hits,sizeof(hit)*(currentSize+MAX_HITS)))==NULL){
+                fprintf(stderr, "hits:: Error reallocating memory for hits array.\n");
+                return -1;
+              }else
+                currentSize += MAX_HITS; // Update "current size"
+            }
+
             // Store position
             (*hits)[numHits].start1 = w1[i].locations[k];
             (*hits)[numHits].start2 = w2[j].locations[h];
@@ -379,7 +377,8 @@ uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
             // Update number of hits
             numHits++;
           }
-        lastIndex = j; // Next iterance starts here
+        }
+        
       }
     }
   }
@@ -540,4 +539,17 @@ inline void storeFragFile(FragFile* frag,hit* h,float s){
   frag->diag = h->start1 - h->start2;
   frag->ident = h->length;
   frag->score = SCORE * h->length;
+}
+
+
+/* This functions is used to deallocate memory space of an HE array.
+ *  @param heArray: HE array that will be deallocated.
+ *  @param length: length of heArray
+ */
+inline void free_HE(HE* heArray,int length){
+  int i,j;
+  for(i=0 ; i<length; ++i)
+    free(heArray[i].locations);
+
+  free(heArray);
 }

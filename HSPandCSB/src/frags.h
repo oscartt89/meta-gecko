@@ -110,3 +110,4 @@ uint64_t hits(HE*,HE*,hit**,uint64_t,uint64_t,int);
 uint64_t groupHits(hit*,uint64_t);
 int calculateFragments(hit*,uint64_t,int,int,FILE*);
 inline void storeFragFile(FragFile*,hit*,float);
+inline void free_HE(HE*,int);

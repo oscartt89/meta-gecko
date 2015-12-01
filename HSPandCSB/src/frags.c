@@ -87,7 +87,7 @@ int main(int ac, char** av){
 			// Load read
 			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
 			// Compare with each genome
-			for(j=0; j<numGenomes & numWM>0; ++j){
+			for(j=0; j<numGenomes && numWM>0; ++j){
 ///////////////////////////////////////////////////////////////////
 fprintf(stdout, "WM: %d", numWM);
 ///////////////////////////////////////////////////////////////////
@@ -104,9 +104,10 @@ fprintf(stdout, "\tWG: %d", numWG);
 ///////////////////////////////////////////////////////////////////
 fprintf(stdout, "\tHits: %d",numHits);
 ///////////////////////////////////////////////////////////////////
-					if(numGenomes > 1)
+					if(numGenomes > 1){
 						// Free space
-						free(geno);
+						free_HE(geno,numWG);
+					}
 					// Sort hits
 					if(quickSort_H(hitsA,0,numHits-1)<0) return -1;
 ///////////////////////////////////////////////////////////////////
@@ -120,11 +121,10 @@ fprintf(stdout, "\tG_Hits: %d",numGHits);
 ///////////////////////////////////////////////////////////////////
 					// Filter hits. Calculte fragments
 						if((numFrags=calculateFragments(hitsA,numGHits,atoi(av[3]),atoi(av[4]),fOut))<0) return -1;
-						free(hitsA); // Free unnecesary space
 ///////////////////////////////////////////////////////////////////
 fprintf(stdout, "\tFrags: %d",numFrags);
 ///////////////////////////////////////////////////////////////////
-					}else
+					}
 						free(hitsA);
 				}
 ///////////////////////////////////////////////////////////////////
@@ -133,10 +133,10 @@ fprintf(stdout, "\n");
 
 			}
 
-			free(metag); // Free space
+			free_HE(metag,numWM); // Free space
 		}
 
-		if(numGenomes == 1) free(geno);
+		if(numGenomes == 1) free_HE(geno,numWG);
 
 		fclose(dR);
 		fclose(dW);
