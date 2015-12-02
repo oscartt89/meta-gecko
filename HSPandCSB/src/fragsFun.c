@@ -236,7 +236,7 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
       return -1;
     }
     // Take pos
-    if((r=fread((*kmers)[numKmers].locations,sizeof(uint64_t),he.num,dP)) != he.num){
+    if((r=fread(&(*kmers)[numKmers].locations[0],sizeof(uint64_t),he.num,dP)) != he.num){
       fprintf(stderr, "loadRead:: Error reading locations (%i/%i)\n", r, he.num);
     }
     // Update num kmers
@@ -349,7 +349,7 @@ uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   }
 
   // Compare all reads
-  int i,j=0,comp;
+  int i,j=0,comp=1;
   for(i=0;i<numW1;++i){
     comp = 1; // Reset value
     for(;j<numW2 && comp > 0;++j){
@@ -378,7 +378,7 @@ uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
             numHits++;
           }
         }
-        
+        break;
       }
     }
   }
@@ -404,8 +404,8 @@ uint64_t groupHits(hit* hits,uint64_t numHits){
 
   for(i=1;i<numHits;++i){    
 
-    if(hits[i].seq1 == hits[newNumHits].seq1 & // Same seqX
-       hits[i].seq2 == hits[newNumHits].seq2 & // Same seqY => Same diagonal
+    if(hits[i].seq1 == hits[newNumHits].seq1 && // Same seqX
+       hits[i].seq2 == hits[newNumHits].seq2 && // Same seqY => Same diagonal
        (hits[newNumHits].start1 + hits[newNumHits].length) >= hits[i].start1){ // End of current hit is after next hit start => Collapsable
         // Calc new length
         newEnd = hits[i].start1 + hits[i].length;
@@ -449,7 +449,7 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
   uint8_t oldS, newS;
 
   // Exception
-  if(numHits == 1 & SThreshold <= 100 & minLength <= frag.length){
+  if(numHits == 1 && SThreshold <= 100 && minLength <= frag.length){
     // Write fragment
       fwrite(&frag,sizeof(FragFile),1,out);
       numFragments++;
@@ -461,7 +461,7 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
     if(hitComparator(&hits[i],&hits[i-1])==0) continue;
 
     // Sequence change
-    if(hits[i].seq1 != frag.seqX | hits[i].seq2 != frag.seqY){ // Different sequences
+    if(hits[i].seq1 != frag.seqX || hits[i].seq2 != frag.seqY){ // Different sequences
       if(frag.length >= minLength){ // Good enough -> write
         // Update values
         frag.xEnd = frag.xStart + frag.length;
@@ -516,6 +516,17 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
         //else overwrite actual fragment (invalid length)
         storeFragFile(&frag,&hits[i],100);
     }
+  }
+
+  // Store last fragment
+  if(frag.length >= minLength){ // Good enough -> write
+    // Update values
+    frag.xEnd = frag.xStart + frag.length;
+    frag.yEnd = frag.yStart + frag.length;
+    frag.score = (2*frag.ident - frag.length)*4;
+    // Write fragment
+    fwrite(&frag,sizeof(FragFile),1,out);
+    numFragments++;
   }
 
   return numFragments;

@@ -7,11 +7,22 @@
 
 #include "frags.h"
 
+///////////////////////////////////////////-------/////////////////
+#include <time.h> 
+//////////////////////////////////////////-------/////////////////
+
 int main(int ac, char** av){
 	if(ac!=7){
 		fprintf(stderr,"USE: %s genomeSetFolder metagenomeFolder similarityThreshold minLength wordLength out\n",av[0]);
 		return -1;
 	}
+
+///////////////////////////////////////////-------/////////////////
+time_t rawtime;
+struct tm * timeinfo;
+time ( &rawtime );
+timeinfo = localtime ( &rawtime );
+///////////////////////////////////////////-------/////////////////
 
 	// Variables
 	dictionaryG* dicGSet;
@@ -81,54 +92,57 @@ int main(int ac, char** av){
 		if(numGenomes == 1)
 			if((numWG = loadGenome(dicGSet[0],&geno,atoi(av[5])))<0) return -1;
 
-
+///////////////////////////////////////////////////////////////////
+//int numR = 0;
+///////////////////////////////////////////////////////////////////
 		// Compare each read with each genome
 		while(!feof(dR)){
 			// Load read
 			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
+///////////////////////////////////////////////////////////////////
+//numR++;
+///////////////////////////////////////////////////////////////////
 			// Compare with each genome
 			for(j=0; j<numGenomes && numWM>0; ++j){
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "WM: %d", numWM);
+//fprintf(stdout, "R%i\tWM: %d", numR, numWM);
 ///////////////////////////////////////////////////////////////////
 				// Load genome
 				if(numGenomes > 1)
 					if((numWG = loadGenome(dicGSet[j],&geno,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tWG: %d", numWG);
+//fprintf(stdout, "\tWG: %d", numWG);
 ///////////////////////////////////////////////////////////////////
 				// Calc hits 
 				if(numWG > 0){
 					// For now only 100% are allowed on hits -> No gaps
 					if((numHits = hits(metag,geno,&hitsA,numWM,numWG,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tHits: %d",numHits);
+//fprintf(stdout, "\tHits: %d",numHits);
 ///////////////////////////////////////////////////////////////////
 					if(numGenomes > 1){
 						// Free space
 						free_HE(geno,numWG);
 					}
-					// Sort hits
-					if(quickSort_H(hitsA,0,numHits-1)<0) return -1;
-///////////////////////////////////////////////////////////////////
-fwrite(&hitsA[0],sizeof(hit),numHits,fOut);
-///////////////////////////////////////////////////////////////////
-					// Group hits
+
 					if(numHits>0){
+						// Sort hits
+						if(quickSort_H(hitsA,0,numHits-1)<0) return -1;
+						// Group hits
 						if((numGHits=groupHits(hitsA,numHits))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tG_Hits: %d",numGHits);
+//fprintf(stdout, "\tG_Hits: %d",numGHits);
 ///////////////////////////////////////////////////////////////////
 					// Filter hits. Calculte fragments
 						if((numFrags=calculateFragments(hitsA,numGHits,atoi(av[3]),atoi(av[4]),fOut))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tFrags: %d",numFrags);
+//fprintf(stdout, "\tFrags: %d",numFrags);
 ///////////////////////////////////////////////////////////////////
 					}
 						free(hitsA);
 				}
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\n");
+//fprintf(stdout, "\n");
 ///////////////////////////////////////////////////////////////////
 
 			}
@@ -147,6 +161,15 @@ fprintf(stdout, "\n");
 	fclose(fOut);
 	free(dicMSet);
 	free(dicGSet);
+
+///////////////////////////////////////////-------/////////////////
+fprintf (stdout,"Init-> %s", asctime(timeinfo));
+time ( &rawtime );
+timeinfo = localtime ( &rawtime );
+fprintf (stdout,"End-> %s", asctime(timeinfo));
+///////////////////////////////////////////-------/////////////////
+
+
 
 	return 0;
 }
