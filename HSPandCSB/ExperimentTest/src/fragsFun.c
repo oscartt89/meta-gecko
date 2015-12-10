@@ -18,10 +18,8 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
 	// Variables
 	DIR *gFolder;
 	struct dirent *ent;
-	char *wD, *pD;
   char file[MAX_FILE_LENGTH];
 	int numGenomes = 0, currentMax = MAX_GENOME_SET;
-  FILE *WD, *PD;
 
   // Allocate memory for genome dirs
   free(*genomes);
@@ -97,10 +95,8 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
   // Variables
   DIR *mFolder;
   struct dirent *ent;
-  char *wD, *pD, *rD;
   char file[MAX_FILE_LENGTH];
   int numMetags = 0, currentMax = MAX_METAGENOME_SET;
-  FILE *WD, *PD;
 
   // Allocate memory for genome dirs
   if((*metagenomes = (dictionaryM*) malloc(sizeof(dictionaryM)*MAX_METAGENOME_SET))==NULL){
@@ -203,14 +199,8 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
   fseek(dW,r.pos,SEEK_SET);
 
   // Load kmers in HE array
-  int i,j;
-  uint64_t loc;
-
+  int i;
   for(i=0;i<r.num;++i){
-    if(feof(dW)){
-      fprintf(stderr, "loadRead:: Error reading hashentry. Premature end of file.\n");
-      return -1;
-    }
     // Read hashentry
     fread(&he,sizeof(hashentry),1,dW);
 
@@ -231,10 +221,6 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
 
     // Take locations
     int r;
-    if(feof(dW)){
-      fprintf(stderr, "loadRead:: Error reading position. Premature end of file.\n");
-      return -1;
-    }
     // Take pos
     if((r=fread(&(*kmers)[numKmers].locations[0],sizeof(uint64_t),he.num,dP)) != he.num){
       fprintf(stderr, "loadRead:: Error reading locations (%i/%i)\n", r, he.num);
@@ -401,7 +387,7 @@ uint64_t groupHits(hit* hits,uint64_t numHits){
   // Hits must be ordered
   // Group hits
   int i;
-  uint64_t newEnd;
+  uint64_t newEnd,oldEnd;
 
   for(i=1;i<numHits;++i){    
     if(hits[i].seq1 == hits[newNumHits].seq1 && // Same seqX
@@ -411,8 +397,10 @@ uint64_t groupHits(hit* hits,uint64_t numHits){
 //fprintf(stdout, "\n\tCollapse -> OldSt=%" PRIu64 " OldL:%" PRIu64 " HitS=%" PRIu64 " HitL=%" PRIu64 "\n", hits[newNumHits].start1, hits[newNumHits].length, hits[i].start1, hits[i].length);
 /////////////////////////////////////////////////////////////////// 
         // Calc new length
+        oldEnd = hits[newNumHits].start1 + hits[newNumHits].length - 1;
         newEnd = hits[i].start1 + hits[i].length - 1;
-        hits[newNumHits].length = newEnd - hits[newNumHits].start1; 
+        if(oldEnd < newEnd) // Only if new end is greater
+          hits[newNumHits].length = newEnd - hits[newNumHits].start1;
 ///////////////////////////////////////////////////////////////////
 //fprintf(stdout, "\tCollapse -> NStart=%" PRIu64 " NLength:%" PRIu64 "\n", hits[newNumHits].start1, hits[newNumHits].length);
 ///////////////////////////////////////////////////////////////////  
@@ -442,6 +430,8 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
   // Variables
   int numFragments = 0;
   FragFile frag;
+
+//fprintf(stdout, "\t");
   
   // Calculate fragments
     // First instance
@@ -453,10 +443,6 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
   int i;
   uint64_t fragEnd,dist,oldLength,newLength;
   uint8_t oldS, newS;
-///////////////////////////////////////////////////////////////////
-//fprintf(stdout, "\tHit:L%" PRIu64 "\n", hits[0].length);
-//fprintf(stdout, "\tFrag:L:%" PRIu64 "\tS:%f\n",frag.length,frag.similarity);
-///////////////////////////////////////////////////////////////////
 
   // Exception
   if(numHits == 1 && minLength <= frag.length){
@@ -465,8 +451,8 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
       return 1;
   }
 
-
   for(i=1; i<numHits; i++){
+//fprintf(stdout, "!");
     // If hits are equal discard one
     if(hitComparator(&hits[i],&hits[i-1])==0) continue;
 
@@ -480,13 +466,14 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
         // Write fragment
         fwrite(&frag,sizeof(FragFile),1,out);
         numFragments++;
+//fprintf(stdout, "+");
       }      
       // Init new fragment
       storeFragFile(&frag,&hits[i],100);
       // Dont alter block and strand for now
       continue;
     }
-
+//fprintf(stdout, "!");
     // IF same sequences
     if((hits[i].start1 - hits[i].start2) == frag.diag){ // Same diag
       fragEnd = frag.xStart + frag.length - 1;
@@ -494,12 +481,16 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
       oldLength = frag.length;
       oldS = frag.similarity;
       dist = fragEnd - hits[i].start1;
+//fprintf(stdout, "-");
+//fprintf(stdout, "NL:%" PRIu64 "  HS:%" PRIu64 "  HL:%" PRIu64 "  FS:%" PRIu64 "\n"
+//,newLength,hits[i].start1,hits[i].length,frag.xStart);
       newS = (newLength - (dist + oldLength - oldLength*oldS))/newLength * 100;
-
+//fprintf(stdout, "-");
       if(newS >= SThreshold){ // Correct fragment, update
         frag.length = newLength;
         frag.similarity = newS;
         frag.ident += newLength - oldLength - dist;
+//fprintf(stdout, ";");
       }else{ // Not enough quality (of new fragment), create new framgent
         if(frag.length >= minLength){ // 
           // Update values
@@ -509,11 +500,13 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
           // Write fragment
           fwrite(&frag,sizeof(FragFile),1,out);
           numFragments++;
+//fprintf(stdout, "+");
         }
         //else overwrite actual fragment (invalid length)
         storeFragFile(&frag,&hits[i],100);
       }
     }else{ // Diff diag
+//fprintf(stdout, ".");
       if(frag.length >= minLength){ // 
           // Update values
           frag.xEnd = frag.xStart + frag.length - 1;
@@ -522,7 +515,9 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
           // Write fragment
           fwrite(&frag,sizeof(FragFile),1,out);
           numFragments++;
+//fprintf(stdout, "+");
         }
+//fprintf(stdout, "_");
         //else overwrite actual fragment (invalid length)
         storeFragFile(&frag,&hits[i],100);
     }
@@ -537,6 +532,7 @@ int calculateFragments(hit* hits, uint64_t numHits, int SThreshold, int minLengt
     // Write fragment
     fwrite(&frag,sizeof(FragFile),1,out);
     numFragments++;
+//fprintf(stdout, "_");
   }
 
   return numFragments;
@@ -568,7 +564,7 @@ inline void storeFragFile(FragFile* frag,hit* h,float s){
  *  @param length: length of heArray
  */
 inline void free_HE(HE* heArray,int length){
-  int i,j;
+  int i;
   for(i=0 ; i<length; ++i)
     free(heArray[i].locations);
 

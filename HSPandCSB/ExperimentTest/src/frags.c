@@ -22,6 +22,7 @@ time_t rawtime;
 struct tm * timeinfo;
 time ( &rawtime );
 timeinfo = localtime ( &rawtime );
+fprintf (stdout,"Init-> %s", asctime(timeinfo));
 ///////////////////////////////////////////-------/////////////////
 
 	// Variables
@@ -104,12 +105,14 @@ numR++;
 			// Compare with each genome
 			for(j=0; j<numGenomes && numWM>0; ++j){
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "R%i\tWM: %" PRIu64 , numR, numWM);
+fprintf(stdout, "R%i", numR);
+fprintf(stdout, "\tWM: %" PRIu64 , numWM);
 ///////////////////////////////////////////////////////////////////
 				// Load genome
 				if(numGenomes > 1)
 					if((numWG = loadGenome(dicGSet[j],&geno,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
+//fprintf(stdout, "\tGenome_Loaded");
 fprintf(stdout, "\tWG: %" PRIu64 , numWG);
 ///////////////////////////////////////////////////////////////////
 				// Calc hits 
@@ -117,7 +120,8 @@ fprintf(stdout, "\tWG: %" PRIu64 , numWG);
 					// For now only 100% are allowed on hits -> No gaps
 					if((numHits = hits(metag,geno,&hitsA,numWM,numWG,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tHits: %" PRIu64 ,numHits);
+//fprintf(stdout, "\tHits");
+fprintf(stdout, "\tH: %" PRIu64 ,numHits);
 ///////////////////////////////////////////////////////////////////
 					if(numGenomes > 1){
 						// Free space
@@ -130,12 +134,14 @@ fprintf(stdout, "\tHits: %" PRIu64 ,numHits);
 						// Group hits
 						if((numGHits=groupHits(hitsA,numHits))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tG_Hits: %" PRIu64 ,numGHits);
+//fprintf(stdout, "\tG_Hits");
+fprintf(stdout, "\tG_H: %" PRIu64 ,numGHits);
 ///////////////////////////////////////////////////////////////////
 					// Filter hits. Calculte fragments
 						if((numFrags=calculateFragments(hitsA,numGHits,atoi(av[3]),atoi(av[4]),fOut))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\tFrags: %" PRIu64,numFrags);
+//fprintf(stdout, "\tFrags");
+fprintf(stdout, "\tF: %" PRIu64,numFrags);
 ///////////////////////////////////////////////////////////////////
 					}
 						free(hitsA);
