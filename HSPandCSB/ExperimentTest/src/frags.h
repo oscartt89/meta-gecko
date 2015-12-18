@@ -8,6 +8,7 @@
 #define MAX_METAGENOME_SET 10
 #define MAX_HITS 1000
 #define SCORE 4
+#define MAX_FILES 30
 
 // STRUCTS
 typedef struct {
@@ -102,12 +103,24 @@ typedef struct{
 }FragFile;
 
 // FUNCTIONS
+// Files and directories hsndler functions
 int readGenomeSet(char*,dictionaryG**);
 int readMetagenomeSet(char*,dictionaryM**);
+int startsWithDot(char*);
+int endsWith(char*,char*);
+int listFiles(char*, char***);
+// Loaders
 uint64_t loadRead(FILE*,FILE*,FILE*,HE**,int);
 uint64_t loadGenome(dictionaryG,HE**,int);
+// Hits functions
 uint64_t hits(HE*,HE*,hit**,uint64_t,uint64_t,int);
 uint64_t groupHits(hit*,uint64_t);
+// Fragment functions
 int calculateFragments(hit*,uint64_t,int,int,FILE*);
 inline void storeFragFile(FragFile*,hit*,float);
+// Space handlers
 inline void free_HE(HE*,int);
+inline void free_Files(char**,int);
+// Sort functions
+inline void SWAP_S(char*,char*);
+void quickSort_S(char**,uint64_t,uint64_t);

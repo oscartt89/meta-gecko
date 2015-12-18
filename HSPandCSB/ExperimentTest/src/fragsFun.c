@@ -15,11 +15,14 @@
  *    something got wrong.
  */
 int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
-	// Variables
-	DIR *gFolder;
-	struct dirent *ent;
-  char file[MAX_FILE_LENGTH];
-	int numGenomes = 0, currentMax = MAX_GENOME_SET;
+  // Variables
+  int numGenomes = 0, currentMax = MAX_GENOME_SET;
+  char **files;
+
+  int numFiles = listFiles(genomeSetPath,&files);
+
+  // Sort files alphabetically
+  quickSort_S(files,0,numFiles);
 
   // Allocate memory for genome dirs
   free(*genomes);
@@ -28,14 +31,9 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
     return -1;
   }
 
-	// Open genomes folder
-	if((gFolder = opendir(genomeSetPath))==NULL){
-		fprintf(stderr, "readGenomeSet:: Error opening genomes folder.\n");
-		return -1;
-  }
-
-	// Take genome dictionary files
-	while((ent = readdir(gFolder))!=NULL){
+  // Take genome dictionary files
+  int i;
+  for(i=0; i<numFiles; ++i){
     // Check for memory
     if(numGenomes>=currentMax){
       if((*genomes = realloc(*genomes,sizeof(dictionaryG)*(currentMax + MAX_GENOME_SET)))==NULL){
@@ -44,40 +42,37 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
       }
       currentMax += MAX_GENOME_SET;
     }
-		// Files are sorted alphabetically
+    // Files are sorted alphabetically
     // Check it's not a metagenome dictionary
-    if(strstr(ent->d_name,".metag.d2h")!=NULL) continue;
-		// Should appear first d2hP than d2hW
-		if(strstr(ent->d_name,".d2hP")!=NULL){ // New dictionary
-			// Save name
-			memcpy(genomes[numGenomes]->name,ent->d_name,strlen(ent->d_name)-5);
-			// Save location dictionary
-      strcpy(&file[0],genomeSetPath);
-      strcat(&file[0],ent->d_name);
-			strcpy(genomes[numGenomes]->P,&file[0]);
-			//Next file should be d2hW dictionary
-			if((ent = readdir(gFolder))==NULL){
-				fprintf(stderr, "readGenomeSet:: Error: incomplete genome pair dictionary. End of file list.\n");
-				return -1;
-			}
-			if(strstr(ent->d_name,".d2hW")!=NULL && strstr(ent->d_name,".metag.d2h")==NULL){
-				// Save word dictionary
-        strcpy(&file[0],genomeSetPath);
-        strcat(&file[0],ent->d_name);
-				strcpy(genomes[numGenomes]->W,&file[0]);
-				numGenomes++;
-			}else if(strstr(ent->d_name,".metag.d2h")!=NULL){
+    if(strstr(files[i],".metag.d2h")!=NULL) continue;
+    // Should appear first d2hP than d2hW
+    if(endsWith(files[i],".d2hP")){ // New dictionary
+      // Save name
+      memcpy(genomes[numGenomes]->name,files[i],strlen(files[i])-5);
+      // Save location dictionary
+      strcpy(genomes[numGenomes]->P,files[i]);
+      ++i;
+      //Next file should be d2hW dictionary
+      if(i >= numFiles){
+        fprintf(stderr, "readGenomeSet:: Error: incomplete genome pair dictionary. End of file list.\n");
+        return -1;
+       }
+      
+      if(endsWith(files[i],".d2hW") && strstr(files[i],".metag.d2h")==NULL){
+        // Save word dictionary
+        strcpy(genomes[numGenomes]->W,files[i]);
+        numGenomes++;
+      }else if(strstr(files[i],".metag.d2h")!=NULL){
         fprintf(stderr, "readGenomeSet:: Error: it's a metagenome dictionary.\n");
         return -1;
       }else{
-				fprintf(stderr, "readGenomeSet:: Error: incomplete genome pair dictionary.\n");
-				return -1;
-			}
-		}
-	}
+        fprintf(stderr, "readGenomeSet:: Error: incomplete genome pair dictionary.\n");
+        return -1;
+      }
+    }
+  }
 
-  // Close dir
-  closedir(gFolder);
+  free_Files(files,numFiles);
 
   return numGenomes;
 }
@@ -93,10 +88,13 @@ int readGenomeSet(char* genomeSetPath,dictionaryG** genomes){
  */
 int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
   // Variables
-  DIR *mFolder;
-  struct dirent *ent;
-  char file[MAX_FILE_LENGTH];
   int numMetags = 0, currentMax = MAX_METAGENOME_SET;
+  char **files;
+
+  int numFiles = listFiles(metagSetPath,&files);
+
+  // Sort files alphabetically
+  quickSort_S(files,0,numFiles);
 
   // Allocate memory for genome dirs
   if((*metagenomes = (dictionaryM*) malloc(sizeof(dictionaryM)*MAX_METAGENOME_SET))==NULL){
@@ -104,15 +102,9 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
     return -1;
   }
 
-
-  // Open metagenomes folder
-  if((mFolder = opendir(metagSetPath))==NULL){
-    fprintf(stderr, "readMetagenomeSet:: Error opening metagenomes folder.\n");
-    return -1;
-  }
-
   // Take metagenome dictionary files
-  while((ent = readdir(mFolder))!=NULL){
+  int i;
+  for(i=0; i<numFiles; ++i){
     // Check for memory
     if(numMetags>=currentMax){
       if((*metagenomes = realloc(*metagenomes,sizeof(dictionaryM)*(currentMax + MAX_METAGENOME_SET)))==NULL){
@@ -121,36 +113,33 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
       }
       currentMax += MAX_METAGENOME_SET;
     }
-
     // Files are sorted alphabetically
     // Should appear first d2hP, then d2hR and d2hW
-    if(strstr(ent->d_name,".metag.d2hP")!=NULL){ // New dictionary
+    if(endsWith(files[i],".metag.d2hP")){ // New dictionary
       // Save name
-      memcpy(&metagenomes[numMetags]->name[0],ent->d_name,strlen(ent->d_name)-11);
+      memcpy(&metagenomes[numMetags]->name[0],files[i],strlen(files[i])-11);
       // Save location dictionary
-      strcpy(&file[0],metagSetPath);
-      strcat(&file[0],ent->d_name);
-      strcpy(&metagenomes[numMetags]->P[0],&file[0]);
+      strcpy(&metagenomes[numMetags]->P[0],files[i]);
       //Next file should be d2hR dictionary
-      if((ent = readdir(mFolder))==NULL){
-        fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triplet dictionary. End of file list.\n");
+      ++i;
+      if(i >= numFiles){
+        fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triplet dictionary. End of file list searching read dictionary.\n");
         return -1;
       }
-      if(strstr(ent->d_name,".metag.d2hR")!=NULL){
+
+      if(endsWith(files[i],".metag.d2hR")){
         // Save read dictionary
-        strcpy(&file[0],metagSetPath);
-        strcat(&file[0],ent->d_name);
-        strcpy(&metagenomes[numMetags]->R[0],&file[0]);
+        strcpy(&metagenomes[numMetags]->R[0],files[i]);
         // Now should appear words dictionary
-        if((ent = readdir(mFolder))==NULL){
-          fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triplet dictionary. End of file list.\n");
+        ++i;
+        if(i >= numFiles){
+          fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triplet dictionary. End of file list searching word dictionary .\n");
           return -1;
         }
-        if(strstr(ent->d_name,".metag.d2hW")!=NULL){
+
+        if(endsWith(files[i],".metag.d2hW")){
           // Save words dictionary
-          strcpy(&file[0],metagSetPath);
-          strcat(&file[0],ent->d_name);
-          strcpy(&metagenomes[numMetags]->W[0],&file[0]);
+          strcpy(&metagenomes[numMetags]->W[0],files[i]);
           numMetags++; 
         }else{
           fprintf(stderr, "readMetagenomeSet:: Error: incomplete metagenome triple dictionary. Word dictionary not found.\n");
@@ -162,11 +151,103 @@ int readMetagenomeSet(char* metagSetPath,dictionaryM** metagenomes){
       }
     }
   }
-
-  // Close dir
-  closedir(mFolder);
+  free_Files(files,numFiles);
 
   return numMetags;
+}
+
+
+/* This function takes a string and returns if the string 
+ * starts with a dot character.
+ *  @param string: string to be studied.
+ *  @return: zero if the string doesn't starts with a dot or
+ *    a positive number in other cases.
+ */
+int startsWithDot(char* str){
+  size_t len = strlen(str);
+  return len >= 1 ? strncmp(str,".",1) == 0 : 0;
+}
+
+
+/* This function takes a string and return if the strign
+ * ends with a suffix given.
+ *  @param str: string to be studied.
+ *  @param suffix: string to be matched on str end.
+ *  @return: zero if the string doesn't ends with the specified
+ *    suffix or a positive number in other case.
+ */
+int endsWith(char *str, char *suffix){
+    size_t l_str = strlen(str),
+           l_suf = strlen(suffix);
+    
+    // Suffix bigger than string to compare
+    if(l_suf > l_str)
+      return 0;
+
+    return strncmp(str + l_str - l_suf, suffix, l_suf) == 0;
+}
+
+
+/* This function is used to list all files in a given directory.
+ *  @param path: path of the directory.
+ *  @param files: array of strings where directories will be stored.
+ *  @return: the length of the final files array.
+ */
+int listFiles(char *path, char*** files){
+  // Variables
+  DIR *mFolder;
+  struct dirent *ent;
+  char f[MAX_FILE_LENGTH];
+  int numFiles = 0;
+  int currentMax = MAX_FILES;
+
+  // Open metagenomes folder
+  if((mFolder = opendir(path))==NULL){
+    fprintf(stderr, "listFiles:: Error opening path folder.\n");
+    return -1;
+  }
+
+  // Take memory for files
+  if((*files = (char**) malloc(sizeof(char)*currentMax))==NULL){
+    fprintf(stderr, "listFiles:: Error allocating memory for files set.\n");
+    return -1;
+  }
+
+  // Take files from directory
+  while((ent = readdir(mFolder))!=NULL){
+    // Realloc if it's necessary
+    if(numFiles >= currentMax){
+      if(*files = realloc(*files,sizeof(char)*(currentMax + MAX_FILES))==NULL){
+        fprintf(stderr, "listFiles:: Error reallocating memory for files set.\n");
+        free(*files);
+        return -1;
+      }
+      currentMax += MAX_FILES;
+    }
+
+    // Prepare file name
+    strcpy(&f,path);
+    strcat(&f,ent->d_name);
+
+    // It it's a directory, avoid it
+    if(opendir(&f)!=NULL) continue;
+
+    // Check that it's not a hidden file or a system directory
+    if(startsWithDot(ent->d_name)) continue;
+
+    // It's a file, save it
+    //Allocate necessary memory
+    if(((*files)[numFiles] = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){
+      fprintf(stderr, "listFiles:: Error allocating space for a file path.\n");
+      return -1;
+    }
+    strcpy((*files)[numFiles],&f);
+    numFiles++;
+  }
+
+  // Close and finish
+  closedir(mFolder);
+  return numFiles;
 }
 
 
@@ -569,4 +650,74 @@ inline void free_HE(HE* heArray,int length){
     free(heArray[i].locations);
 
   free(heArray);
+}
+
+
+/* This functions is used to deallocate memory space of an files array.
+ *  @param fArray: char** array that will be deallocated.
+ *  @param length: length of fArray.
+ */
+inline void free_Files(char** fArray,int length){
+  int i;
+  for(i=0 ; i<length; ++i)
+    free(fArray[i]);
+  free(fArray);
+}
+
+
+/* This function is used to swap/interchange two strings.
+ *  @param s1: string that will be swapped.
+ *  @param s2: string that will be swapped.
+ */
+inline void SWAP_S(char *s1,char *s2){
+  char t[MAX_FILE_LENGTH];
+  strcpy(&t,s1);
+  strcpy(s1,s2);
+  strcpy(s2,&t);
+}
+
+
+/* Function used to sort an array of strings.
+ *  @param strs: array of string that will be sorted.
+ *  @param start: index where start to sort.
+ *  @param length: length of the array to sort (starting on "start" index).
+ */
+void quickSort_S(char** strs, uint64_t start, uint64_t length){
+  //Check exceptions
+  if (length < 2) return;
+  else if(length == 2){
+    if(strcmp(strs[start],strs[start+1])>0)
+      SWAP_S(strs[start],strs[start+1]);
+    return;
+  }
+  if(start < 0) return;
+  uint64_t right, left, pivot, end = start + length - 1;
+  int changed = 0;
+
+  pivot = rand() % (end + 1 - start) + start;
+  right = start;
+  left = end;
+
+  while(right != pivot || left != pivot) {
+    // While right is lower than pivot, continue
+      while(strcmp(strs[right],strs[pivot])<0 && right <= pivot) right++;
+      // While left y greater than pivot, continue
+      while(strcmp(strs[pivot],strs[left])<0 && left >= pivot) left--;
+      // All array checked -> end
+      if(right>=left)
+          break;
+      // Swap selected values
+      SWAP_S(strs[right],strs[left]);
+      changed = 1;
+      if(right < pivot) right++;
+      if(left > pivot) left--;
+  }
+  if(changed && right<=left){ // If anything changed, don't continue, it's sorted
+    quickSort_S(strs,start,right);
+    quickSort_S(strs,right,length-right);
+    if(length == 3)
+      quickSort_S(strs,start,length);
+  }
+
+  return;
 }
