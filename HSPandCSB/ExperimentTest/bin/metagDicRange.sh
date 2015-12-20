@@ -56,7 +56,7 @@ do
 
 		# Create hash table in disk
 		#echo "${BINDIR}/w2hd Ds.words.sort Ds"
-		${BINDIR}/w2hd old.words.sort .oldDic
+		${BINDIR}/w2hd old.words.sort oldDic
 
 		oldEnd=$(date -u +"%s")
 
@@ -70,4 +70,11 @@ do
 	done
 done
 
-
+######################################## DELETE ###########################################
+rm -f fakeM.fasta
+rm -f oldDic.d2hP
+rm -f oldDic.d2hW
+rm -f old.words.sort
+rm -f newDic.metag.d2hP
+rm -f newDic.metag.d2hR
+rm -f newDic.metag.d2hW
