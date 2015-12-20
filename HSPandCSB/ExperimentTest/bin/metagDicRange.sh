@@ -4,25 +4,38 @@
 # is artificially generated using a given genome. After that a dictionary
 # of the metagenome is created using the old gecko version and the new 
 # geckoMGV saving times spended on this actions in a file given.
-# WARNING! : actually the names of files and directories aren't calculeted. 
-# 		Replace it directories for your's
 
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-maxR=1000000
-maxL=1000
 
-for (( R=10000; R <= $maxR; R=R+10000 ))
+if [ $# != 8 ]; then
+   echo " ==== ERROR ... you called this script inappropriately."
+   echo ""
+   echo "   usage: $0 genome.fasta startR startL maxR maxL incrR incrL dataFile"
+   echo ""
+   exit -1
+fi
+
+# Store info
+startR=$2
+startL=$3
+maxR=$4
+maxL=$5
+incrR=$6
+incrL=$7
+
+for (( R=$startR; R <= $maxR; R=R+$incrR ))
 do
-	for (( L=100; L <= $maxL; L=L+100 ))
+	for (( L=$startL; L <= $maxL; L=L+$incrL ))
 	do
-		java -jar ${BINDIR}/MetagGenerator.jar ../ExperimentoSecuencial/Ds.fasta ../Genome/Ds-W501-2L.fasta $R $L
+		java -jar ${BINDIR}/MetagGenerator.jar fakeM.fasta $1 $R $L
 
+######################################### NEW #############################################
 
 		newInit=$(date -u +"%s")
 
 		#New dict
-		${BINDIR}/dic ../ExperimentoSecuencial/Ds.fasta ../ExperimentoSecuencial/DsNew
+		${BINDIR}/dic $1 newDic
 
 		newEnd=$(date -u +"%s")
 
@@ -30,27 +43,30 @@ do
 
 		echo "NEW: $((newTime / 60)) min $((newTime % 60)) sec"
 
-
+######################################### OLD #############################################
 
 		# Take old time
 		oldInit=$(date -u +"%s")
 
 		# find words and order
 		#echo "${BINDIR}/words"
-		${BINDIR}/words ../ExperimentoSecuencial/Ds.fasta ../ExperimentoSecuencial/Ds.words.unsort
+		${BINDIR}/words $1 old.words.unsort
 		#echo "${BINDIR}/sortWords 10000000 32"
-		${BINDIR}/sortWords 10000000 32 ../ExperimentoSecuencial/Ds.words.unsort ../ExperimentoSecuencial/Ds.words.sort
+		${BINDIR}/sortWords 10000000 32 old.words.unsort old.words.sort
 
 		# Create hash table in disk
 		#echo "${BINDIR}/w2hd Ds.words.sort Ds"
-		${BINDIR}/w2hd ../ExperimentoSecuencial/Ds.words.sort ../ExperimentoSecuencial/Ds
+		${BINDIR}/w2hd old.words.sort .oldDic
 
 		oldEnd=$(date -u +"%s")
 
 		oldTime=$(($oldEnd-$oldInit))
 
 		echo "OLD: $((oldTime / 60)) min $((oldTime % 60)) sec"
-		${BINDIR}/write ../ExperimentoSecuencial/data.txt $R $L $newTime $oldTime
+
+######################################## WRITE ############################################
+
+		${BINDIR}/write $8 $R $L $newTime $oldTime
 	done
 done
 
