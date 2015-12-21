@@ -49,7 +49,7 @@ fprintf (stdout,"Init-> %s", asctime(timeinfo));
 	}
 
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "TEST::M=%" PRIu64 "::G=%" PRIu64 "\n",numMetags,numGenomes);
+//fprintf(stdout, "TEST::M=%" PRIu64 "::G=%" PRIu64 "\n",numMetags,numGenomes);
 ///////////////////////////////////////////////////////////////////
 
 
@@ -71,15 +71,15 @@ fprintf(stdout, "TEST::M=%" PRIu64 "::G=%" PRIu64 "\n",numMetags,numGenomes);
 	while(i<numMetags){
 		// Open dictionaries
 		if((dR = fopen(&dicMSet[i].R[0],"rb"))==NULL){
-			fprintf(stderr, "MAIN:: Error opening read dictionary. [%s]\n", &dicMSet[i].R);
+			fprintf(stderr, "MAIN:: Error opening read dictionary.\n");
 			return -1;
 		}
 		if((dW = fopen(&dicMSet[i].W[0],"rb"))==NULL){
-			fprintf(stderr, "MAIN:: Error opening words dictionary. [%s]\n", &dicMSet[i].W);
+			fprintf(stderr, "MAIN:: Error opening words dictionary.\n");
 			return -1;
 		}
 		if((dP = fopen(&dicMSet[i].P[0],"rb"))==NULL){
-			fprintf(stderr, "MAIN:: Error opening locations dictionary. [%s]\n", &dicMSet[i].P);
+			fprintf(stderr, "MAIN:: Error opening locations dictionary.\n");
 			return -1;
 		}
 
@@ -93,27 +93,27 @@ fprintf(stdout, "TEST::M=%" PRIu64 "::G=%" PRIu64 "\n",numMetags,numGenomes);
 		if(numGenomes == 1)
 			if((numWG = loadGenome(dicGSet[0],&geno,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-int numR = 0;
+//int numR = 0;
 ///////////////////////////////////////////////////////////////////
 		// Compare each read with each genome
 		while(!feof(dR)){
 			// Load read
 			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
-numR++;
+//numR++;
 ///////////////////////////////////////////////////////////////////
 			// Compare with each genome
 			for(j=0; j<numGenomes && numWM>0; ++j){
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "R%i", numR);
-fprintf(stdout, "\tWM: %" PRIu64 , numWM);
+//fprintf(stdout, "R%i", numR);
+//fprintf(stdout, "\tWM: %" PRIu64 , numWM);
 ///////////////////////////////////////////////////////////////////
 				// Load genome
 				if(numGenomes > 1)
 					if((numWG = loadGenome(dicGSet[j],&geno,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
 //fprintf(stdout, "\tGenome_Loaded");
-fprintf(stdout, "\tWG: %" PRIu64 , numWG);
+//fprintf(stdout, "\tWG: %" PRIu64 , numWG);
 ///////////////////////////////////////////////////////////////////
 				// Calc hits 
 				if(numWG > 0){
@@ -121,7 +121,7 @@ fprintf(stdout, "\tWG: %" PRIu64 , numWG);
 					if((numHits = hits(metag,geno,&hitsA,numWM,numWG,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
 //fprintf(stdout, "\tHits");
-fprintf(stdout, "\tH: %" PRIu64 ,numHits);
+//fprintf(stdout, "\tH: %" PRIu64 ,numHits);
 ///////////////////////////////////////////////////////////////////
 					if(numGenomes > 1){
 						// Free space
@@ -135,19 +135,19 @@ fprintf(stdout, "\tH: %" PRIu64 ,numHits);
 						if((numGHits=groupHits(hitsA,numHits))<0) return -1;
 ///////////////////////////////////////////////////////////////////
 //fprintf(stdout, "\tG_Hits");
-fprintf(stdout, "\tG_H: %" PRIu64 ,numGHits);
+//fprintf(stdout, "\tG_H: %" PRIu64 ,numGHits);
 ///////////////////////////////////////////////////////////////////
 					// Filter hits. Calculte fragments
 						if((numFrags=calculateFragments(hitsA,numGHits,atoi(av[3]),atoi(av[4]),fOut))<0) return -1;
 ///////////////////////////////////////////////////////////////////
 //fprintf(stdout, "\tFrags");
-fprintf(stdout, "\tF: %" PRIu64,numFrags);
+//fprintf(stdout, "\tF: %" PRIu64,numFrags);
 ///////////////////////////////////////////////////////////////////
 					}
 						free(hitsA);
 				}
 ///////////////////////////////////////////////////////////////////
-fprintf(stdout, "\n");
+//fprintf(stdout, "\n");
 ///////////////////////////////////////////////////////////////////
 
 			}
@@ -168,7 +168,7 @@ fprintf(stdout, "\n");
 	free(dicGSet);
 
 ///////////////////////////////////////////-------/////////////////
-fprintf (stdout,"Init-> %s", asctime(timeinfo));
+//fprintf (stdout,"Init-> %s", asctime(timeinfo));
 time ( &rawtime );
 timeinfo = localtime ( &rawtime );
 fprintf (stdout,"End-> %s", asctime(timeinfo));

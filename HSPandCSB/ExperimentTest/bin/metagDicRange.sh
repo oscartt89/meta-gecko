@@ -35,7 +35,7 @@ do
 		newInit=$(date -u +"%s")
 
 		#New dict
-		${BINDIR}/dic $1 newDic
+		${BINDIR}/dic fakeM.fasta newDic
 
 		newEnd=$(date -u +"%s")
 
@@ -50,7 +50,7 @@ do
 
 		# find words and order
 		#echo "${BINDIR}/words"
-		${BINDIR}/words $1 old.words.unsort
+		${BINDIR}/words fakeM.fasta old.words.unsort
 		#echo "${BINDIR}/sortWords 10000000 32"
 		${BINDIR}/sortWords 10000000 32 old.words.unsort old.words.sort
 

@@ -208,7 +208,7 @@ int listFiles(char *path, char*** files){
   }
 
   // Take memory for files
-  if((*files = (char**) malloc(sizeof(char)*currentMax))==NULL){
+  if((*files = (char**) malloc(sizeof(char*)*currentMax))==NULL){
     fprintf(stderr, "listFiles:: Error allocating memory for files set.\n");
     return -1;
   }
@@ -217,7 +217,7 @@ int listFiles(char *path, char*** files){
   while((ent = readdir(mFolder))!=NULL){
     // Realloc if it's necessary
     if(numFiles >= currentMax){
-      if(*files = realloc(*files,sizeof(char)*(currentMax + MAX_FILES))==NULL){
+      if(*files = realloc(*files,sizeof(char*)*(currentMax + MAX_FILES))==NULL){
         fprintf(stderr, "listFiles:: Error reallocating memory for files set.\n");
         free(*files);
         return -1;
@@ -234,7 +234,6 @@ int listFiles(char *path, char*** files){
 
     // Check that it's not a hidden file or a system directory
     if(startsWithDot(ent->d_name)) continue;
-
     // It's a file, save it
     //Allocate necessary memory
     if(((*files)[numFiles] = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){

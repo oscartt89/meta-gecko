@@ -2,9 +2,9 @@ CC=gcc
 BIN=../bin
 FLAGS=-Wall -pg
 
-all: dictionary fragment write-words write-frags
+all: dictionary fragment write-words write-frags write-info
 
-develope: dictionary-develope fragment-develope write-words write-frags
+develope: dictionary-develope fragment-develope write-words write-frags write-info
 
 dictionary: dictionary.c
 	$(CC) dictionary.c dictionary.h geckoMGVutils.h dictionaryFun.c geckoMGVutils.c -o $(BIN)/dic
@@ -23,3 +23,6 @@ write-words: writeWords.c
 
 write-frags: fragB_T.c
 	$(CC) fragB_T.c -o $(BIN)/WF
+
+write-info: write.c
+	$(CC) write.c -o $(BIN)/write
