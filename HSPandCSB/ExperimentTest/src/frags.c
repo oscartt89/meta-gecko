@@ -95,10 +95,10 @@ fprintf (stdout,"Init-> %s", asctime(timeinfo));
 ///////////////////////////////////////////////////////////////////
 //int numR = 0;
 ///////////////////////////////////////////////////////////////////
+		// Load fist read
+		numWM = loadRead(dR,dW,dP,&metag,atoi(av[5]));
 		// Compare each read with each genome
 		while(!feof(dR)){
-			// Load read
-			if((numWM = loadRead(dR,dW,dP,&metag,atoi(av[5])))<0) return -1;
 ///////////////////////////////////////////////////////////////////
 //numR++;
 ///////////////////////////////////////////////////////////////////
@@ -153,6 +153,8 @@ fprintf (stdout,"Init-> %s", asctime(timeinfo));
 			}
 
 			free_HE(metag,numWM); // Free space
+			// Load read
+			numWM = loadRead(dR,dW,dP,&metag,atoi(av[5]));
 		}
 
 		if(numGenomes == 1) free_HE(geno,numWG);

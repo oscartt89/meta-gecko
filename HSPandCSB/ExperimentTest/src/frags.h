@@ -111,10 +111,10 @@ int endsWith(char*,char*);
 int listFiles(char*, char***);
 // Loaders
 uint64_t loadRead(FILE*,FILE*,FILE*,HE**,int);
-uint64_t loadGenome(dictionaryG,HE**,int);
+int64_t loadGenome(dictionaryG,HE**,int);
 // Hits functions
-uint64_t hits(HE*,HE*,hit**,uint64_t,uint64_t,int);
-uint64_t groupHits(hit*,uint64_t);
+int64_t hits(HE*,HE*,hit**,uint64_t,uint64_t,int);
+int64_t groupHits(hit*,uint64_t);
 // Fragment functions
 int calculateFragments(hit*,uint64_t,int,int,FILE*);
 inline void storeFragFile(FragFile*,hit*,float);

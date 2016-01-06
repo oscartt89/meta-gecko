@@ -265,9 +265,9 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
   Read r;
   hashentry he;
   uint64_t numKmers = 0;
-
+  int aux;
   // Load read
-  fread(&r,sizeof(Read),1,dR); 
+  if(aux=fread(&r,sizeof(Read),1,dR)!=1) return 0; 
 
   // KMERS space
   if((*kmers = malloc(sizeof(HE)*MAX_WORDS))==NULL){
@@ -322,11 +322,11 @@ uint64_t loadRead(FILE *dR,FILE *dW,FILE *dP,HE** kmers,int WL){
  *  @return: number HE instances allocated on kmers.
  * WANING: kmers memory are allocated inside of this function.
  */
-uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
+int64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
   // Variables
   hashentryOld he;
   location lo;
-  uint64_t numKmers = 0, currentMax = MAX_WORDS;
+  int64_t numKmers = 0, currentMax = MAX_WORDS;
   FILE *dW, *dP;
 
   // KMERS space
@@ -403,9 +403,9 @@ uint64_t loadGenome(dictionaryG genome,HE** kmers,int WL){
  *  @param WL: words length.
  *  @return: number of hits/matches founded.
  */
-uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
+int64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
   // Variables
-  uint64_t numHits = 0;
+  int64_t numHits = 0;
   uint64_t currentSize = MAX_HITS;
 
   // Memory for hits
@@ -460,9 +460,9 @@ uint64_t hits(HE* w1,HE* w2,hit** hits,uint64_t numW1, uint64_t numW2,int WL){
  *  @param numHits: number of hits stored on hits array.
  *  @return: new number of hits (grouped hits).
  */
-uint64_t groupHits(hit* hits,uint64_t numHits){
+int64_t groupHits(hit* hits,uint64_t numHits){
   // Variables
-  uint64_t newNumHits = 0;
+  int64_t newNumHits = 0;
 
   // Hits must be ordered
   // Group hits

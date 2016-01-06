@@ -27,11 +27,12 @@ incrL=$7
 # Create necessary directories
 mkdir -p ExpOldNew/old
 mkdir -p ExpOldNew/new
+mkdir -p ExpOldNew/genoDic
 
 # Create genome dictionary
 ${BINDIR}/words $1 ExpOldNew/geno.words.unsort
 ${BINDIR}/sortWords 10000000 32 ExpOldNew/geno.words.unsort ExpOldNew/geno.words.sort
-${BINDIR}/w2hd ExpOldNew/geno.words.sort ExpOldNew/genoDic
+${BINDIR}/w2hd ExpOldNew/geno.words.sort ExpOldNew/genoDic/gd
 rm -f ExpOldNew/geno.words.sort
 
 for (( R=$startR; R <= $maxR; R=R+$incrR ))
@@ -57,7 +58,7 @@ do
 		fr_newInit=$(date -u +"%s")
 
 		#New fragment
-		${BINDIR}/frags ExpOldNew/ ExpOldNew/new/ 100 32 32 ExpOldNew/FTest
+		${BINDIR}/frags ExpOldNew/genoDic/ ExpOldNew/new/ 100 32 32 ExpOldNew/FTest
 
 		fr_newEnd=$(date -u +"%s")
 
@@ -90,7 +91,7 @@ do
 
 		#Old fragment
 		#Hits
-		${BINDIR}/hits ExpOldNew/old/oldDic ExpOldNew/genoDic ExpOldNew/oldF.hits 1000 32
+		${BINDIR}/hits ExpOldNew/old/oldDic ExpOldNew/genoDic/gd ExpOldNew/oldF.hits 1000 32
 		#Sort hits
 		${BINDIR}/sortHits 10000000 32 ExpOldNew/oldF.hits ExpOldNew/oldF.hits.sorted
 		#FilterHits
@@ -121,4 +122,4 @@ rm -f ExpOldNew/new/newDic.metag.d2hW
 rm -f ExpOldNew/old/old.words.sort
 rm -f ExpOldNew/old/oldDic.d2hP
 rm -f ExpOldNew/old/oldDic.d2hW
-rmdir -f ExpOldNew/
+rm -rf ExpOldNew

@@ -1,11 +1,9 @@
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.File;
 import java.util.Random;
-import java.util.Scanner;
 
 import org.biojava.bio.BioException;
 import org.biojava.bio.seq.io.*;
