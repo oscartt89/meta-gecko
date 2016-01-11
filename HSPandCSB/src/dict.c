@@ -1,4 +1,4 @@
-/**
+/*
  * @author Fernando Moreno Jabato <jabato@uma.es>
  * @description This file encodes the workflow of GECKO for create
  *    metagenome dictionaries.
@@ -23,7 +23,7 @@
 int main(int ac, char** av){
 	// Check arguments
 	if(ac!=4){
-		fprintf(stderr, "Bad call error.\nUSE: dict metag.IN dictName WL");
+		fprintf(stderr, "Bad call error.\nUSE: dict metag.IN dictName WL\n");
 		return -1;
 	}else if(atoi(av[3])%4 != 0){
 		fprintf(stderr, "Error WL must be a 4 multiple and it's \"%s\".\n", av[3]);
@@ -62,7 +62,7 @@ int main(int ac, char** av){
 
 	//Open intermediate files
 	strcpy(fname,av[2]); // Copy outDic name
-	if((wIndx = fopen(strcat(fname,".windx"),"wb"))==NULL){
+	if((wIndx = fopen(strcat(fname,".windx"),"w+b"))==NULL){
 		fprintf(stderr, "Error opening word index file.\n");
 		return -1;
 	}
@@ -83,6 +83,14 @@ int main(int ac, char** av){
 	uint64_t seqPos = 0, crrSeqL = 0;
 	char c; // Auxiliar -> Read char per char
 	wentry temp; // Auxiliar word variable
+	if((temp.w.b = (unsigned char*) malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
+		fprintf(stderr, "Error allocating memory for temp.\n");
+		return -1;
+	}
+	temp.seq = 0;
+////////////////////////////////////////////////////////////////
+fprintf(stdout, "TEST\n");
+////////////////////////////////////////////////////////////////
 
 	// Start to read
 	c = fgetc(metag);
@@ -125,16 +133,37 @@ int main(int ac, char** av){
 		if(crrSeqL >= (uint64_t)WL){ // Full well formed sequence 
 			temp.pos = seqPos - WL; // Take position on read
 			// Store the new word
-			storeWord(buffer,&temp,++wordsInBuffer,&maxWordsStored);
+			storeWord(buffer,temp,++wordsInBuffer,&maxWordsStored);
 			if(wordsInBuffer == BUFFER_LENGTH){ // Buffer is full
 				if(writeBuffer(buffer,wIndx,wrds,wordsInBuffer) < 0){
 					return -1;
-				}else wordsInBuffer = 0;
+				}else{
+					// Update info
+					readW += wordsInBuffer;
+					wordsInBuffer = 0;
+				}
 			}
 		}
 		c = fgetc(metag);
 	}
 
+	// Free&Close unnecessary varaibles
+	free(temp.w.b);
+	fclose(metag);
+////////////////////////////////////////////////////////////////
+fprintf(stdout, "TEST%" PRIu64 "\n",wordsInBuffer);
+////////////////////////////////////////////////////////////////
+
+	// Write buffered words
+	if(wordsInBuffer != 0)
+		if(writeBuffer(buffer,wIndx,wrds,wordsInBuffer) < 0) return -1;
+
+////////////////////////////////////////////////////////////////
+fprintf(stdout, "TEST\n");
+////////////////////////////////////////////////////////////////
+
+	// Free buffer space
+	freeBuffer(buffer,maxWordsStored);
 
 
 
@@ -147,7 +176,8 @@ int main(int ac, char** av){
 
 
 
-
+	fclose(wIndx);
+	fclose(wrds);
 
 	// Everything finished. All it's ok.
 	return 0;
