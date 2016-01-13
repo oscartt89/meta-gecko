@@ -46,5 +46,4 @@ inline void SWAP_W(wentry*,wentry*);
 int wordComparator(wentry*,wentry*);
 void quickSort_W(wentry*,uint64_t,uint64_t);
 long int searchInIndex(word,FILE*,long int,bool*);
-inline void writeWords(wentry*,FILE*,FILE*,int,int,bool);
 void freeBuffer(wentry*,uint64_t);

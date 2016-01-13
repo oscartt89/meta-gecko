@@ -13,10 +13,10 @@
  *   1 - Read a char of a read.
  *   2 - IF sequence is not long and good enough GO TO 1.
  *   3 - Store sequence (word) on words buffer.
- *   4 - IF bufer is full, write buffer on intermediate files.
+ *   4 - IF bufer is full, write buffer sorted on intermediate files.
  *   5 - IF there are more Reads or chars unread on current Read GO 
  *       TO 1.
- *   6 - Write buffered words on intermediate files.
+ *   6 - Write buffered words on intermediate files after sort it.
  *   7 - Read intermediate files word per word and write final dictionary
  *       files.
  */
@@ -36,8 +36,9 @@ int main(int ac, char** av){
 	wentry *buffer; //Buffer of read words
 	FILE *metag; // Input files
 	FILE *wDic,*pDic;  // Output files
-	FILE *wIndx, *wrds; // Intermediate files
-	uint64_t readW = 0, wordsInBuffer = 0, maxWordsStored = 0; // Absolute and buffer read words and control varaible
+	FILE *bIndx, *wrds; // Intermediate files
+	uint64_t /*readW = 0,*/ wordsInBuffer = 0, maxWordsStored = 0; // Absolute and buffer read words and control varaible
+	uint32_t numBuffWritten = 0;
 	char *fname;
 
 	// Allocate necessary memory
@@ -62,10 +63,11 @@ int main(int ac, char** av){
 
 	//Open intermediate files
 	strcpy(fname,av[2]); // Copy outDic name
-	if((wIndx = fopen(strcat(fname,".windx"),"w+b"))==NULL){
+	if((bIndx = fopen(strcat(fname,".bindx"),"wb"))==NULL){
 		fprintf(stderr, "Error opening word index file.\n");
 		return -1;
 	}
+
 
 	// Open words repo
 	strcpy(fname,av[2]);
@@ -88,9 +90,6 @@ int main(int ac, char** av){
 		return -1;
 	}
 	temp.seq = 0;
-////////////////////////////////////////////////////////////////
-fprintf(stdout, "TEST\n");
-////////////////////////////////////////////////////////////////
 
 	// Start to read
 	c = fgetc(metag);
@@ -135,11 +134,11 @@ fprintf(stdout, "TEST\n");
 			// Store the new word
 			storeWord(buffer,temp,++wordsInBuffer,&maxWordsStored);
 			if(wordsInBuffer == BUFFER_LENGTH){ // Buffer is full
-				if(writeBuffer(buffer,wIndx,wrds,wordsInBuffer) < 0){
+				if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){
 					return -1;
 				}else{
 					// Update info
-					readW += wordsInBuffer;
+					//readW += wordsInBuffer;
 					wordsInBuffer = 0;
 				}
 			}
@@ -150,17 +149,10 @@ fprintf(stdout, "TEST\n");
 	// Free&Close unnecessary varaibles
 	free(temp.w.b);
 	fclose(metag);
-////////////////////////////////////////////////////////////////
-fprintf(stdout, "TEST%" PRIu64 "\n",wordsInBuffer);
-////////////////////////////////////////////////////////////////
 
 	// Write buffered words
 	if(wordsInBuffer != 0)
-		if(writeBuffer(buffer,wIndx,wrds,wordsInBuffer) < 0) return -1;
-
-////////////////////////////////////////////////////////////////
-fprintf(stdout, "TEST\n");
-////////////////////////////////////////////////////////////////
+		if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
 
 	// Free buffer space
 	freeBuffer(buffer,maxWordsStored);
@@ -176,7 +168,7 @@ fprintf(stdout, "TEST\n");
 
 
 
-	fclose(wIndx);
+	fclose(bIndx);
 	fclose(wrds);
 
 	// Everything finished. All it's ok.
