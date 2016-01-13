@@ -64,9 +64,11 @@ int main(int ac, char** av){
 	//Open intermediate files
 	strcpy(fname,av[2]); // Copy outDic name
 	if((bIndx = fopen(strcat(fname,".bindx"),"wb"))==NULL){
-		fprintf(stderr, "Error opening word index file.\n");
+		fprintf(stderr, "Error opening buffer index file.\n");
 		return -1;
 	}
+	// Write first line of buffer index file (WordLength)
+	fwrite(&WL,sizeof(int),1,bIndx);
 
 
 	// Open words repo

@@ -53,6 +53,12 @@ int writeBuffer(wentry* buff,FILE* index,FILE* positions,uint64_t numWords){
 	// Sort buffer
 	quickSort_W(buff,0,numWords);
 	
+	// Write buffer info on buffer index file
+	uint64_t pos = (uint64_t) ftell(positions); // Buffer start position
+	fwrite(&pos,sizeof(uint64_t),1,index);
+	fwrite(&numWords,sizeof(uint64_t),1,index); // Number of words
+	// Write words on words file
+	fwrite(buff,sizeof(buff[0]),numWords,positions);
 
 	// Buffer correctly written on intermediate files
 	return 0;
