@@ -40,6 +40,7 @@ int main(int ac, char** av){
 	uint64_t /*readW = 0,*/ wordsInBuffer = 0, maxWordsStored = 0; // Absolute and buffer read words and control varaible
 	uint32_t numBuffWritten = 0;
 	char *fname;
+	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -64,7 +65,7 @@ int main(int ac, char** av){
 	//Open intermediate files
 	strcpy(fname,av[2]); // Copy outDic name
 	if((bIndx = fopen(strcat(fname,".bindx"),"wb"))==NULL){
-		fprintf(stderr, "Error opening buffer index file.\n");
+		fprintf(stderr, "Error opening buffer index file (write).\n");
 		return -1;
 	}
 	// Write first line of buffer index file (WordLength)
@@ -74,12 +75,9 @@ int main(int ac, char** av){
 	// Open words repo
 	strcpy(fname,av[2]);
 	if((wrds = fopen(strcat(fname,".wrds"),"wb"))==NULL){
-		fprintf(stderr, "Error opening words repository.\n");
+		fprintf(stderr, "Error opening words repository (write).\n");
 		return -1;
 	}
-
-	// Free unnecessary memory
-	free(fname);
 
 	// START WORKFLOW
 	// Read metagenome file
@@ -142,6 +140,7 @@ int main(int ac, char** av){
 					// Update info
 					//readW += wordsInBuffer;
 					wordsInBuffer = 0;
+					numBuffWritten++;
 				}
 			}
 		}
@@ -149,7 +148,6 @@ int main(int ac, char** av){
 	}
 
 	// Free&Close unnecessary varaibles
-	free(temp.w.b);
 	fclose(metag);
 
 	// Write buffered words
@@ -159,19 +157,102 @@ int main(int ac, char** av){
 	// Free buffer space
 	freeBuffer(buffer,maxWordsStored);
 
+	// Read Intermediate files and create final dictionary
+		// Close write buffer and open read buffers
+		fclose(bIndx);
+		fclose(wrds);
+
+		strcpy(fname,av[2]); // Copy outDic name
+		if((bIndx = fopen(strcat(fname,".bindx"),"rb"))==NULL){
+			fprintf(stderr, "Error opening buffer index file (read).\n");
+			return -1;
+		}
+		fread(&WL,sizeof(int),1,bIndx); // Read first line ()
+
+		// Open words repo
+		strcpy(fname,av[2]);
+		if((wrds = fopen(strcat(fname,".wrds"),"rb"))==NULL){
+			fprintf(stderr, "Error opening words repository (read).\n");
+			return -1;
+		}
+
+		// Open positions file
+		strcpy(fname,av[2]); // Copy outDic name
+		if((pDic = fopen(strcat(fname,".d2hP"),"wb"))==NULL){
+			fprintf(stderr, "Error opening positions dictionary file.\n");
+			return -1;
+		}
+
+		// Open dictionary words file 
+		strcpy(fname,av[2]); // Copy outDic name
+		if((wDic = fopen(strcat(fname,".d2hW"),"wb"))==NULL){
+			fprintf(stderr, "Error opening words dictionary file.\n");
+			return -1;
+		}
+
+
+	// Prepare necessary variables
+	uint64_t arrPos[numBuffWritten];
+	uint64_t wordsUnread[numBuffWritten];
+	wentry words[numBuffWritten];
+	uint64_t i;
+	uint16_t reps = 0;
+
+	// Read info about buffers
+	i = 0;
+	while(!feof(bIndx)){
+		fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
+		fread(&wordsUnread[i],sizeof(uint64_t),1,bIndx); // Number of words on set
+		++i;
+	}
+
+	// Take memory for words & read first set of words
+	for(i=0 ;i<numBuffWritten ;++i){
+		if((words[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
+			fprintf(stderr, "Error allocating space for word.\n");
+			return -1;
+		}
+		fseek(wrds,arrPos[i],SEEK_SET);
+		fread(&words[i],sizeof(words[i]),1,wrds);
+		// Update info
+		arrPos[i] = (uint64_t) ftell(wrds);
+		wordsUnread[i]--;
+	}
+
+	// First entrance
+	fwrite(&WL,sizeof(int),1,wDic); // Word length
+	i = lowestWord(words,numBuffWritten);
+	fwrite(&words[i].w.b,BYTES_IN_WORD,1,wDic); // write first word
+	i = (uint64_t)ftell(pDic);
+	fwrite(&i,sizeof(uint64_t),1,wDic); // position on pDic
+	fwrite(&words[i].seq,sizeof(uint32_t),1,pDic); // Read index
+	fwrite(&words[i].pos,sizeof(uint64_t),1,pDic); // Position on read
+	reps++; // Increment number of repetitions
+	memcpy(&temp,&words[i],sizeof(words[i])); // Update last word written
+	if(wordsUnread[i] > 0){
+		fseek(wrds,arrPos[i],SEEK_SET);
+		fread(&words[i],sizeof(words[i]),1,wrds);
+		arrPos[i] = (uint64_t) ftell(wrds);
+		wordsUnread[i]--;
+	}
+
+
+	// Write final dictionary file
+	while(!finished(&wordsUnread[0],numBuffWritten)){
+		i = lowestWord(words,numBuffWritten);
+		writeWord(&words[i],wDic,pDic,(bool)(wordComparator(&words[i],&temp)>0? true:false),&reps);
+	}
 
 
 
 
 
 
-
-
-
-
-
-	fclose(bIndx);
-	fclose(wrds);
+	// Free space
+	free(fname);
+	free(temp.w.b);
+	//freewords()
+	
 
 	// Everything finished. All it's ok.
 	return 0;

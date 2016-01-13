@@ -168,10 +168,50 @@ void quickSort_W(wentry *words, uint64_t start, uint64_t length){
 
 
 /* This function is used to deallocate a buffer from disk
+ *  @param buff buffer to be deallocated.
+ *  @param maxStored length of the buffer.
  */
 void freeBuffer(wentry* buff, uint64_t maxStored){
 	int k;
 	for(k=0; k<maxStored; ++k)
 		free(buff[k].w.b);
 	free(buff);
+}
+
+
+/* This function is used to check if all words has been read from intermediate file.
+ *  @param unread array of unread words of each buffer segment.
+ *  @param length of the unread array.
+ *  @return true if there are not unread word and false in other cases.
+ */
+bool finished(uint64_t *unread, uint64_t length){
+	uint64_t i;
+	for(i=0; i<length; ++i)
+		if(unread[i] > 0) return false;
+	return true;
+}
+
+
+/* This function is used to return the index of the lower word on a wentry array.
+ *  @param words array where search.
+ *  @param length of words array.
+ *  @return the index of the lowest wentry on words array.
+ */
+uint64_t lowestWord(wentry *words,uint64_t length){
+	uint64_t i,j=0;
+	for(i=1;i<length;++i)
+		if(wordComparator(&words[j],&words[i]) > 0) j = i;
+	return j;
+}
+
+
+/* This function is used to write an entrance on dictionary files
+ *  @param word to be written.
+ *  @param wDic words dictioanry.
+ *  @param pDic positions dictionary.
+ *  @param sameThanLastWord boolean value that indicate if the current word is the same than the last written.
+ *  @param words equal than last written.
+ */
+inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uint16_t *words){
+	//if()
 }
