@@ -37,10 +37,10 @@ int main(int ac, char** av){
 	FILE *metag; // Input files
 	FILE *wDic,*pDic;  // Output files
 	FILE *bIndx, *wrds; // Intermediate files
-	uint64_t /*readW = 0,*/ wordsInBuffer = 0, maxWordsStored = 0; // Absolute and buffer read words and control varaible
+	uint64_t readW = 0, wordsInBuffer = 0,i; // Absolute and buffer read words and auxiliar variable(i)
 	uint32_t numBuffWritten = 0;
 	char *fname;
-	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
+	bool removeIntermediataFiles = false; // Config it if you want save or not the itnermediate files
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -91,6 +91,14 @@ int main(int ac, char** av){
 	}
 	temp.seq = 0;
 
+	// Memory for buffer words
+	for(i=0;i<BUFFER_LENGTH;++i){
+		if((buffer[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
+			fprintf(stderr, "Error allocating space for word\n");
+			return -1;
+		}
+	}
+
 	// Start to read
 	c = fgetc(metag);
 	while(!feof(metag)){
@@ -132,7 +140,9 @@ int main(int ac, char** av){
 		if(crrSeqL >= (uint64_t)WL){ // Full well formed sequence 
 			temp.pos = seqPos - WL; // Take position on read
 			// Store the new word
-			storeWord(buffer,temp,++wordsInBuffer,&maxWordsStored);
+			memcpy(&buffer[wordsInBuffer],&temp,sizeof(temp));
+			memcpy(buffer[wordsInBuffer].w.b,temp.w.b,sizeof(temp.w.b));
+			readW++; wordsInBuffer++;
 			if(wordsInBuffer == BUFFER_LENGTH){ // Buffer is full
 				if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){
 					return -1;
@@ -151,11 +161,21 @@ int main(int ac, char** av){
 	fclose(metag);
 
 	// Write buffered words
-	if(wordsInBuffer != 0)
+	if(wordsInBuffer != 0){
 		if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
+		else numBuffWritten++;
+	}
 
-	// Free buffer space
-	freeBuffer(buffer,maxWordsStored);
+//////////////////////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST:%" PRIu64 "-%"PRIu32"\n",readW,numBuffWritten);
+//////////////////////////////////////////////////////////////////////////////////////////
+//	// Free buffer space
+	for(i=0; i<BUFFER_LENGTH; ++i)
+		free(buffer[i].w.b);    // ERROR IN EXECUTION HERE: "double free or corrupted"
+//////////////////////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST\n");
+//////////////////////////////////////////////////////////////////////////////////////////
+	free(buffer);
 
 	// Read Intermediate files and create final dictionary
 		// Close write buffer and open read buffers
@@ -195,17 +215,20 @@ int main(int ac, char** av){
 	uint64_t arrPos[numBuffWritten];
 	uint64_t wordsUnread[numBuffWritten];
 	wentry words[numBuffWritten];
-	uint64_t i;
 	uint16_t reps = 0;
 
 	// Read info about buffers
 	i = 0;
+	fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
+	fread(&wordsUnread[i],sizeof(uint64_t),1,bIndx); // Number of words on set
 	while(!feof(bIndx)){
+		++i;
 		fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
 		fread(&wordsUnread[i],sizeof(uint64_t),1,bIndx); // Number of words on set
-		++i;
 	}
-
+//////////////////////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST2:%"PRIu64"\n",i); // Here in test 2 buffers are being read when only there are one
+//////////////////////////////////////////////////////////////////////////////////////////
 	// Take memory for words & read first set of words
 	for(i=0 ;i<numBuffWritten ;++i){
 		if((words[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
@@ -222,7 +245,7 @@ int main(int ac, char** av){
 	// First entrance
 	fwrite(&WL,sizeof(int),1,wDic); // Word length
 	i = lowestWord(words,numBuffWritten);
-	fwrite(&words[i].w.b,BYTES_IN_WORD,1,wDic); // write first word
+	fwrite(&words[i].w.b,sizeof(unsigned char),BYTES_IN_WORD,wDic); // write first word
 	i = (uint64_t)ftell(pDic);
 	fwrite(&i,sizeof(uint64_t),1,wDic); // position on pDic
 	fwrite(&words[i].seq,sizeof(uint32_t),1,pDic); // Read index
@@ -240,19 +263,33 @@ int main(int ac, char** av){
 	// Write final dictionary file
 	while(!finished(&wordsUnread[0],numBuffWritten)){
 		i = lowestWord(words,numBuffWritten);
-		writeWord(&words[i],wDic,pDic,(bool)(wordComparator(&words[i],&temp)>0? true:false),&reps);
+		writeWord(&words[i],wDic,pDic,wordComparator(&words[i],&temp)>0? true:false,&reps);
+		memcpy(&temp,&words[i],sizeof(words[i])); // Update last word written
+		if(wordsUnread[i] > 0){
+			fseek(wrds,arrPos[i],SEEK_SET);
+			fread(&words[i],sizeof(words[i]),1,wrds);
+			arrPos[i] = (uint64_t) ftell(wrds);
+			wordsUnread[i]--;
+		}
 	}
 
+	if(wordComparator(&words[i],&temp)<=0) // End entrance on words dictionary
+		fwrite(&reps,sizeof(uint16_t),1,wDic);
+	
+	// Deallocate words buffer
+	for(i=0 ;i<numBuffWritten ;++i) // Free words
+		free(words[i].w.b);
 
-
-
-
+	if(removeIntermediataFiles){
+		strcpy(fname,av[2]);
+		remove(strcat(fname,".bindx"));
+		strcpy(fname,av[2]);
+		remove(strcat(fname,".wrds"));
+	}
 
 	// Free space
 	free(fname);
-	free(temp.w.b);
-	//freewords()
-	
+	//free(temp.w.b);
 
 	// Everything finished. All it's ok.
 	return 0;

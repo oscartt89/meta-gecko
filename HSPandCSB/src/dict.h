@@ -39,14 +39,12 @@ typedef struct {
 
 // FUNCTIONS
 inline void shift_word(word*);
-int storeWord(wentry*,wentry,uint64_t,uint64_t*);
 int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 int wordcmp(unsigned char*,unsigned char*,int);
 inline void SWAP_W(wentry*,wentry*);
 int wordComparator(wentry*,wentry*);
 void quickSort_W(wentry*,uint64_t,uint64_t);
 long int searchInIndex(word,FILE*,long int,bool*);
-void freeBuffer(wentry*,uint64_t);
 bool finished(uint64_t*,uint64_t);
 uint64_t lowestWord(wentry*,uint64_t);
 inline void writeWord(wentry*,FILE*,FILE*,bool,uint16_t*);

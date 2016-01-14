@@ -18,29 +18,6 @@ void shift_word(word* w){
 }
 
 
-/* This method is used to store a wentry instance into an array of wentry. 
- * @param wArr is the array of wentry** where the new wentry will be stored.
- * @param word is the new word to be stored.
- * @param length is the new length of the array.
- * @param maxStored is a variable used to know if memory allocation is necessary or not.
- * @return 0 if the process ends correctly. If something got wrong return a
- * 		negative value.
- */
-int storeWord(wentry *wArr,wentry word,uint64_t length,uint64_t *maxStored){
-	// Allocate memory if it's necessary
-	if((length > *maxStored) == 0){ // Limit of words
-		if((wArr[length-1].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-			fprintf(stderr, "storeWord:: Error allocating space for word\n");
-			return -1;
-		}
-		*maxStored++;
-	}
-	// Copy the new word
-	memcpy(&wArr[length-1],&word,sizeof(wentry));
-	return 0;
-}
-
-
 /* This function is used to write a given set of words in two intermediate files.
  *  @param buff set of words to be written.
  *  @param index file of intermediate files.
@@ -101,8 +78,8 @@ inline void SWAP_W(wentry *w1,wentry *w2){
 /* This function is used to compare two wentry instances. The criterion
  * used is:
  * 		1 - Compare sequences (alphabetically).
- * 		2 - Compare position on sequence.
- *      3 - Compare Read index.
+ *      2 - Compare Read index.
+ *		3 - Compare position on sequence.
  * @param w1 word to be compared.
  * @param w2 word to be compared.
  * @return a positive number if w1 is greater than w2, a negative number
@@ -112,12 +89,12 @@ int wordComparator(wentry* w1,wentry* w2){
 	int wComp;
 	if((wComp = wordcmp(&w1->w.b[0],&w2->w.b[0],BYTES_IN_WORD)) != 0) return wComp;
 
-	if(w1->pos > w2->pos) return 1;
-	else if(w1->pos < w2->pos) return -1;
-
 	if(w1->seq > w2->seq) return 1;
 	else if(w1->seq < w2->seq) return -1;
 
+	if(w1->pos > w2->pos) return 1;
+	else if(w1->pos < w2->pos) return -1;
+	
 	return 0;
 }
 
@@ -167,18 +144,6 @@ void quickSort_W(wentry *words, uint64_t start, uint64_t length){
 }
 
 
-/* This function is used to deallocate a buffer from disk
- *  @param buff buffer to be deallocated.
- *  @param maxStored length of the buffer.
- */
-void freeBuffer(wentry* buff, uint64_t maxStored){
-	int k;
-	for(k=0; k<maxStored; ++k)
-		free(buff[k].w.b);
-	free(buff);
-}
-
-
 /* This function is used to check if all words has been read from intermediate file.
  *  @param unread array of unread words of each buffer segment.
  *  @param length of the unread array.
@@ -213,5 +178,15 @@ uint64_t lowestWord(wentry *words,uint64_t length){
  *  @param words equal than last written.
  */
 inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uint16_t *words){
-	//if()
+	uint64_t aux;
+	if(!sameThanLastWord){ // Write new word
+		fwrite(words,sizeof(uint16_t),1,w); // Write num of repetitions
+		fwrite(word->w.b,sizeof(unsigned char),BYTES_IN_WORD,w); // Write new word
+		aux = (uint64_t) ftell(p);
+		fwrite(&aux,sizeof(uint64_t),1,w); // Write new postions on positions dictionary
+		*words = 0; // Update value
+	}
+	fwrite(&word->seq,sizeof(uint32_t),1,p); // Read index
+	fwrite(&word->pos,sizeof(uint64_t),1,p); // Position on read
+	*words+=1; // Increment number of repetitions
 }
