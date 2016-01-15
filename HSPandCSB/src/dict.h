@@ -22,6 +22,7 @@ int BYTES_IN_WORD;
 
 // STRUCTS
 typedef struct {
+    uint16_t WL;
 	// Each letter is stored using 2 bits
 	// We have 4 letters per byte and 
 	// each unsigned char size is 1 byte.
@@ -39,6 +40,7 @@ typedef struct {
 
 // FUNCTIONS
 inline void shift_word(word*);
+inline void storeWord(wentry*,wentry);
 int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 int wordcmp(unsigned char*,unsigned char*,int);
 inline void SWAP_W(wentry*,wentry*);
@@ -46,5 +48,6 @@ int wordComparator(wentry*,wentry*);
 void quickSort_W(wentry*,uint64_t,uint64_t);
 long int searchInIndex(word,FILE*,long int,bool*);
 bool finished(uint64_t*,uint64_t);
+inline void loadWord(wentry*,FILE*);
 uint64_t lowestWord(wentry*,uint64_t);
 inline void writeWord(wentry*,FILE*,FILE*,bool,uint16_t*);

@@ -7,6 +7,33 @@
  */
 #include "dict.h"
 
+void showWord(word* w, int wsize) {
+	char Alf[] = { 'A', 'C', 'G', 'T' };
+	char ws[wsize*4+4];
+	int i;
+	unsigned char c;
+	for (i = 0; i < wsize; i++) {
+		c = w->b[i];
+		c = c >> 6;
+		ws[4*i] = Alf[(int) c];
+		c = w->b[i];
+		c = c << 2;
+		c = c >> 6;
+		ws[4*i+1] = Alf[(int) c];
+		c = w->b[i];
+		c = c << 4;
+		c = c >> 6;
+		ws[4*i+2] = Alf[(int) c];
+		c = w->b[i];
+		c = c << 6;
+		c = c >> 6;
+		ws[4*i+3] = Alf[(int) c];
+	}
+	ws[wsize*4+4] = '\0';
+	fprintf(stderr, "Word:%s\n", ws);
+}
+
+
 /**
  * This main function encodes the workflow of metagenome dictionary
  * creation. The workflow is:
@@ -31,7 +58,7 @@ int main(int ac, char** av){
 	}
 
 	// Variables
-	int WL = atoi(av[3]); // Word length
+	uint16_t WL = (uint16_t) atoi(av[3]); // Word length
 	BYTES_IN_WORD = WL / 4;
 	wentry *buffer; //Buffer of read words
 	FILE *metag; // Input files
@@ -69,7 +96,7 @@ int main(int ac, char** av){
 		return -1;
 	}
 	// Write first line of buffer index file (WordLength)
-	fwrite(&WL,sizeof(int),1,bIndx);
+	fwrite(&WL,sizeof(uint16_t),1,bIndx);
 
 
 	// Open words repo
@@ -90,11 +117,12 @@ int main(int ac, char** av){
 		return -1;
 	}
 	temp.seq = 0;
+	temp.w.WL = WL;
 
 	// Memory for buffer words
 	for(i=0;i<BUFFER_LENGTH;++i){
 		if((buffer[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-			fprintf(stderr, "Error allocating space for word\n");
+			fprintf(stderr, "Error allocating space for word.\n");
 			return -1;
 		}
 	}
@@ -140,8 +168,7 @@ int main(int ac, char** av){
 		if(crrSeqL >= (uint64_t)WL){ // Full well formed sequence 
 			temp.pos = seqPos - WL; // Take position on read
 			// Store the new word
-			memcpy(&buffer[wordsInBuffer],&temp,sizeof(temp));
-			memcpy(buffer[wordsInBuffer].w.b,temp.w.b,sizeof(temp.w.b));
+			storeWord(&buffer[wordsInBuffer],temp);
 			readW++; wordsInBuffer++;
 			if(wordsInBuffer == BUFFER_LENGTH){ // Buffer is full
 				if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){
@@ -170,8 +197,11 @@ int main(int ac, char** av){
 fprintf(stderr, "TEST:%" PRIu64 "-%"PRIu32"\n",readW,numBuffWritten);
 //////////////////////////////////////////////////////////////////////////////////////////
 //	// Free buffer space
-	for(i=0; i<BUFFER_LENGTH; ++i)
-		free(buffer[i].w.b);    // ERROR IN EXECUTION HERE: "double free or corrupted"
+	for(i=0; i</*BUFFER_LENGTH*/readW; ++i){
+		showWord(&buffer[i].w,BYTES_IN_WORD);
+//		fprintf(stderr, "S:%"PRIu64"\n", i);
+//		free(buffer[i].w.b);    // ERROR IN EXECUTION HERE: "double free or corrupted"
+	}
 //////////////////////////////////////////////////////////////////////////////////////////
 //fprintf(stderr, "TEST\n");
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -187,7 +217,7 @@ fprintf(stderr, "TEST:%" PRIu64 "-%"PRIu32"\n",readW,numBuffWritten);
 			fprintf(stderr, "Error opening buffer index file (read).\n");
 			return -1;
 		}
-		fread(&WL,sizeof(int),1,bIndx); // Read first line ()
+		fread(&WL,sizeof(uint16_t),1,bIndx); // Read header = word length
 
 		// Open words repo
 		strcpy(fname,av[2]);
@@ -219,16 +249,13 @@ fprintf(stderr, "TEST:%" PRIu64 "-%"PRIu32"\n",readW,numBuffWritten);
 
 	// Read info about buffers
 	i = 0;
-	fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
-	fread(&wordsUnread[i],sizeof(uint64_t),1,bIndx); // Number of words on set
-	while(!feof(bIndx)){
-		++i;
+	do{
 		fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
 		fread(&wordsUnread[i],sizeof(uint64_t),1,bIndx); // Number of words on set
-	}
-//////////////////////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST2:%"PRIu64"\n",i); // Here in test 2 buffers are being read when only there are one
-//////////////////////////////////////////////////////////////////////////////////////////
+		++i;
+	}while(i<numBuffWritten);
+
+fprintf(stderr, "CLEAN\n");
 	// Take memory for words & read first set of words
 	for(i=0 ;i<numBuffWritten ;++i){
 		if((words[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
@@ -236,9 +263,11 @@ fprintf(stderr, "TEST2:%"PRIu64"\n",i); // Here in test 2 buffers are being read
 			return -1;
 		}
 		fseek(wrds,arrPos[i],SEEK_SET);
-		fread(&words[i],sizeof(words[i]),1,wrds);
+		loadWord(&words[i],wrds);
 		// Update info
 		arrPos[i] = (uint64_t) ftell(wrds);
+fprintf(stderr, "WU%"PRIu64"\t", wordsUnread[i]);
+showWord(&words[i].w,BYTES_IN_WORD);
 		wordsUnread[i]--;
 	}
 
@@ -246,28 +275,31 @@ fprintf(stderr, "TEST2:%"PRIu64"\n",i); // Here in test 2 buffers are being read
 	fwrite(&WL,sizeof(int),1,wDic); // Word length
 	i = lowestWord(words,numBuffWritten);
 	fwrite(&words[i].w.b,sizeof(unsigned char),BYTES_IN_WORD,wDic); // write first word
-	i = (uint64_t)ftell(pDic);
-	fwrite(&i,sizeof(uint64_t),1,wDic); // position on pDic
+	uint64_t pos = (uint64_t)ftell(pDic);
+	fwrite(&pos,sizeof(uint64_t),1,wDic); // position on pDic
 	fwrite(&words[i].seq,sizeof(uint32_t),1,pDic); // Read index
 	fwrite(&words[i].pos,sizeof(uint64_t),1,pDic); // Position on read
 	reps++; // Increment number of repetitions
-	memcpy(&temp,&words[i],sizeof(words[i])); // Update last word written
+	storeWord(&temp,words[i]); // Update last word written
 	if(wordsUnread[i] > 0){
 		fseek(wrds,arrPos[i],SEEK_SET);
-		fread(&words[i],sizeof(words[i]),1,wrds);
+		loadWord(&words[i],wrds);
+fprintf(stderr, "WU%"PRIu64"\t", wordsUnread[i]);
+showWord(&words[i].w,BYTES_IN_WORD);
 		arrPos[i] = (uint64_t) ftell(wrds);
 		wordsUnread[i]--;
 	}
-
 
 	// Write final dictionary file
 	while(!finished(&wordsUnread[0],numBuffWritten)){
 		i = lowestWord(words,numBuffWritten);
 		writeWord(&words[i],wDic,pDic,wordComparator(&words[i],&temp)>0? true:false,&reps);
-		memcpy(&temp,&words[i],sizeof(words[i])); // Update last word written
+fprintf(stderr, "WU%"PRIu64"\t", wordsUnread[i]);
+showWord(&words[i].w,BYTES_IN_WORD);
+		storeWord(&temp,words[i]); // Update last word written
 		if(wordsUnread[i] > 0){
 			fseek(wrds,arrPos[i],SEEK_SET);
-			fread(&words[i],sizeof(words[i]),1,wrds);
+			loadWord(&words[i],wrds);
 			arrPos[i] = (uint64_t) ftell(wrds);
 			wordsUnread[i]--;
 		}

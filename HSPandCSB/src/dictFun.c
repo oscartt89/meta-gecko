@@ -18,25 +18,41 @@ void shift_word(word* w){
 }
 
 
+/*
+ */
+inline void storeWord(wentry* container,wentry word){
+	container->pos = word.pos;
+	container->seq = word.seq;
+	container->w.WL = word.w.WL;
+	int i;
+	for(i=0;i<BYTES_IN_WORD;++i)
+		container->w.b[i] = word.w.b[i];
+}
+
+
 /* This function is used to write a given set of words in two intermediate files.
  *  @param buff set of words to be written.
  *  @param index file of intermediate files.
- *  @param positions file of intermediate files.
+ *  @param words file of intermediate files.
  *  @param numWords number of instances on buff set.
  *  @return a negative number if any error happens or a non negative number if
  *     the process finished correctly.
  */
-int writeBuffer(wentry* buff,FILE* index,FILE* positions,uint64_t numWords){
+int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
 	// Sort buffer
 	quickSort_W(buff,0,numWords);
 	
 	// Write buffer info on buffer index file
-	uint64_t pos = (uint64_t) ftell(positions); // Buffer start position
+	uint64_t pos = (uint64_t) ftell(words); // Buffer start position
 	fwrite(&pos,sizeof(uint64_t),1,index);
 	fwrite(&numWords,sizeof(uint64_t),1,index); // Number of words
 	// Write words on words file
-	fwrite(buff,sizeof(buff[0]),numWords,positions);
-
+	for(pos=0;pos<numWords;++pos){
+		fwrite(&buff[pos].pos,sizeof(uint64_t),1,words); 
+		fwrite(&buff[pos].seq,sizeof(uint32_t),1,words);
+		//fwrite(&buff[pos].w.WL,sizeof(uint16_t),1,words);
+		fwrite(&buff[pos].w.b,sizeof(unsigned char),BYTES_IN_WORD,words);
+	}
 	// Buffer correctly written on intermediate files
 	return 0;
 }
@@ -87,7 +103,7 @@ inline void SWAP_W(wentry *w1,wentry *w2){
  */
 int wordComparator(wentry* w1,wentry* w2){
 	int wComp;
-	if((wComp = wordcmp(&w1->w.b[0],&w2->w.b[0],BYTES_IN_WORD)) != 0) return wComp;
+	if((wComp = wordcmp(w1->w.b,w2->w.b,BYTES_IN_WORD)) != 0) return wComp;
 
 	if(w1->seq > w2->seq) return 1;
 	else if(w1->seq < w2->seq) return -1;
@@ -157,6 +173,16 @@ bool finished(uint64_t *unread, uint64_t length){
 }
 
 
+/*
+ */
+inline void loadWord(wentry *word,FILE* wFile){
+	fread(&word->pos,sizeof(uint64_t),1,wFile); 
+	fread(&word->seq,sizeof(uint32_t),1,wFile);
+	//fread(&word->w.WL,sizeof(uint16_t),1,wFile);
+	fread(&word->w.b,sizeof(unsigned char),BYTES_IN_WORD,wFile);
+}
+
+
 /* This function is used to return the index of the lower word on a wentry array.
  *  @param words array where search.
  *  @param length of words array.
@@ -170,7 +196,10 @@ uint64_t lowestWord(wentry *words,uint64_t length){
 }
 
 
-/* This function is used to write an entrance on dictionary files
+/* This function is used to write an entrance on dictionary files. The order of
+ * each entrance on dictionaries are:
+ *     - WDictionary : Word<unsigned char*BYTES_IN_WORD> + PosOnPDic<uint64_t> + NumReps<uint16_t>
+ *     - PDictionary : ReadIndex<uint32_t> + PosOnRead<uint64_t>
  *  @param word to be written.
  *  @param wDic words dictioanry.
  *  @param pDic positions dictionary.
