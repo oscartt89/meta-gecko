@@ -7,33 +7,6 @@
  */
 #include "dict.h"
 
-void showWord(word* w, int wsize) {
-	char Alf[] = { 'A', 'C', 'G', 'T' };
-	char ws[wsize*4+4];
-	int i;
-	unsigned char c;
-	for (i = 0; i < wsize; i++) {
-		c = w->b[i];
-		c = c >> 6;
-		ws[4*i] = Alf[(int) c];
-		c = w->b[i];
-		c = c << 2;
-		c = c >> 6;
-		ws[4*i+1] = Alf[(int) c];
-		c = w->b[i];
-		c = c << 4;
-		c = c >> 6;
-		ws[4*i+2] = Alf[(int) c];
-		c = w->b[i];
-		c = c << 6;
-		c = c >> 6;
-		ws[4*i+3] = Alf[(int) c];
-	}
-	ws[wsize*4+4] = '\0';
-	fprintf(stderr, "Word:%s\n", ws);
-}
-
-
 /**
  * This main function encodes the workflow of metagenome dictionary
  * creation. The workflow is:
@@ -193,19 +166,8 @@ int main(int ac, char** av){
 		else numBuffWritten++;
 	}
 
-//////////////////////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST:%" PRIu64 "-%"PRIu32"\n",readW,numBuffWritten);
-//////////////////////////////////////////////////////////////////////////////////////////
-//	// Free buffer space
-	for(i=0; i</*BUFFER_LENGTH*/readW; ++i){
-		showWord(&buffer[i].w,BYTES_IN_WORD);
-//		fprintf(stderr, "S:%"PRIu64"\n", i);
-//		free(buffer[i].w.b);    // ERROR IN EXECUTION HERE: "double free or corrupted"
-	}
-//////////////////////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TEST\n");
-//////////////////////////////////////////////////////////////////////////////////////////
-	free(buffer);
+	// Free buffer space
+	freeWArray(buffer,BUFFER_LENGTH);
 
 	// Read Intermediate files and create final dictionary
 		// Close write buffer and open read buffers
@@ -255,7 +217,6 @@ fprintf(stderr, "TEST:%" PRIu64 "-%"PRIu32"\n",readW,numBuffWritten);
 		++i;
 	}while(i<numBuffWritten);
 
-fprintf(stderr, "CLEAN\n");
 	// Take memory for words & read first set of words
 	for(i=0 ;i<numBuffWritten ;++i){
 		if((words[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
@@ -266,8 +227,6 @@ fprintf(stderr, "CLEAN\n");
 		loadWord(&words[i],wrds);
 		// Update info
 		arrPos[i] = (uint64_t) ftell(wrds);
-fprintf(stderr, "WU%"PRIu64"\t", wordsUnread[i]);
-showWord(&words[i].w,BYTES_IN_WORD);
 		wordsUnread[i]--;
 	}
 
@@ -284,8 +243,6 @@ showWord(&words[i].w,BYTES_IN_WORD);
 	if(wordsUnread[i] > 0){
 		fseek(wrds,arrPos[i],SEEK_SET);
 		loadWord(&words[i],wrds);
-fprintf(stderr, "WU%"PRIu64"\t", wordsUnread[i]);
-showWord(&words[i].w,BYTES_IN_WORD);
 		arrPos[i] = (uint64_t) ftell(wrds);
 		wordsUnread[i]--;
 	}
@@ -294,8 +251,6 @@ showWord(&words[i].w,BYTES_IN_WORD);
 	while(!finished(&wordsUnread[0],numBuffWritten)){
 		i = lowestWord(words,numBuffWritten);
 		writeWord(&words[i],wDic,pDic,wordComparator(&words[i],&temp)>0? true:false,&reps);
-fprintf(stderr, "WU%"PRIu64"\t", wordsUnread[i]);
-showWord(&words[i].w,BYTES_IN_WORD);
 		storeWord(&temp,words[i]); // Update last word written
 		if(wordsUnread[i] > 0){
 			fseek(wrds,arrPos[i],SEEK_SET);
@@ -321,7 +276,7 @@ showWord(&words[i].w,BYTES_IN_WORD);
 
 	// Free space
 	free(fname);
-	//free(temp.w.b);
+	free(temp.w.b);
 
 	// Everything finished. All it's ok.
 	return 0;

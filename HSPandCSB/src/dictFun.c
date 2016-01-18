@@ -18,7 +18,9 @@ void shift_word(word* w){
 }
 
 
-/*
+/* This function is used to store a given word in another word variable.
+ *  @param container variable where word will be stored.
+ *  @param word taht will be stored.
  */
 inline void storeWord(wentry* container,wentry word){
 	container->pos = word.pos;
@@ -39,8 +41,22 @@ inline void storeWord(wentry* container,wentry word){
  *     the process finished correctly.
  */
 int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
+///////////////////////////////////////////////////////////////////////////
+int i;
+for(i=0;i<numWords;++i){
+	fprintf(stdout, "S:%"PRIu32"  P:%"PRIu64" ",buff[i].seq,buff[i].pos);
+	showWord(&buff[i].w,BYTES_IN_WORD);
+}
+//////////////////////////////////////////////////////////////////////////
 	// Sort buffer
 	quickSort_W(buff,0,numWords);
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "||\n");
+for(i=0;i<numWords;++i){
+	fprintf(stdout, "S:%"PRIu32"  P:%"PRIu64" ",buff[i].seq,buff[i].pos);
+	showWord(&buff[i].w,BYTES_IN_WORD);
+}
+//////////////////////////////////////////////////////////////////////////
 	
 	// Write buffer info on buffer index file
 	uint64_t pos = (uint64_t) ftell(words); // Buffer start position
@@ -51,7 +67,9 @@ int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
 		fwrite(&buff[pos].pos,sizeof(uint64_t),1,words); 
 		fwrite(&buff[pos].seq,sizeof(uint32_t),1,words);
 		//fwrite(&buff[pos].w.WL,sizeof(uint16_t),1,words);
-		fwrite(&buff[pos].w.b,sizeof(unsigned char),BYTES_IN_WORD,words);
+		int i;
+		for(i=0;i<BYTES_IN_WORD;++i)
+			fwrite(&buff[pos].w.b[i],sizeof(unsigned char),1,words);
 	}
 	// Buffer correctly written on intermediate files
 	return 0;
@@ -64,11 +82,11 @@ int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
  *  @param n: length of BOTH arrays.
  *  @retun a positive number if w1>w2, a negative number if w1>w2 and zero if they are equal.
  */
-int wordcmp(unsigned char *w1, unsigned char*w2, int n){
+int wordcmp(word w1, word w2, int n){
 	int i;
 	for(i=0;i<n;i++)
-		if(w1[i] < w2[i]) return -1;
-		else if(w1[i] > w2[i]) return +1;
+		if(w1.b[i] < w2.b[i]) return -1;
+		else if(w1.b[i] > w2.b[i]) return +1;
 
 	return 0;
 }
@@ -83,9 +101,9 @@ inline void SWAP_W(wentry *w1,wentry *w2){
 	if((t.w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
 		fprintf(stderr, "SWAP_W:: Error allocating memory.\n");
 	}else{
-		memcpy(&t,w1,sizeof(wentry));
-		memcpy(w1,w2,sizeof(wentry));
-		memcpy(w2,&t,sizeof(wentry));
+		storeWord(&t,*w1);
+		storeWord(w1,*w2);
+		storeWord(w2,t);
 		free(t.w.b);
 	}
 }
@@ -103,7 +121,7 @@ inline void SWAP_W(wentry *w1,wentry *w2){
  */
 int wordComparator(wentry* w1,wentry* w2){
 	int wComp;
-	if((wComp = wordcmp(w1->w.b,w2->w.b,BYTES_IN_WORD)) != 0) return wComp;
+	if((wComp = wordcmp(w1->w,w2->w,BYTES_IN_WORD)) != 0) return wComp;
 
 	if(w1->seq > w2->seq) return 1;
 	else if(w1->seq < w2->seq) return -1;
@@ -144,9 +162,22 @@ void quickSort_W(wentry *words, uint64_t start, uint64_t length){
       // All array checked -> end
       if(right>=left)
           break;
-      // Swap selected values
-      SWAP_W(&words[right],&words[left]);
-      changed = 1;
+      
+      if(right > pivot){ // Right sub-array is sorted
+      	quickSort_W(words,pivot,length-pivot);
+      	changed = 0;
+      }else if(left < pivot){ // Left sub-array is sorted
+      	quickSort_W(words,start,pivot);
+      	changed = 0;
+      }else{
+	    // Swap selected values
+	    SWAP_W(&words[right],&words[left]);
+	    changed = 1;
+
+	    if(pivot == right && pivot != end) pivot++;
+	  	else if(pivot == left && pivot > 0) pivot--;
+	  }
+      
       if(right < pivot) right++;
       if(left > pivot) left--;
   }
@@ -154,7 +185,8 @@ void quickSort_W(wentry *words, uint64_t start, uint64_t length){
   if(changed && right<left){ // If anything changed, don't continue, it's sorted
   	quickSort_W(words,start,right);
   	quickSort_W(words,right,length-right);
-  }
+  }else if(changed) quickSort_W(words,start,end);
+
 
   return;
 }
@@ -173,13 +205,17 @@ bool finished(uint64_t *unread, uint64_t length){
 }
 
 
-/*
+/* This function is used to load a word from a words intermediate file.
+ *  @param word varaible where loaded wentry ill be stored.
+ *  @param wFile pointer to words intermediate file.
  */
 inline void loadWord(wentry *word,FILE* wFile){
 	fread(&word->pos,sizeof(uint64_t),1,wFile); 
 	fread(&word->seq,sizeof(uint32_t),1,wFile);
 	//fread(&word->w.WL,sizeof(uint16_t),1,wFile);
-	fread(&word->w.b,sizeof(unsigned char),BYTES_IN_WORD,wFile);
+	int i;
+	for(i=0;i<BYTES_IN_WORD;++i)
+		fread(&word->w.b[i],sizeof(unsigned char),1,wFile);
 }
 
 
@@ -218,4 +254,48 @@ inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uin
 	fwrite(&word->seq,sizeof(uint32_t),1,p); // Read index
 	fwrite(&word->pos,sizeof(uint64_t),1,p); // Position on read
 	*words+=1; // Increment number of repetitions
+}
+
+
+/* This funtion is used to deallocate a wentry array in disk.
+ *  @param arr wentry array to be deallocated.
+ *  @param length of wentry array.
+ */
+inline void freeWArray(wentry *arr,uint64_t length){
+	uint64_t i;
+	for(i=0;i<length;++i)
+		free(arr[i].w.b);
+	free(arr);
+}
+
+
+void showWord(word* w, int wsize) {
+	char Alf[] = { 'A', 'C', 'G', 'T' };
+	char ws[wsize*4+4];
+	int i;
+	unsigned char c;
+	fprintf(stdout, "Word:");
+	for (i = 0; i < wsize; i++) {
+		c = w->b[i];
+		c = c >> 6;
+		ws[4*i] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w->b[i];
+		c = c << 2;
+		c = c >> 6;
+		ws[4*i+1] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w->b[i];
+		c = c << 4;
+		c = c >> 6;
+		ws[4*i+2] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w->b[i];
+		c = c << 6;
+		c = c >> 6;
+		ws[4*i+3] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+	}
+	ws[wsize*4+4] = '\0';
+	fprintf(stdout, "\n");
 }
