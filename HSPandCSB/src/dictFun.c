@@ -5,6 +5,7 @@
  */
 #include "dict.h"
 
+
 /* This function is used to shift bits in a unsigned char array
  *	@param w: word structure where char array to be shifted is stored.
  */
@@ -42,20 +43,20 @@ inline void storeWord(wentry* container,wentry word){
  */
 int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
 ///////////////////////////////////////////////////////////////////////////
-int i;
-for(i=0;i<numWords;++i){
-	fprintf(stdout, "S:%"PRIu32"  P:%"PRIu64" ",buff[i].seq,buff[i].pos);
-	showWord(&buff[i].w,BYTES_IN_WORD);
-}
+//int i;
+//for(i=0;i<numWords;++i){
+//	fprintf(stdout, "S:%"PRIu32"  P:%"PRIu64" ",buff[i].seq,buff[i].pos);
+//	showWord(&buff[i].w,BYTES_IN_WORD);
+//}
 //////////////////////////////////////////////////////////////////////////
 	// Sort buffer
-	quickSort_W(buff,0,numWords);
+	quicksort_W(buff,0,numWords-1);
 ///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "||\n");
-for(i=0;i<numWords;++i){
-	fprintf(stdout, "S:%"PRIu32"  P:%"PRIu64" ",buff[i].seq,buff[i].pos);
-	showWord(&buff[i].w,BYTES_IN_WORD);
-}
+//fprintf(stdout, "||\n");
+//for(i=0;i<numWords;++i){
+//	fprintf(stdout, "S:%"PRIu32"  P:%"PRIu64" ",buff[i].seq,buff[i].pos);
+//	showWord(&buff[i].w,BYTES_IN_WORD);
+//}
 //////////////////////////////////////////////////////////////////////////
 	
 	// Write buffer info on buffer index file
@@ -92,23 +93,6 @@ int wordcmp(word w1, word w2, int n){
 }
 
 
-/* This function is used to swap/interchange two wentry instances.
- *  @param w1: wentry that will be swapped.
- *  @param w2: wentry that will be swapped.
- */
-inline void SWAP_W(wentry *w1,wentry *w2){
-	wentry t;
-	if((t.w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-		fprintf(stderr, "SWAP_W:: Error allocating memory.\n");
-	}else{
-		storeWord(&t,*w1);
-		storeWord(w1,*w2);
-		storeWord(w2,t);
-		free(t.w.b);
-	}
-}
-
-
 /* This function is used to compare two wentry instances. The criterion
  * used is:
  * 		1 - Compare sequences (alphabetically).
@@ -138,57 +122,76 @@ int wordComparator(wentry* w1,wentry* w2){
  *  @param start: index where start to sort.
  *  @param length: length of the array to sort (starting on "start" index).
  */
-void quickSort_W(wentry *words, uint64_t start, uint64_t length){
-	//Check exceptions
-  if (length < 2) return;
-  else if(length == 2){
-  	if(wordComparator(&words[start],&words[start+1])>0)
-  		SWAP_W(&words[start],&words[start+1]);
-  	return;
-  }
-  if(start < 0) return;
-	uint64_t right, left, pivot, end = start + length - 1;
-	int changed = 0;
+int GT(wentry a1, wentry a2){
+	int i;
+	for(i=0;i<BYTES_IN_WORD;i++)
+		if(a1.w.b[i] < a2.w.b[i]) return 0;
+		else if(a1.w.b[i] > a2.w.b[i]) return 1;
 
-  pivot = rand() % (end + 1 - start) + start;
-  right = start;
-  left = end;
+	if(a1.seq > a2.seq) return 1;
+	else if(a1.seq < a2.seq) return 0;
 
-  while(right != pivot || left != pivot) {
-  	// While right is lower than pivot, continue
-      while(wordComparator(&words[right],&words[pivot])<0 && right <= pivot) right++;
-      // While left y greater than pivot, continue
-      while(wordComparator(&words[pivot],&words[left])<0 && left >= pivot) left--;
-      // All array checked -> end
-      if(right>=left)
-          break;
-      
-      if(right > pivot){ // Right sub-array is sorted
-      	quickSort_W(words,pivot,length-pivot);
-      	changed = 0;
-      }else if(left < pivot){ // Left sub-array is sorted
-      	quickSort_W(words,start,pivot);
-      	changed = 0;
-      }else{
-	    // Swap selected values
-	    SWAP_W(&words[right],&words[left]);
-	    changed = 1;
-
-	    if(pivot == right && pivot != end) pivot++;
-	  	else if(pivot == left && pivot > 0) pivot--;
-	  }
-      
-      if(right < pivot) right++;
-      if(left > pivot) left--;
-  }
-
-  if(changed && right<left){ // If anything changed, don't continue, it's sorted
-  	quickSort_W(words,start,right);
-  	quickSort_W(words,right,length-right);
-  }else if(changed) quickSort_W(words,start,end);
+	if(a1.pos > a2.pos) return 1;
+	return 0;
+}
 
 
-  return;
+/*
+ */
+int partition(wentry* a, int l, int r) {
+   int i=l;
+   int j=r+1;
+   wentry t;
+
+   // l sera el pivote
+   // y contendra la mediana de l, r y (l+r)/2
+   int mid = (l+r)/2;
+
+   if(GT(a[mid],a[r])) {
+		 SWAP_W(a[mid],a[r],t);
+   }
+
+   if(GT(a[mid],a[l])) {
+		 SWAP_W(a[mid],a[l],t);
+   }
+
+   if(GT(a[l],a[r])) {
+		 SWAP_W(a[l],a[r],t);
+	 }
+
+	while (1) {
+		do{
+			++i;
+		}while( !GT(a[i],a[l]) && i <= r );
+
+		do{
+			--j;
+		}while( GT(a[j],a[l]) && j >= l);
+
+		if( i >= j ) break;
+
+		SWAP_W(a[i],a[j],t)
+	}
+
+	SWAP_W(a[l],a[j],t)
+
+	return j;
+}
+
+
+/*
+ */
+int quicksort_W(wentry* a, int l,int r) {
+   int j;
+
+	if( l < r ) {
+ 	// divide and conquer
+       j = partition( a, l, r);
+       //  j=(l+r)/2;
+       quicksort_W( a, l, j-1);
+       quicksort_W( a, j+1, r);
+   }
+   return 0;
 }
 
 

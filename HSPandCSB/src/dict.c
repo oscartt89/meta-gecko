@@ -40,7 +40,7 @@ int main(int ac, char** av){
 	uint64_t readW = 0, wordsInBuffer = 0,i; // Absolute and buffer read words and auxiliar variable(i)
 	uint32_t numBuffWritten = 0;
 	char *fname;
-	bool removeIntermediataFiles = false; // Config it if you want save or not the itnermediate files
+	int removeIntermediataFiles = 0; // Config it if you want save or not the itnermediate files
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -165,7 +165,7 @@ int main(int ac, char** av){
 		if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
 		else numBuffWritten++;
 	}
-
+fprintf(stderr, "-\n");
 	// Free buffer space
 	freeWArray(buffer,BUFFER_LENGTH);
 
@@ -202,6 +202,7 @@ int main(int ac, char** av){
 			return -1;
 		}
 
+fprintf(stderr, "--\n");
 
 	// Prepare necessary variables
 	uint64_t arrPos[numBuffWritten];
@@ -230,6 +231,8 @@ int main(int ac, char** av){
 		wordsUnread[i]--;
 	}
 
+fprintf(stderr, "--\n");
+
 	// First entrance
 	fwrite(&WL,sizeof(int),1,wDic); // Word length
 	i = lowestWord(words,numBuffWritten);
@@ -247,11 +250,16 @@ int main(int ac, char** av){
 		wordsUnread[i]--;
 	}
 
+showWord(&temp.w,BYTES_IN_WORD);
+fprintf(stderr, "--%"PRIu32"\n",numBuffWritten);
+
 	// Write final dictionary file
 	while(!finished(&wordsUnread[0],numBuffWritten)){
 		i = lowestWord(words,numBuffWritten);
-		writeWord(&words[i],wDic,pDic,wordComparator(&words[i],&temp)>0? true:false,&reps);
+		writeWord(&words[i],wDic,pDic,wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
+fprintf(stderr, "SAME: %i\t", wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? 0:1);
 		storeWord(&temp,words[i]); // Update last word written
+showWord(&temp.w,BYTES_IN_WORD);
 		if(wordsUnread[i] > 0){
 			fseek(wrds,arrPos[i],SEEK_SET);
 			loadWord(&words[i],wrds);
@@ -260,8 +268,9 @@ int main(int ac, char** av){
 		}
 	}
 
-	if(wordComparator(&words[i],&temp)<=0) // End entrance on words dictionary
-		fwrite(&reps,sizeof(uint16_t),1,wDic);
+	// Write last word
+	writeWord(&words[i],wDic,pDic,wordComparator(&words[i],&temp)!=0? false:true,&reps);
+	fwrite(&reps,sizeof(uint16_t),1,wDic); // Write num of repetitions
 	
 	// Deallocate words buffer
 	for(i=0 ;i<numBuffWritten ;++i) // Free words

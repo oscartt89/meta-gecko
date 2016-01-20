@@ -14,9 +14,11 @@
 #include <stdbool.h> // Boolean varaibles
 
 // VARIABLES
-#define BUFFER_LENGTH 500
+#define BUFFER_LENGTH 100000
 #define MAX_FILE_LENGTH 1024
 #define FLAG 0
+// FUNCTIONS
+#define SWAP_W(a,b,t) t=a; a=b; b=t;
 
 int BYTES_IN_WORD;
 
@@ -43,9 +45,9 @@ inline void shift_word(word*);
 inline void storeWord(wentry*,wentry);
 int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 int wordcmp(word,word,int);
-inline void SWAP_W(wentry*,wentry*);
 int wordComparator(wentry*,wentry*);
-void quickSort_W(wentry*,uint64_t,uint64_t);
+int partition(wentry*,int,int);
+int quicksort_W(wentry*,int,int);
 long int searchInIndex(word,FILE*,long int,bool*);
 bool finished(uint64_t*,uint64_t);
 inline void loadWord(wentry*,FILE*);
