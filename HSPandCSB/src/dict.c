@@ -166,8 +166,6 @@ int main(int ac, char** av){
 		else numBuffWritten++;
 	}
 fprintf(stderr, "-\n");
-	// Free buffer space
-	freeWArray(buffer,BUFFER_LENGTH);
 
 	// Read Intermediate files and create final dictionary
 		// Close write buffer and open read buffers
@@ -209,6 +207,8 @@ fprintf(stderr, "--\n");
 	uint64_t wordsUnread[numBuffWritten];
 	wentry words[numBuffWritten];
 	uint16_t reps = 0;
+	wordsInBuffer = 0;
+	uint64_t lastLoaded;
 
 	// Read info about buffers
 	i = 0;
@@ -246,35 +246,56 @@ fprintf(stderr, "--\n");
 	if(wordsUnread[i] > 0){
 		fseek(wrds,arrPos[i],SEEK_SET);
 		loadWord(&words[i],wrds);
+		lastLoaded = i;
 		arrPos[i] = (uint64_t) ftell(wrds);
 		wordsUnread[i]--;
 	}
 
-showWord(&temp.w,BYTES_IN_WORD);
+//showWord(&temp.w,BYTES_IN_WORD);
 fprintf(stderr, "--%"PRIu32"\n",numBuffWritten);
 
 	// Write final dictionary file
 	while(!finished(&wordsUnread[0],numBuffWritten)){
 		i = lowestWord(words,numBuffWritten);
-		writeWord(&words[i],wDic,pDic,wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
-fprintf(stderr, "SAME: %i\t", wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? 0:1);
-		storeWord(&temp,words[i]); // Update last word written
-showWord(&temp.w,BYTES_IN_WORD);
+		// Store word in buffer
+		storeWord(&buffer[wordsInBuffer],words[i]);
+		wordsInBuffer++;
+		// Load next word if it's possible
 		if(wordsUnread[i] > 0){
-			fseek(wrds,arrPos[i],SEEK_SET);
+			if(i != lastLoaded){
+				fseek(wrds,arrPos[i],SEEK_SET);
+				lastLoaded = i;
+			}
 			loadWord(&words[i],wrds);
 			arrPos[i] = (uint64_t) ftell(wrds);
 			wordsUnread[i]--;
 		}
+		if(wordsInBuffer == BUFFER_LENGTH){
+			quicksort_W(buffer,0,BUFFER_LENGTH-1);	
+fprintf(stderr, "TEST\n");
+			for(i=0;i<BUFFER_LENGTH;++i){	
+				writeWord(&buffer[i],wDic,pDic,wordcmp(buffer[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
+//fprintf(stderr, "SAME: %i\t", wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? 0:1);
+				storeWord(&temp,buffer[i]); // Update last word written
+//showWord(&temp.w,BYTES_IN_WORD);
+			}
+			wordsInBuffer = 0;
+		}	
 	}
-
 	// Write last word
-	writeWord(&words[i],wDic,pDic,wordComparator(&words[i],&temp)!=0? false:true,&reps);
+	if(wordsInBuffer != 0){
+		quicksort_W(buffer,0,wordsInBuffer-1);
+		for(i=0;i<wordsInBuffer;++i)
+			writeWord(&buffer[i],wDic,pDic,wordComparator(&buffer[i],&temp)!=0? false:true,&reps);
+	}
 	fwrite(&reps,sizeof(uint16_t),1,wDic); // Write num of repetitions
 	
 	// Deallocate words buffer
 	for(i=0 ;i<numBuffWritten ;++i) // Free words
 		free(words[i].w.b);
+
+	// Free buffer space
+	freeWArray(buffer,BUFFER_LENGTH);
 
 	if(removeIntermediataFiles){
 		strcpy(fname,av[2]);

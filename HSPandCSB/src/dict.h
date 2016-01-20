@@ -14,7 +14,7 @@
 #include <stdbool.h> // Boolean varaibles
 
 // VARIABLES
-#define BUFFER_LENGTH 100000
+#define BUFFER_LENGTH 1000000
 #define MAX_FILE_LENGTH 1024
 #define FLAG 0
 // FUNCTIONS
