@@ -165,6 +165,12 @@ int main(int ac, char** av){
 		if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
 		else numBuffWritten++;
 	}
+
+fprintf(stderr, "-\n");
+
+	// Free buffer space
+	freeWArray(buffer,BUFFER_LENGTH);
+
 fprintf(stderr, "-\n");
 
 	// Read Intermediate files and create final dictionary
@@ -206,9 +212,24 @@ fprintf(stderr, "--\n");
 	uint64_t arrPos[numBuffWritten];
 	uint64_t wordsUnread[numBuffWritten];
 	wentry words[numBuffWritten];
-	uint16_t reps = 0;
+	uint64_t reps = 0;
 	wordsInBuffer = 0;
 	uint64_t lastLoaded;
+
+	// Memory for buffer
+	if((buffer = (wentry*) malloc(sizeof(wentry)*READ_BUFFER_LENGTH))==NULL){
+		fprintf(stderr, "Error allocating memory for read words buffer.\n");
+		return -1;
+	}
+
+	// Memory for buffer words
+	for(i=0;i<READ_BUFFER_LENGTH;++i){
+		if((buffer[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
+			fprintf(stderr, "Error allocating space for word(2).\n");
+			return -1;
+		}
+	}
+
 
 	// Read info about buffers
 	i = 0;
@@ -270,10 +291,10 @@ fprintf(stderr, "--%"PRIu32"\n",numBuffWritten);
 			arrPos[i] = (uint64_t) ftell(wrds);
 			wordsUnread[i]--;
 		}
-		if(wordsInBuffer == BUFFER_LENGTH){
-			quicksort_W(buffer,0,BUFFER_LENGTH-1);	
+		if(wordsInBuffer == READ_BUFFER_LENGTH){
+			quicksort_W(buffer,0,READ_BUFFER_LENGTH-1);	
 fprintf(stderr, "TEST\n");
-			for(i=0;i<BUFFER_LENGTH;++i){	
+			for(i=0;i<READ_BUFFER_LENGTH;++i){	
 				writeWord(&buffer[i],wDic,pDic,wordcmp(buffer[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
 //fprintf(stderr, "SAME: %i\t", wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? 0:1);
 				storeWord(&temp,buffer[i]); // Update last word written
@@ -295,7 +316,7 @@ fprintf(stderr, "TEST\n");
 		free(words[i].w.b);
 
 	// Free buffer space
-	freeWArray(buffer,BUFFER_LENGTH);
+	freeWArray(buffer,READ_BUFFER_LENGTH);
 
 	if(removeIntermediataFiles){
 		strcpy(fname,av[2]);

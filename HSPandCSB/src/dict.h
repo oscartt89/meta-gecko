@@ -14,7 +14,8 @@
 #include <stdbool.h> // Boolean varaibles
 
 // VARIABLES
-#define BUFFER_LENGTH 1000000
+#define BUFFER_LENGTH 10000000
+#define READ_BUFFER_LENGTH 100000000
 #define MAX_FILE_LENGTH 1024
 #define FLAG 0
 // FUNCTIONS
@@ -52,6 +53,6 @@ long int searchInIndex(word,FILE*,long int,bool*);
 bool finished(uint64_t*,uint64_t);
 inline void loadWord(wentry*,FILE*);
 uint64_t lowestWord(wentry*,uint64_t);
-inline void writeWord(wentry*,FILE*,FILE*,bool,uint16_t*);
+inline void writeWord(wentry*,FILE*,FILE*,bool,uint64_t*);
 inline void freeWArray(wentry*,uint64_t length);
 void showWord(word*,int);

@@ -245,7 +245,7 @@ uint64_t lowestWord(wentry *words,uint64_t length){
  *  @param sameThanLastWord boolean value that indicate if the current word is the same than the last written.
  *  @param words equal than last written.
  */
-inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uint16_t *words){
+inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uint64_t *words){
 	uint64_t aux;
 	if(!sameThanLastWord){ // Write new word
 		fwrite(words,sizeof(uint16_t),1,w); // Write num of repetitions
