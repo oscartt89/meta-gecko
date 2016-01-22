@@ -200,10 +200,10 @@ int quicksort_W(wentry* a, int l,int r) {
  *  @param length of the unread array.
  *  @return true if there are not unread word and false in other cases.
  */
-bool finished(uint64_t *unread, uint64_t length){
+bool finished(int64_t *unread, uint64_t length){
 	uint64_t i;
 	for(i=0; i<length; ++i)
-		if(unread[i] > 0) return false;
+		if(unread[i] >= 0) return false;
 	return true;
 }
 
@@ -227,10 +227,17 @@ inline void loadWord(wentry *word,FILE* wFile){
  *  @param length of words array.
  *  @return the index of the lowest wentry on words array.
  */
-uint64_t lowestWord(wentry *words,uint64_t length){
-	uint64_t i,j=0;
-	for(i=1;i<length;++i)
-		if(wordComparator(&words[j],&words[i]) > 0) j = i;
+uint64_t lowestWord(wentry *words,uint64_t length,int64_t *unread){
+	uint64_t i;
+	int64_t j=-1;
+	// Search first readable
+	for(i=0;i<length && j<0;++i)
+		if(unread[i]>=0) j = i;
+
+	for(i=j+1;i<length;++i)
+		if(unread[i]>=0)
+			if(wordComparator(&words[j],&words[i]) > 0) j = i;
+
 	return j;
 }
 
@@ -245,11 +252,12 @@ uint64_t lowestWord(wentry *words,uint64_t length){
  *  @param sameThanLastWord boolean value that indicate if the current word is the same than the last written.
  *  @param words equal than last written.
  */
-inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uint64_t *words){
-	uint64_t aux;
+inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uint32_t *words){
 	if(!sameThanLastWord){ // Write new word
-		fwrite(words,sizeof(uint16_t),1,w); // Write num of repetitions
-		fwrite(word->w.b,sizeof(unsigned char),BYTES_IN_WORD,w); // Write new word
+		uint64_t aux;
+		fwrite(words,sizeof(uint32_t),1,w); // Write num of repetitions
+		for(aux=0;aux<BYTES_IN_WORD;++aux)
+			fwrite(&word->w.b[aux],sizeof(unsigned char),1,w); // Write new word
 		aux = (uint64_t) ftell(p);
 		fwrite(&aux,sizeof(uint64_t),1,w); // Write new postions on positions dictionary
 		*words = 0; // Update value

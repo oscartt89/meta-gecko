@@ -166,12 +166,8 @@ int main(int ac, char** av){
 		else numBuffWritten++;
 	}
 
-fprintf(stderr, "-\n");
-
 	// Free buffer space
 	freeWArray(buffer,BUFFER_LENGTH);
-
-fprintf(stderr, "-\n");
 
 	// Read Intermediate files and create final dictionary
 		// Close write buffer and open read buffers
@@ -205,37 +201,22 @@ fprintf(stderr, "-\n");
 			fprintf(stderr, "Error opening words dictionary file.\n");
 			return -1;
 		}
-
-fprintf(stderr, "--\n");
+		fwrite(&WL,sizeof(uint16_t),1,wDic); // Word length
 
 	// Prepare necessary variables
 	uint64_t arrPos[numBuffWritten];
-	uint64_t wordsUnread[numBuffWritten];
+	int64_t wordsUnread[numBuffWritten];
 	wentry words[numBuffWritten];
-	uint64_t reps = 0;
-	wordsInBuffer = 0;
+	uint32_t reps = 0;
 	uint64_t lastLoaded;
-
-	// Memory for buffer
-	if((buffer = (wentry*) malloc(sizeof(wentry)*READ_BUFFER_LENGTH))==NULL){
-		fprintf(stderr, "Error allocating memory for read words buffer.\n");
-		return -1;
-	}
-
-	// Memory for buffer words
-	for(i=0;i<READ_BUFFER_LENGTH;++i){
-		if((buffer[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-			fprintf(stderr, "Error allocating space for word(2).\n");
-			return -1;
-		}
-	}
-
 
 	// Read info about buffers
 	i = 0;
+	uint64_t aux64;
 	do{
 		fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
-		fread(&wordsUnread[i],sizeof(uint64_t),1,bIndx); // Number of words on set
+		fread(&aux64,sizeof(uint64_t),1,bIndx); // Number of words on set
+		wordsUnread[i] = (int64_t) aux64;
 		++i;
 	}while(i<numBuffWritten);
 
@@ -252,12 +233,11 @@ fprintf(stderr, "--\n");
 		wordsUnread[i]--;
 	}
 
-fprintf(stderr, "--\n");
-
 	// First entrance
-	fwrite(&WL,sizeof(int),1,wDic); // Word length
-	i = lowestWord(words,numBuffWritten);
-	fwrite(&words[i].w.b,sizeof(unsigned char),BYTES_IN_WORD,wDic); // write first word
+	i = lowestWord(words,numBuffWritten,&wordsUnread[0]);
+	int k;
+	for(k=0;k<BYTES_IN_WORD;++k)
+		fwrite(&words[i].w.b[k],sizeof(unsigned char),1,wDic); // write first word
 	uint64_t pos = (uint64_t)ftell(pDic);
 	fwrite(&pos,sizeof(uint64_t),1,wDic); // position on pDic
 	fwrite(&words[i].seq,sizeof(uint32_t),1,pDic); // Read index
@@ -272,15 +252,12 @@ fprintf(stderr, "--\n");
 		wordsUnread[i]--;
 	}
 
-//showWord(&temp.w,BYTES_IN_WORD);
-fprintf(stderr, "--%"PRIu32"\n",numBuffWritten);
-
 	// Write final dictionary file
 	while(!finished(&wordsUnread[0],numBuffWritten)){
-		i = lowestWord(words,numBuffWritten);
+		i = lowestWord(words,numBuffWritten,&wordsUnread[0]);
 		// Store word in buffer
-		storeWord(&buffer[wordsInBuffer],words[i]);
-		wordsInBuffer++;
+		writeWord(&words[i],wDic,pDic,wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
+		storeWord(&temp,words[i]); // Update last word written
 		// Load next word if it's possible
 		if(wordsUnread[i] > 0){
 			if(i != lastLoaded){
@@ -290,33 +267,14 @@ fprintf(stderr, "--%"PRIu32"\n",numBuffWritten);
 			loadWord(&words[i],wrds);
 			arrPos[i] = (uint64_t) ftell(wrds);
 			wordsUnread[i]--;
-		}
-		if(wordsInBuffer == READ_BUFFER_LENGTH){
-			quicksort_W(buffer,0,READ_BUFFER_LENGTH-1);	
-fprintf(stderr, "TEST\n");
-			for(i=0;i<READ_BUFFER_LENGTH;++i){	
-				writeWord(&buffer[i],wDic,pDic,wordcmp(buffer[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
-//fprintf(stderr, "SAME: %i\t", wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? 0:1);
-				storeWord(&temp,buffer[i]); // Update last word written
-//showWord(&temp.w,BYTES_IN_WORD);
-			}
-			wordsInBuffer = 0;
-		}	
+		}else wordsUnread[i] = -1;
 	}
-	// Write last word
-	if(wordsInBuffer != 0){
-		quicksort_W(buffer,0,wordsInBuffer-1);
-		for(i=0;i<wordsInBuffer;++i)
-			writeWord(&buffer[i],wDic,pDic,wordComparator(&buffer[i],&temp)!=0? false:true,&reps);
-	}
-	fwrite(&reps,sizeof(uint16_t),1,wDic); // Write num of repetitions
-	
+	// Write last word index
+	fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
+
 	// Deallocate words buffer
 	for(i=0 ;i<numBuffWritten ;++i) // Free words
 		free(words[i].w.b);
-
-	// Free buffer space
-	freeWArray(buffer,READ_BUFFER_LENGTH);
 
 	if(removeIntermediataFiles){
 		strcpy(fname,av[2]);
@@ -328,7 +286,6 @@ fprintf(stderr, "TEST\n");
 	// Free space
 	free(fname);
 	free(temp.w.b);
-
 	// Everything finished. All it's ok.
 	return 0;
 }
