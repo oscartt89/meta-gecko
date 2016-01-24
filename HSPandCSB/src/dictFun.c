@@ -117,81 +117,83 @@ int wordComparator(wentry* w1,wentry* w2){
 }
 
 
-/* Function used to sort an array of wentrys.
- *  @param words: array of wentry that will be sorted.
- *  @param start: index where start to sort.
- *  @param length: length of the array to sort (starting on "start" index).
+/* Function used to compare two wentry variables
+ *  @param w1 word to be compared.
+ *  @param w2 word to be compared
+ *  @return zero if w2 are greater or equal and a positive number if
+ *     w1 is greater.
  */
-int GT(wentry a1, wentry a2){
+int GT(wentry w1, wentry w2){
 	int i;
 	for(i=0;i<BYTES_IN_WORD;i++)
-		if(a1.w.b[i] < a2.w.b[i]) return 0;
-		else if(a1.w.b[i] > a2.w.b[i]) return 1;
+		if(w1.w.b[i] < w2.w.b[i]) return 0;
+		else if(w1.w.b[i] > w2.w.b[i]) return 1;
 
-	if(a1.seq > a2.seq) return 1;
-	else if(a1.seq < a2.seq) return 0;
+	if(w1.seq > w2.seq) return 1;
+	else if(w1.seq < w2.seq) return 0;
 
-	if(a1.pos > a2.pos) return 1;
+	if(w1.pos > w2.pos) return 1;
 	return 0;
 }
 
 
-/*
+/* This function is necessary for quicksort functionality.
+ *  @param arr array to be sorted.
+ *  @param left inde of the sub-array.
+ *  @param right index of the sub-array.
  */
-int partition(wentry* a, int l, int r) {
-   int i=l;
-   int j=r+1;
+int partition(wentry* arr, int left, int right) {
+   int i = left;
+   int j = right + 1;
    wentry t;
 
-   // l sera el pivote
-   // y contendra la mediana de l, r y (l+r)/2
-   int mid = (l+r)/2;
+   // Pivot variable
+   int pivot = (left+right)/2;
 
-   if(GT(a[mid],a[r])) {
-		 SWAP_W(a[mid],a[r],t);
-   }
+   if(GT(arr[pivot],arr[right]))
+		 SWAP_W(arr[pivot],arr[right],t);
 
-   if(GT(a[mid],a[l])) {
-		 SWAP_W(a[mid],a[l],t);
-   }
+   if(GT(arr[pivot],arr[left]))
+		 SWAP_W(arr[pivot],arr[left],t);
 
-   if(GT(a[l],a[r])) {
-		 SWAP_W(a[l],a[r],t);
-	 }
+   if(GT(arr[left],arr[right]))
+		 SWAP_W(arr[left],arr[right],t);
 
-	while (1) {
+	while(1){
 		do{
 			++i;
-		}while( !GT(a[i],a[l]) && i <= r );
+		}while(!GT(arr[i],arr[left]) && i <= right);
 
 		do{
 			--j;
-		}while( GT(a[j],a[l]) && j >= l);
+		}while(GT(arr[j],arr[left]) && j >= left);
 
-		if( i >= j ) break;
+		if(i >= j) break;
 
-		SWAP_W(a[i],a[j],t)
+		SWAP_W(arr[i],arr[j],t)
 	}
 
-	SWAP_W(a[l],a[j],t)
+	SWAP_W(arr[left],arr[j],t)
 
 	return j;
 }
 
 
-/*
+/* This function is used to sort a wentry array.
+ *  @param arr array to be sorted.
+ *  @param left index where start to sort.
+ *  @param right index where end sorting action.
+ *
  */
-int quicksort_W(wentry* a, int l,int r) {
-   int j;
+void quicksort_W(wentry* arr, int left,int right) {
+	int j;
 
-	if( l < r ) {
- 	// divide and conquer
-       j = partition( a, l, r);
-       //  j=(l+r)/2;
-       quicksort_W( a, l, j-1);
-       quicksort_W( a, j+1, r);
+	if(left < right){
+		// divide and conquer
+		j = partition(arr,left,right);
+		quicksort_W(arr,left,j-1);
+		quicksort_W(arr,j+1,right);
    }
-   return 0;
 }
 
 

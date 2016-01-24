@@ -47,7 +47,7 @@ int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 int wordcmp(word,word,int);
 int wordComparator(wentry*,wentry*);
 int partition(wentry*,int,int);
-int quicksort_W(wentry*,int,int);
+void quicksort_W(wentry*,int,int);
 long int searchInIndex(word,FILE*,long int,bool*);
 bool finished(int64_t*,uint64_t);
 inline void loadWord(wentry*,FILE*);
