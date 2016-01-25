@@ -9,12 +9,18 @@
 #include <errno.h> // errors
 #include <stdint.h> // unit64_t ...
 #include <inttypes.h> 
+#include <string.h> // String functions
 #include <stdbool.h> // Boolean varaibles
 
 // VARAIBLES
 #define MAX_BUFF 10000000
 #define MAX_FILE_LENGTH 1024
 
+// LINE FUNCTIONS
+#define SWAP(a,b,t) t=a; a=b; b=t;
+
+// GLOBAL VARAIBLES
+uint64_t buffersWritten;
 
 // STRUCTS
 typedef struct{
@@ -24,6 +30,11 @@ typedef struct{
     uint64_t pos; // Position on locations file
     uint32_t reps; // Number of instances of this word
 } WordEntry;
+
+typedef struct{
+    uint32_t seq; // Sequence index
+    uint64_t pos; // Position on sequence
+} LocationEntry;
 
 typedef struct {
 	// Diagonal where the hit is located
@@ -78,6 +89,12 @@ typedef struct {
 // FUNCTIONS
 int wordcmp(unsigned char*,unsigned char*,int);
 int WEComparer(WordEntry w1, WordEntry w2);
-int readHashEntry(WordEntry*,FILE*);
+void readHashEntry(WordEntry*,FILE*);
 int readWordEntrance(WordEntry*,FILE*,uint16_t);
-int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*,int,int);
+int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*);
+void loadLocationEntrance(LocationEntry*,FILE*,uint32_t,bool); 
+inline void storeHit(Hit*,LocationEntry,LocationEntry,uint64_t);
+void writeHitsBuff(Hit*,FILE*,FILE*,uint64_t);
+int GT(Hit,Hit);
+int partition(Hit*,int,int);
+void quicksort_H(Hit*,int,int);

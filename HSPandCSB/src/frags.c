@@ -18,16 +18,18 @@ int main(int ac, char** av){
 	FILE *mW,*mP,*gW,*gP; // Dictionaries
 	FILE *hIndx,*hts; // Intermediate files
 	FILE *fr; // Fragments file
-	Hit *buff;
+	Hit *buffer;
 	uint64_t hitsInBuffer = 0;
 	uint16_t gWL = 32,mWL;
 	uint16_t BytesGenoWord = 8, BytesMetagWord, MinBytes, MaxBytes;
-	int GoM; // If >0 --> gWL > mWL; <0 --> gWL < mWL; =0 --> gWL == mWL
+	buffersWritten = 0;
+	char *fname;
+	//int GoM; // If >0 --> gWL > mWL; <0 --> gWL < mWL; =0 --> gWL == mWL
 	
 
 	// Allocate necessary memory
 	// Memory for buffer
-	if((buff = (hit*) malloc(sizeof(hit)*MAX_BUFF))==NULL){
+	if((buffer = (Hit*) malloc(sizeof(Hit)*MAX_BUFF))==NULL){
 		fprintf(stderr, "Error allocating memory for hits buffer.\n");
 		return -1;
 	}
@@ -51,28 +53,31 @@ int main(int ac, char** av){
 		return -1;
 	}
 	// Read words header = WordLength
-	fread(&mWL,sizeof(uint16_t),1,mW);
-
-			// Check
-			if(mWL == NULL){ 
-				fprintf(stderr, "Error, couldn't find word length.\n");
+		// Check
+		if(fread(&mWL,sizeof(uint16_t),1,mW)!=1){ 
+			fprintf(stderr, "Error, couldn't find word length.\n");
+			return -1;
+		}else if(mWL % 4 != 0){
+			fprintf(stderr, "Error, word length of metagenome dictionary isn't a 4 multiple.\n");
+			return -1;
+		}else{
+			BytesMetagWord = mWL/4;
+			if(BytesMetagWord != BytesGenoWord){
+				fprintf(stderr, "Error: metagenome and genome dictionaries have differents word lengths.\n");
 				return -1;
-			}else if(mWL % 4 != 0){
-				fprintf(stderr, "Error, word length of metagenome dictionary isn't a 4 multiple.\n");
-				return -1;
-			}else
-				BytesMetagWord = mWL/4;
+			}
+		}
 
 			// Select minimum and maximum WL
-			if(gWL == mWL){
-				GoM = 0;
-				MinBytes = BytesGenoWord;
-				MaxBytes  = BytesGenoWord;
-			}else{
-				GoM = gWL > mWL? 1 : -1;
-				MinBytes = GoM > 0? BytesMetagWord : BytesGenoWord;
-				MaxBytes = GoM < 0? BytesMetagWord : BytesGenoWord;
-			}
+//			if(gWL == mWL){
+//				GoM = 0;
+//				MinBytes = BytesGenoWord;
+//				MaxBytes  = BytesGenoWord;
+//			}else{
+//				GoM = gWL > mWL? 1 : -1;
+//				MinBytes = GoM > 0? BytesMetagWord : BytesGenoWord;
+//				MaxBytes = GoM < 0? BytesMetagWord : BytesGenoWord;
+//			}
 
 
 	// Open genome postions file
@@ -103,7 +108,7 @@ int main(int ac, char** av){
 
 	// Search hits
 		// Prepare necessary variables
-		wordEntry we[2]; // [0]-> Metagenome [1]-> Genome
+		WordEntry we[2]; // [0]-> Metagenome [1]-> Genome
 		// Take memory
 		if((we[0].seq = (unsigned char *) malloc(sizeof(unsigned char)*BytesMetagWord))==NULL){
 			fprintf(stderr, "Error allocating memory for metagenome entrance.\n");
@@ -117,43 +122,41 @@ int main(int ac, char** av){
 
 	// Read first entrances
 	if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
-	if(readHashEntry(&we[1],gW)<0) return -1;
+	readHashEntry(&we[1],gW);
 
 	// Search
-	int cmp
-	bool loadMetag,loadGeno;
+	int cmp;
 	while(!feof(mW) && !feof(gW)){
-		loadGeno = false;
-		loadMetag = false;
-
-		// Compare sequences searching match
-		if(GoM == 0){ // Same length
-			if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0){ // Hit
-				generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,hitsInBuffer,0,0);
-				loadGeno = true;
-				loadMetag = true;
-			}
-		}else if(GoM > 0){ // Metag word is larger
-			uint16_t i;
-			uint16_t diff = BytesMetagWord - BytesGenoWord;
-			for(i=0; i<=diff; ++i)
-				if((cmp = wordcmp(&we[0].seq[i],we[1].seq,BytesGenoWord))==0){ // Hit
-					generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,hitsInBuffer,i,0);
-					
-				}
-		}else{ // Geno word is larger
-			uint16_t i;
-			uint16_t diff = BytesGenoWord - BytesMetagWord;
-			for(i=0; i<=diff; ++i)
-				if((cmp = wordcmp(&we[0].seq,we[1].seq[i],BytesMetagWord))==0) // Hit
-						generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,hitsInBuffer,0,i);
-		}
+		if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
+			generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer);
 
 		// Load next word
-		if()
+		if(cmp >= 0) // New genome word is necessary
+			readHashEntry(&we[1],gW);
+		if(cmp <= 0) // New metagenome word is necessary
+			if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 	}
 
+	// Write buffered hits
+	if(hitsInBuffer > 0){
+		writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
+		buffersWritten++;
+	}
+
+	// Free auxiliar buffers
+	free(we[0].seq);
+	free(we[1].seq);
+	free(buffer);
+
 	// Close files
+	fclose(mW); fclose(gW);
+	fclose(mP); fclose(gP);
+	fclose(hIndx);
+	fclose(hts);
+
+	// Open necessary files
+
+
 
 	// Free space
 
