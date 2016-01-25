@@ -21,6 +21,7 @@
 
 // GLOBAL VARAIBLES
 uint64_t buffersWritten;
+uint64_t S_Threshold; // Similarity threshold
 
 // STRUCTS
 typedef struct{
@@ -86,9 +87,48 @@ typedef struct {
     uint64_t seq;
 } location;
 
+typedef struct{
+    //Diagonal where the frag is located
+    //This value is calculated as:
+    //posX - posY
+    int64_t diag;
+    //Start position in sequence X
+    uint64_t xStart;
+    //Start position in Sequence Y
+    uint64_t yStart;
+    //End position in Sequence X
+    uint64_t xEnd;
+    //End position in Sequence Y
+    uint64_t yEnd;
+    //Fragment Length
+    //For ungaped aligment is:
+    //xEnd-xStart+1
+    uint64_t length;
+    //Number of identities in the
+    //fragment
+    uint64_t ident;
+    //Score of the fragment. This
+    //depends on the score matrix
+    //used
+    uint64_t score;
+    //Percentage of similarity. This
+    //is calculated as score/scoreMax
+    //Where score max is the maximum
+    //score possible
+    float similarity;
+    //sequence number in the 'X' file
+    /*uint64_t*/uint32_t seqX;
+    //sequence number in the 'Y' file
+    /*uint64_t*/uint32_t seqY;
+    //synteny block id
+    int64_t block;
+    //'f' for the forward strain and 'r' for the reverse
+    char strand;
+} FragFile;
+
 // FUNCTIONS
 int wordcmp(unsigned char*,unsigned char*,int);
-int WEComparer(WordEntry w1, WordEntry w2);
+int HComparer(Hit w1, Hit w2);
 void readHashEntry(WordEntry*,FILE*);
 int readWordEntrance(WordEntry*,FILE*,uint16_t);
 int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*);
@@ -98,3 +138,7 @@ void writeHitsBuff(Hit*,FILE*,FILE*,uint64_t);
 int GT(Hit,Hit);
 int partition(Hit*,int,int);
 void quicksort_H(Hit*,int,int);
+inline void loadHit(Hit*,FILE*);
+uint64_t lowestHit(Hit*,uint64_t,int64_t*);
+bool finished(int64_t*,uint64_t);
+inline void writeFragment(FragFile,FILE*);

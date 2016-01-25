@@ -21,21 +21,33 @@ int wordcmp(unsigned char *w1, unsigned char *w2, int n){
 }
 
 
-/* This function is used to compare two word entrance instances. The comparation only
- * use the sequence info (length and alphabetical order).
- *  @param w1 word entrance to be compared.
- *  @param w2 word entrance to be compared.
- *  @return a positive number if w1 is greater than w2, a negtive number if w2 is 
- *     greater or zero if both are equal.
+/* Function used to compare two Hit variables. It function sort with this
+ * criterion:
+ *    1 - Sequence X
+ *    2 - Sequence Y
+ *    3 - Diagonal
+ *    4 - Position on X
+ *    5 - Length 
+ *  @param h1 word to be compared.
+ *  @param h2 word to be compared
+ *  @return zero if both are equal, a positive number if w1 is greater or a
+ *     negative number if w2 is greater.
  */
-int WEComparer(WordEntry w1, WordEntry w2){
-	if(w1.WB > w2.WB) return 1;
-	else if(w1.WB < w2.WB) return -1;
+int HComparer(Hit h1, Hit h2){
+	if(h1.seqX > h2.seqX) return 1;
+	else if(h1.seqX < h2.seqX) return -1;
 
-	int i;
-	for(i=0;i<w1.WB;i++)
-		if(w1.seq[i] < w2.seq[i]) return -1;
-		else if(w1.seq[i] > w2.seq[i]) return 1;
+	if(h1.seqY > h2.seqY) return 1;
+	else if(h1.seqY < h2.seqY) return -1;
+
+	if(h1.diag > h2.diag) return 1;
+	else if(h1.diag < h2.diag) return -1;
+
+	if(h1.posX > h2.posX) return 1;
+	else if(h1.posX < h2.posX) return -1;
+
+	if(h1.length > h2.length) return 1;
+	else if(h1.length < h2.length) return -1;
 
 	return 0;
 }
@@ -210,17 +222,34 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 
 	// Write info on index file
 	uint64_t pos = (uint64_t) ftell(hits);
+	uint64_t numHits = 0;
+	Hit lastHit;
 	fwrite(&pos,sizeof(uint64_t),1,index);
-	fwrite(&hitsInBuff,sizeof(uint64_t),1,index);
+	
+	// Write first hit
+	fwrite(&buff[0].seqX,sizeof(uint32_t),1,hits);
+	fwrite(&buff[0].seqY,sizeof(uint32_t),1,hits);
+	fwrite(&buff[0].diag,sizeof(uint64_t),1,hits);
+	fwrite(&buff[0].posX,sizeof(uint64_t),1,hits);
+	fwrite(&buff[0].posY,sizeof(uint64_t),1,hits);
+	fwrite(&buff[0].length,sizeof(uint64_t),1,hits);
+	lastHit = buff[0];
+		
 	// Write hits in hits file
-	for(pos=0; pos<hitsInBuff; ++pos){
+	for(pos=1; pos<hitsInBuff; ++pos){
+		if(buff[pos].diag == lastHit.diag && buff[pos].posX < lastHit.posX + lastHit.length)
+			continue; // Collapsable
 		fwrite(&buff[pos].seqX,sizeof(uint32_t),1,hits);
 		fwrite(&buff[pos].seqY,sizeof(uint32_t),1,hits);
 		fwrite(&buff[pos].diag,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].posX,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].posY,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].length,sizeof(uint64_t),1,hits);
+		lastHit = buff[pos];
 	}
+	// Write final number of hits
+	fwrite(&numHits,sizeof(uint64_t),1,index);
+	buffersWritten++;
 }
 
 
@@ -311,4 +340,76 @@ void quicksort_H(Hit* arr, int left,int right){
 		quicksort_H(arr,left,j-1);
 		quicksort_H(arr,j+1,right);
    }
+}
+
+
+/* This function is used to load a hit from a hits intermediate file.
+ *  @param hit varaible where loaded hit will be stored.
+ *  @param hFile pointer to hits intermediate file.
+ */
+inline void loadHit(Hit *hit,FILE* hFile){
+	fread(&hit->seqX,sizeof(uint32_t),1,hFile);
+	fread(&hit->seqY,sizeof(uint32_t),1,hFile);
+	fread(&hit->diag,sizeof(uint64_t),1,hFile);
+	fread(&hit->posX,sizeof(uint64_t),1,hFile);
+	fread(&hit->posY,sizeof(uint64_t),1,hFile);
+	fread(&hit->length,sizeof(uint64_t),1,hFile);
+}
+
+
+/* This function is used to return the index of the lowest hit on a hit array.
+ *  @param hits array where search.
+ *  @param length of hits array.
+ *  @return the index of the lowest hit on hits array.
+ */
+uint64_t lowestHit(Hit *hits,uint64_t length,int64_t *unread){
+	uint64_t i;
+	int64_t j=-1;
+	// Search first readable
+	for(i=0;i<length && j<0;++i)
+		if(unread[i]>=0) j = i;
+
+	for(i=j+1;i<length;++i)
+		if(unread[i]>=0)
+			if(HComparer(hits[j],hits[i]) > 0) j = i;
+
+	return j;
+}
+
+
+/* This function is used to check if all hits has been read from intermediate file.
+ *  @param unread array of unread hits of each buffer segment.
+ *  @param length of the unread array.
+ *  @return true if there are not unread hits and false in other cases.
+ */
+bool finished(int64_t *unread, uint64_t length){
+	uint64_t i;
+	for(i=0; i<length; ++i)
+		if(unread[i] >= 0) return false;
+	return true;
+}
+
+
+/* This function is used to write a fragment in fragment file. The order 
+ * of a fragment entrance is:
+ *    X<uint32_t> Y<uint32_t> diag<int64_t> xStart<uint64_t> yStart<uint64_t> xEnd<uint64_t> 
+ *        yEnd<uint64_t> length<uint64_t> ident<uint64_t> score<uint64_t> similarity<float> 
+ *        block<int64_t> strand<char>
+ *  @param frag fragment to be written.
+ *  @param fr fragment file where fragment will be written.
+ */
+inline void writeFragment(FragFile frag,FILE *fr){
+	fwrite(&frag.seqX,sizeof(uint32_t),1,fr);
+	fwrite(&frag.seqY,sizeof(uint32_t),1,fr);
+	fwrite(&frag.diag,sizeof(int64_t),1,fr);
+	fwrite(&frag.xStart,sizeof(uint64_t),1,fr);
+	fwrite(&frag.yStart,sizeof(uint64_t),1,fr);
+	fwrite(&frag.xEnd,sizeof(uint64_t),1,fr);
+	fwrite(&frag.yEnd,sizeof(uint64_t),1,fr);
+	fwrite(&frag.length,sizeof(uint64_t),1,fr);
+	fwrite(&frag.ident,sizeof(uint64_t),1,fr);
+	fwrite(&frag.score,sizeof(uint64_t),1,fr);
+	fwrite(&frag.similarity,sizeof(float),1,fr);
+	fwrite(&frag.block,sizeof(int64_t),1,fr);
+	fwrite(&frag.strand,sizeof(char),1,fr);
 }
