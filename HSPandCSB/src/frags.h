@@ -142,3 +142,5 @@ inline void loadHit(Hit*,FILE*);
 uint64_t lowestHit(Hit*,uint64_t,int64_t*);
 bool finished(int64_t*,uint64_t);
 inline void writeFragment(FragFile,FILE*);
+
+void showWord(unsigned char*,uint16_t);

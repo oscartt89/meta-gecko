@@ -40,7 +40,7 @@ int main(int ac, char** av){
 	uint64_t readW = 0, wordsInBuffer = 0,i; // Absolute and buffer read words and auxiliar variable(i)
 	uint32_t numBuffWritten = 0;
 	char *fname;
-	int removeIntermediataFiles = 0; // Config it if you want save or not the itnermediate files
+	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
 
 	// Allocate necessary memory
 	// Memory for buffer

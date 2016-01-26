@@ -143,21 +143,25 @@ int GT(wentry w1, wentry w2){
  *  @param right index of the sub-array.
  */
 int partition(wentry* arr, int left, int right) {
-   int i = left;
-   int j = right + 1;
-   wentry t;
+  int i = left;
+  int j = right+1;
+  wentry t;
 
-   // Pivot variable
-   int pivot = (left+right)/2;
+  // left sera el pivote
+  // y contendra la mediana de left, r y (l+r)/2
+  int mid = (left+right)/2;
 
-   if(GT(arr[pivot],arr[right]))
-		 SWAP_W(arr[pivot],arr[right],t);
+  if(GT(arr[mid],arr[right])){
+		SWAP_W(arr[mid],arr[right],t);
+  }
 
-   if(GT(arr[pivot],arr[left]))
-		 SWAP_W(arr[pivot],arr[left],t);
+  if(GT(arr[mid],arr[left])){
+		SWAP_W(arr[mid],arr[left],t);
+  }
 
-   if(GT(arr[left],arr[right]))
-		 SWAP_W(arr[left],arr[right],t);
+  if(GT(arr[left],arr[right])){
+		SWAP_W(arr[left],arr[right],t);
+	}
 
 	while(1){
 		do{
@@ -185,15 +189,17 @@ int partition(wentry* arr, int left, int right) {
  *  @param right index where end sorting action.
  *
  */
-void quicksort_W(wentry* arr, int left,int right) {
-	int j;
+int quicksort_W(wentry* arr, int left,int right) {
+   int j;
 
-	if(left < right){
-		// divide and conquer
-		j = partition(arr,left,right);
-		quicksort_W(arr,left,j-1);
-		quicksort_W(arr,j+1,right);
+	if( left < right ) {
+ 	// divide and conquer
+       j = partition( arr, left, right);
+       //  j=(left+r)/2;
+       quicksort_W( arr, left, j-1);
+       quicksort_W( arr, j+1, right);
    }
+   return 0;
 }
 
 

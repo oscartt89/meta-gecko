@@ -24,7 +24,8 @@ int main(int ac, char** av){
 	uint16_t BytesGenoWord = 8, BytesMetagWord, MinBytes, MaxBytes;
 	buffersWritten = 0;
 	S_Threshold = (uint64_t) atoi(av[6]);
-	char *fname;	
+	char *fname;
+	bool removeIntermediataFiles = true;	
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -114,9 +115,14 @@ int main(int ac, char** av){
 	// Search
 	int cmp;
 	while(!feof(mW) && !feof(gW)){
+////////////////////////////////////////////////////////////
+fprintf(stderr, "Metag\t");
+showWord(we[0].seq,we[0].WB);
+fprintf(stderr, "Geno\t");
+showWord(we[1].seq,we[1].WB);
+////////////////////////////////////////////////////////////
 		if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
 			generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer);
-
 		// Load next word
 		if(cmp >= 0) // New genome word is necessary
 			readHashEntry(&we[1],gW);
@@ -207,6 +213,17 @@ int main(int ac, char** av){
 	frag.block = 0;
 	frag.strand = 'f';
 
+	// Load new hit
+	if(hitsUnread[i] > 0){
+		if(i != lastLoaded){
+			fseek(hts,positions[i],SEEK_SET);
+			lastLoaded = i;
+		}
+		loadHit(&hitsBuff[i],hts);
+		positions[i] = (uint64_t) ftell(hts);
+		hitsUnread[i]--;
+	}else hitsUnread[i] = -1;
+
 	// Search new fragments
 	float newSimilarity;
 	int64_t dist;
@@ -264,10 +281,19 @@ int main(int ac, char** av){
 			hitsUnread[i]--;
 		}else hitsUnread[i] = -1;
 	}
+
 	// Close files
 	fclose(hIndx);
 	fclose(hts);
 	fclose(fr);
+
+	// Remove intermediate files
+	if(removeIntermediataFiles){
+		strcpy(fname,av[5]);
+		remove(strcat(fname,".hts"));
+		strcpy(fname,av[5]);
+		remove(strcat(fname,".hindx"));
+	}
 
 	// Everything finished OK
 	return 0;

@@ -179,6 +179,7 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 		for(i=0; i<reps;++i){
 			fread(&arr[i].seq,sizeof(uint32_t),1,PFile);
 			fread(&arr[i].pos,sizeof(uint64_t),1,PFile);
+fprintf(stderr, "LoadM: Seq:%"PRIu32"  Pos:%"PRIu64"\n", arr[i].seq,arr[i].pos);
 		}
 	}else{
 		location aux;
@@ -186,6 +187,7 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 			fread(&aux,sizeof(location),1,PFile);
 			arr[i].seq = (uint32_t) aux.seq;
 			arr[i].pos = aux.pos;
+fprintf(stderr, "LoadG: Seq:%"PRIu32"  Pos:%"PRIu64"\n", arr[i].seq,arr[i].pos);
 		}
 	}
 }
@@ -246,6 +248,7 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 		fwrite(&buff[pos].posY,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].length,sizeof(uint64_t),1,hits);
 		lastHit = buff[pos];
+		numHits++;
 	}
 	// Write final number of hits
 	fwrite(&numHits,sizeof(uint64_t),1,index);
@@ -412,4 +415,36 @@ inline void writeFragment(FragFile frag,FILE *fr){
 	fwrite(&frag.similarity,sizeof(float),1,fr);
 	fwrite(&frag.block,sizeof(int64_t),1,fr);
 	fwrite(&frag.strand,sizeof(char),1,fr);
+}
+
+
+void showWord(unsigned char *w, uint16_t wsize) {
+	char Alf[] = { 'A', 'C', 'G', 'T' };
+	char ws[wsize*4+4];
+	uint16_t i;
+	unsigned char c;
+	fprintf(stdout, "Word:");
+	for (i = 0; i < wsize; i++) {
+		c = w[i];
+		c = c >> 6;
+		ws[4*i] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w[i];
+		c = c << 2;
+		c = c >> 6;
+		ws[4*i+1] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w[i];
+		c = c << 4;
+		c = c >> 6;
+		ws[4*i+2] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w[i];
+		c = c << 6;
+		c = c >> 6;
+		ws[4*i+3] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+	}
+	ws[wsize*4+4] = '\0';
+	fprintf(stdout, "\n");
 }
