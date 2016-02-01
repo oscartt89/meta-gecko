@@ -115,12 +115,6 @@ int main(int ac, char** av){
 	// Search
 	int cmp;
 	while(!feof(mW) && !feof(gW)){
-////////////////////////////////////////////////////////////
-fprintf(stderr, "Metag\t");
-showWord(we[0].seq,we[0].WB);
-fprintf(stderr, "Geno\t");
-showWord(we[1].seq,we[1].WB);
-////////////////////////////////////////////////////////////
 		if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
 			generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer);
 		// Load next word
@@ -131,10 +125,8 @@ showWord(we[1].seq,we[1].WB);
 	}
 
 	// Write buffered hits
-	if(hitsInBuffer > 0){
+	if(hitsInBuffer > 0)
 		writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
-		buffersWritten++;
-	}
 
 	// Free auxiliar buffers
 	free(we[0].seq);
@@ -148,7 +140,7 @@ showWord(we[1].seq,we[1].WB);
 	fclose(hts);
 
 	// Open necessary files
-	//Open intermediate files
+	// Open intermediate files
 	// Index file
 	strcpy(fname,av[5]); // Copy outDic name
 	if((hIndx = fopen(strcat(fname,".hindx"),"rb"))==NULL){
@@ -227,9 +219,12 @@ showWord(we[1].seq,we[1].WB);
 	// Search new fragments
 	float newSimilarity;
 	int64_t dist;
+
 	while(!finished(&hitsUnread[0],buffersWritten)){
 		i = lowestHit(hitsBuff,buffersWritten,&hitsUnread[0]);
-		if(hitsBuff[i].seqX == frag.seqX && hitsBuff[i].seqY == frag.seqY && hitsBuff[i].diag == frag.diag){ // Possible fragment
+		if(hitsBuff[i].seqX == frag.seqX && 
+				hitsBuff[i].seqY == frag.seqY &&
+				hitsBuff[i].diag == frag.diag){ // Possible fragment
 			// Check if are collapsable
 			dist = hitsBuff[i].posX - frag.xStart + frag.length;
 			if(dist >= 0){
