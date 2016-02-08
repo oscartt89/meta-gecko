@@ -22,13 +22,19 @@
  */
 int main(int ac, char** av){
 	// Check arguments
-	if(ac!=4){
-		fprintf(stderr, "Bad call error.\nUSE: dict metag.IN dictName WL\n");
+	if(ac<4 || ac>5){
+		fprintf(stderr, "Bad call error.\nUSE: dict seq.IN dictName WL\nOR: dict seq.IN dictName WL metag/geno\n");
 		return -1;
 	}else if(atoi(av[3])%4 != 0){
 		fprintf(stderr, "Error WL must be a 4 multiple and it's \"%s\".\n", av[3]);
 		return -1;
 	}
+
+	// Take extensions
+	bool isMetag = true;
+	if(ac==5 && strcmp(av[4],(const char*)&("geno"))==0) isMetag = false;
+
+	
 
 	// Variables
 	uint16_t WL = (uint16_t) atoi(av[3]); // Word length
@@ -40,7 +46,7 @@ int main(int ac, char** av){
 	uint64_t readW = 0, wordsInBuffer = 0,i; // Absolute and buffer read words and auxiliar variable(i)
 	uint32_t numBuffWritten = 0;
 	char *fname;
-	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
+	bool removeIntermediataFiles = true; // Config it if you want save or not the intermediate files
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -56,9 +62,9 @@ int main(int ac, char** av){
 	}
 
 	// Open current necessary files
-	// Open metagenome file
+	// Open sequence(s) file
 	if((metag = fopen(av[1],"rt"))==NULL){
-		fprintf(stderr, "Error opening metagenome file.\n");
+		fprintf(stderr, "Error opening sequence(s) file.\n");
 		return -1;
 	}
 
@@ -80,7 +86,7 @@ int main(int ac, char** av){
 	}
 
 	// START WORKFLOW
-	// Read metagenome file
+	// Read sequence(s) file
 	// Necessary variables
 	uint64_t seqPos = 0, crrSeqL = 0;
 	char c; // Auxiliar -> Read char per char
@@ -190,14 +196,14 @@ int main(int ac, char** av){
 
 		// Open positions file
 		strcpy(fname,av[2]); // Copy outDic name
-		if((pDic = fopen(strcat(fname,".d2hP"),"wb"))==NULL){
+		if((pDic = fopen(strcat(fname,isMetag?".md2hP":".gd2hP"),"wb"))==NULL){
 			fprintf(stderr, "Error opening positions dictionary file.\n");
 			return -1;
 		}
 
 		// Open dictionary words file 
 		strcpy(fname,av[2]); // Copy outDic name
-		if((wDic = fopen(strcat(fname,".d2hW"),"wb"))==NULL){
+		if((wDic = fopen(strcat(fname,isMetag?".md2hW":".gd2hW"),"wb"))==NULL){
 			fprintf(stderr, "Error opening words dictionary file.\n");
 			return -1;
 		}

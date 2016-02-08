@@ -16,9 +16,6 @@
 #define MAX_BUFF 10000000
 #define MAX_FILE_LENGTH 1024
 
-// LINE FUNCTIONS
-#define SWAP(a,b,t) t=a; a=b; b=t;
-
 // GLOBAL VARAIBLES
 uint64_t buffersWritten;
 uint64_t S_Threshold; // Similarity threshold
