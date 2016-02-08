@@ -161,6 +161,9 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
 				*hitsInBuff=0;
 			}			
 		}
+///////////////////////////////////////////////////////////////////
+//fprintf(stderr, "HitsInBuff=%"PRIu64"\n", *hitsInBuff);
+///////////////////////////////////////////////////////////////////
 	return 0;
 }
 
@@ -178,6 +181,9 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 		for(i=0; i<reps;++i){
 			fread(&arr[i].seq,sizeof(uint32_t),1,PFile);
 			fread(&arr[i].pos,sizeof(uint64_t),1,PFile);
+///////////////////////////////////////////////////////////////////
+//fprintf(stderr, "LoadM: Seq:%"PRIu32"  Pos:%"PRIu64"\n", arr[i].seq,arr[i].pos);
+///////////////////////////////////////////////////////////////////
 		}
 	}else{
 		location aux;
@@ -185,6 +191,9 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 			fread(&aux,sizeof(location),1,PFile);
 			arr[i].seq = (uint32_t) aux.seq;
 			arr[i].pos = aux.pos;
+///////////////////////////////////////////////////////////////////
+//fprintf(stderr, "LoadG: Seq:%"PRIu32"  Pos:%"PRIu64"\n", arr[i].seq,arr[i].pos);
+///////////////////////////////////////////////////////////////////
 		}
 	}
 }
@@ -216,8 +225,19 @@ inline void storeHit(Hit* hit,LocationEntry X,LocationEntry Y,uint64_t HitLength
  *  @param hitsInBuff number of words stored on buffer.
  */
 void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
+/////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "Quicksort:\n\tUNSORTED\n");
+//int k;
+//for(k=0;k<hitsInBuff;++k)
+//	fprintf(stderr,"\tHit: X=%"PRIu32" Y=%"PRIu32" Diag=%"PRId64" PosX=%"PRIu64" L=%"PRIu64"\n",buff[k].seqX,buff[k].seqY,buff[k].diag,buff[k].posX,buff[k].length);
+/////////////////////////////////////////////////////////////////////
 	// Sort buffer
 	quicksort_H(buff,0,hitsInBuff-1);
+/////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tSORTED\n");
+//for(k=0;k<hitsInBuff;++k)
+//	fprintf(stderr,"\tHit: X=%"PRIu32" Y=%"PRIu32" Diag=%"PRId64" PosX=%"PRIu64" L=%"PRIu64"\n",buff[k].seqX,buff[k].seqY,buff[k].diag,buff[k].posX,buff[k].length);
+/////////////////////////////////////////////////////////////////////
 
 	// Write info on index file
 	uint64_t pos = (uint64_t) ftell(hits);
@@ -238,8 +258,14 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 	// Write hits in hits file
 	for(pos=1; pos<hitsInBuff; ++pos){
 		if(buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY && buff[pos].diag == lastHit.diag && buff[pos].posX < lastHit.posX + lastHit.length){
+////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "Hit collapsed\n");
+////////////////////////////////////////////////////////////////////
 			continue; // Collapsable
 		}
+///////////////////////////////////////////////////////////////////
+//fprintf(stderr, "Hit written.\n");
+///////////////////////////////////////////////////////////////////
 		fwrite(&buff[pos].seqX,sizeof(uint32_t),1,hits);
 		fwrite(&buff[pos].seqY,sizeof(uint32_t),1,hits);
 		fwrite(&buff[pos].diag,sizeof(int64_t),1,hits);
@@ -249,6 +275,9 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 		lastHit = buff[pos];
 		numHits++;
 	}
+///////////////////////////////////////////////////////////////////
+//fprintf(stderr, "NumHitsWritten=%"PRIu64"\n", numHits);
+///////////////////////////////////////////////////////////////////
 	// Write final number of hits
 	fwrite(&numHits,sizeof(uint64_t),1,index);
 	buffersWritten++;
@@ -417,10 +446,39 @@ inline void writeFragment(FragFile frag,FILE *fr){
 }
 
 
-/* This function is used to swap two hits variables
- *  @param h1 hit to be swapped.
- *  @param h2 hit to be swapped.
- *  @param t auxiliar hit.
+void showWord(unsigned char *w, uint16_t wsize) {
+	char Alf[] = { 'A', 'C', 'G', 'T' };
+	char ws[wsize*4+4];
+	uint16_t i;
+	unsigned char c;
+	fprintf(stdout, "Word:");
+	for (i = 0; i < wsize; i++) {
+		c = w[i];
+		c = c >> 6;
+		ws[4*i] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w[i];
+		c = c << 2;
+		c = c >> 6;
+		ws[4*i+1] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w[i];
+		c = c << 4;
+		c = c >> 6;
+		ws[4*i+2] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+		c = w[i];
+		c = c << 6;
+		c = c >> 6;
+		ws[4*i+3] = Alf[(int) c];
+		fprintf(stdout,"%c",Alf[(int) c]);
+	}
+	ws[wsize*4+4] = '\0';
+	fprintf(stdout, "\n");
+}
+
+
+/*
  */
 void SWAP_H(Hit* h1, Hit* h2, Hit t){
 	copyHit(&t,*h1);
@@ -428,10 +486,7 @@ void SWAP_H(Hit* h1, Hit* h2, Hit t){
 	copyHit(h2,t);
 }
 
-
-/* This function is used to copy a hit variable in another hit variable.
- *  @param toCopy where hit will be copied.
- *  @param copy hit to be copied.
+/*
  */
 void copyHit(Hit* toCopy, Hit copy){
 	toCopy->diag = copy.diag;

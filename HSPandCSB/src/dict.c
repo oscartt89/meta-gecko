@@ -34,19 +34,18 @@ int main(int ac, char** av){
 	bool isMetag = true;
 	if(ac==5 && strcmp(av[4],(const char*)&("geno"))==0) isMetag = false;
 
-	
-
 	// Variables
-	uint16_t WL = (uint16_t) atoi(av[3]); // Word length
+	WL = (uint16_t) atoi(av[3]); // Word length
 	BYTES_IN_WORD = WL / 4;
 	wentry *buffer; //Buffer of read words
-	FILE *metag; // Input files
+	FILE *seqFile; // Input files
 	FILE *wDic,*pDic;  // Output files
 	FILE *bIndx, *wrds; // Intermediate files
 	uint64_t readW = 0, wordsInBuffer = 0,i; // Absolute and buffer read words and auxiliar variable(i)
 	uint32_t numBuffWritten = 0;
 	char *fname;
-	bool removeIntermediataFiles = true; // Config it if you want save or not the intermediate files
+	unsigned char *MemoryBlock;
+	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -62,9 +61,9 @@ int main(int ac, char** av){
 	}
 
 	// Open current necessary files
-	// Open sequence(s) file
-	if((metag = fopen(av[1],"rt"))==NULL){
-		fprintf(stderr, "Error opening sequence(s) file.\n");
+	// Open sequence file
+	if((seqFile = fopen(av[1],"rt"))==NULL){
+		fprintf(stderr, "Error opening sequences file.\n");
 		return -1;
 	}
 
@@ -86,58 +85,58 @@ int main(int ac, char** av){
 	}
 
 	// START WORKFLOW
-	// Read sequence(s) file
+	// Read sequence file
 	// Necessary variables
 	uint64_t seqPos = 0, crrSeqL = 0;
 	char c; // Auxiliar -> Read char per char
 	wentry temp; // Auxiliar word variable
-	if((temp.w.b = (unsigned char*) malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
+	if((temp.seq = (unsigned char*) malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
 		fprintf(stderr, "Error allocating memory for temp.\n");
 		return -1;
 	}
-	temp.seq = 0;
-	temp.w.WL = WL;
+	temp.seqIndex = 0;
 
 	// Memory for buffer words
-	for(i=0;i<BUFFER_LENGTH;++i){
-		if((buffer[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-			fprintf(stderr, "Error allocating space for word.\n");
-			return -1;
-		}
+	if((MemoryBlock = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD*BUFFER_LENGTH))==NULL){
+		fprintf(stderr, "Error allocating space for words.\n");
+		return -1;
 	}
+	uint64_t mbIndex=0; // Memory block index
+	for(i=0;i<BUFFER_LENGTH;++i, mbIndex+=BYTES_IN_WORD)
+		buffer[i].seq = &MemoryBlock[mbIndex];
 
 	// Start to read
-	c = fgetc(metag);
-	while(!feof(metag)){
+	c = fgetc(seqFile);
+	while(!feof(seqFile)){
 		// Check if it's a special line
 		if(!isupper(toupper(c))){ // Comment, empty or quality (+) line
 			if(c=='>'){ // Comment line
-				c = fgetc(metag);
+				c = fgetc(seqFile);
 				while(c != '\n') // Avoid comment line
-					c = fgetc(metag);
-				temp.seq++; // New sequence
+					c = fgetc(seqFile);
+				temp.seqIndex++; // New sequence
 				crrSeqL = 0; // Reset buffered sequence length
 				seqPos = 0; // Reset index
 			}
-			c=fgetc(metag); // First char of next sequence
+			c=fgetc(seqFile); // First char of next sequence
 			continue;
 		}
-		shift_word(&temp.w); // Shift bits sequence
+		shift_word(temp.seq); // Shift bits sequence
 		// Add new nucleotid
 		switch (c) {
 			case 'A': // A = 00 
 				crrSeqL++;
 				break;
 			case 'C': // C = 01
-				temp.w.b[BYTES_IN_WORD-1]|=1;
+				temp.seq[BYTES_IN_WORD-1]|=1;
 				crrSeqL++;
 				break;
 			case 'G': // G = 10
-				temp.w.b[BYTES_IN_WORD-1]|=2;
+				temp.seq[BYTES_IN_WORD-1]|=2;
 				crrSeqL++;
 				break;
 			case 'T': // T = 11
-				temp.w.b[BYTES_IN_WORD-1]|=3;
+				temp.seq[BYTES_IN_WORD-1]|=3;
 				crrSeqL++;
 				break;
 			default : // Bad formed sequence
@@ -160,11 +159,11 @@ int main(int ac, char** av){
 				}
 			}
 		}
-		c = fgetc(metag);
+		c = fgetc(seqFile);
 	}
 
 	// Free&Close unnecessary varaibles
-	fclose(metag);
+	fclose(seqFile);
 
 	// Write buffered words
 	if(wordsInBuffer != 0){
@@ -173,7 +172,8 @@ int main(int ac, char** av){
 	}
 
 	// Free buffer space
-	freeWArray(buffer,BUFFER_LENGTH);
+	free(MemoryBlock);
+	free(buffer);
 
 	// Read Intermediate files and create final dictionary
 		// Close write buffer and open read buffers
@@ -209,78 +209,140 @@ int main(int ac, char** av){
 		}
 		fwrite(&WL,sizeof(uint16_t),1,wDic); // Word length
 
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST1\n");
+////////////////////////////////////////////////////////////////////
+
 	// Prepare necessary variables
-	uint64_t arrPos[numBuffWritten];
-	int64_t wordsUnread[numBuffWritten];
-	wentry words[numBuffWritten];
-	uint32_t reps = 0;
-	uint64_t lastLoaded;
+	uint64_t arrPos[numBuffWritten]; // Where stat to read buffer i
+	int64_t wordsUnread[numBuffWritten]; // Words unread of buffer i
+	uint32_t index[numBuffWritten];
+	uint64_t wrdsInBuff[numBuffWritten];
+	wentry **words; // Buffers
+	uint32_t reps = 0, activeBuffers = numBuffWritten; // Auxiliar variable
+	wentry *WentryBlock;
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST2\n");
+////////////////////////////////////////////////////////////////////
+
+	// Allocate space for buffers
+	if((words = (wentry **) malloc(sizeof(wentry*)*numBuffWritten))==NULL){
+		fprintf(stderr, "Error allocating matrix of words.\n");
+		return -1;
+	}
+	if((WentryBlock = (wentry*) malloc(sizeof(wentry)*MERGE_BUFFER_LENGTH*numBuffWritten))==NULL){
+		fprintf(stderr, "Error allocating wentry block.\n");
+		return -1;
+	}
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST3\n");
+////////////////////////////////////////////////////////////////////
 
 	// Read info about buffers
 	i = 0;
 	uint64_t aux64;
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST4\n");
+////////////////////////////////////////////////////////////////////
 	do{
 		fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
 		fread(&aux64,sizeof(uint64_t),1,bIndx); // Number of words on set
 		wordsUnread[i] = (int64_t) aux64;
 		++i;
 	}while(i<numBuffWritten);
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST5\n");
+////////////////////////////////////////////////////////////////////
 
 	// Take memory for words & read first set of words
-	for(i=0 ;i<numBuffWritten ;++i){
-		if((words[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-			fprintf(stderr, "Error allocating space for word.\n");
-			return -1;
-		}
+	if((MemoryBlock = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD*activeBuffers))==NULL){
+		fprintf(stderr, "Error allocating space for bufffer words.\n");
+		return -1;
+	}
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST6\n");
+////////////////////////////////////////////////////////////////////
+
+	// Load matrix
+	mbIndex = 0;
+	uint64_t wbIndex = 0,j;
+	for(i=0 ;i<activeBuffers ;++i, wbIndex+=MERGE_BUFFER_LENGTH){
+		words[i] = &WentryBlock[wbIndex];
+		wrdsInBuff[i]=0;
+
 		fseek(wrds,arrPos[i],SEEK_SET);
-		loadWord(&words[i],wrds);
+
+		for(j=0;j<MERGE_BUFFER_LENGTH && wordsUnread[i]>0;++j, mbIndex+=BYTES_IN_WORD){
+			words[i][j].seq = &MemoryBlock[mbIndex];
+			loadWord(&words[i][j],wrds);
+			wordsUnread[i]--;
+			wrdsInBuff[i]++;
+		}
 		// Update info
 		arrPos[i] = (uint64_t) ftell(wrds);
-		wordsUnread[i]--;
 	}
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST7\n");
+////////////////////////////////////////////////////////////////////
+
+	// Sort buffers
+	sortBuffers(&words,activeBuffers,&index[0],&wrdsInBuff[0]);
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST8\n");
+////////////////////////////////////////////////////////////////////
 
 	// First entrance
-	i = lowestWord(words,numBuffWritten,&wordsUnread[0]);
-	int k;
-	for(k=0;k<BYTES_IN_WORD;++k)
-		fwrite(&words[i].w.b[k],sizeof(unsigned char),1,wDic); // write first word
+	fwrite(words[0][0].seq,sizeof(unsigned char),BYTES_IN_WORD,wDic);
 	uint64_t pos = (uint64_t)ftell(pDic);
 	fwrite(&pos,sizeof(uint64_t),1,wDic); // position on pDic
-	fwrite(&words[i].seq,sizeof(uint32_t),1,pDic); // Read index
-	fwrite(&words[i].pos,sizeof(uint64_t),1,pDic); // Position on read
+	fwrite(&words[0][0].seqIndex,sizeof(uint32_t),1,pDic); // Read index
+	fwrite(&words[0][0].pos,sizeof(uint64_t),1,pDic); // Position on read
 	reps++; // Increment number of repetitions
-	storeWord(&temp,words[i]); // Update last word written
-	if(wordsUnread[i] > 0){
+	index[0]++;
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST9\n");
+////////////////////////////////////////////////////////////////////
+	storeWord(&temp,words[0][0]); // Update last word written
+/*	if(wordsUnread[i] > 0){
 		fseek(wrds,arrPos[i],SEEK_SET);
 		loadWord(&words[i],wrds);
 		lastLoaded = i;
 		arrPos[i] = (uint64_t) ftell(wrds);
 		wordsUnread[i]--;
 	}
+*/
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST10\n");
+////////////////////////////////////////////////////////////////////
+	checkOrder(&words,&activeBuffers,&index[0],&wrdsInBuff[0]);
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST11\n");
+////////////////////////////////////////////////////////////////////
 
 	// Write final dictionary file
 	while(!finished(&wordsUnread[0],numBuffWritten)){
-		i = lowestWord(words,numBuffWritten,&wordsUnread[0]);
-		// Store word in buffer
-		writeWord(&words[i],wDic,pDic,wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
-		storeWord(&temp,words[i]); // Update last word written
-		// Load next word if it's possible
-		if(wordsUnread[i] > 0){
-			if(i != lastLoaded){
-				fseek(wrds,arrPos[i],SEEK_SET);
-				lastLoaded = i;
-			}
-			loadWord(&words[i],wrds);
-			arrPos[i] = (uint64_t) ftell(wrds);
-			wordsUnread[i]--;
-		}else wordsUnread[i] = -1;
+		// Reload matrix if it's necessary
+		if(activeBuffers <= 0)
+			loadMatrix(words,&wordsUnread[0],numBuffWritten,&index[0],&wrdsInBuff[0],&activeBuffers,&arrPos[0],wrds);	
+
+		while(activeBuffers > 0){
+			// Store word in buffer
+			writeWord(&words[0][index[0]],wDic,pDic,wordcmp(words[0][index[0]].seq,temp.seq,BYTES_IN_WORD)!=0? false:true,&reps);
+			storeWord(&temp,words[0][index[0]]); // Update last word written
+			index[0]++;
+			// Check order and shift if it's necessary
+			checkOrder(&words,&activeBuffers,&index[0],&wrdsInBuff[0]);
+		}
 	}
+////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST12\n");
+////////////////////////////////////////////////////////////////////
+
 	// Write last word index
 	fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
 
 	// Deallocate words buffer
-	for(i=0 ;i<numBuffWritten ;++i) // Free words
-		free(words[i].w.b);
+	free(MemoryBlock);
 
 	if(removeIntermediataFiles){
 		strcpy(fname,av[2]);
@@ -291,7 +353,10 @@ int main(int ac, char** av){
 
 	// Free space
 	free(fname);
-	free(temp.w.b);
+	free(temp.seq);
+	free(WentryBlock);
+	free(words);
+
 	// Everything finished. All it's ok.
 	return 0;
 }

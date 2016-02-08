@@ -115,6 +115,12 @@ int main(int ac, char** av){
 	// Search
 	int cmp;
 	while(!feof(mW) && !feof(gW)){
+////////////////////////////////////////////////////////////
+//fprintf(stderr, "Metag\t");
+//showWord(we[0].seq,we[0].WB);
+//fprintf(stderr, "Geno\t");
+//showWord(we[1].seq,we[1].WB);
+////////////////////////////////////////////////////////////
 		if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
 			generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer);
 		// Load next word
@@ -140,7 +146,7 @@ int main(int ac, char** av){
 	fclose(hts);
 
 	// Open necessary files
-	// Open intermediate files
+	//Open intermediate files
 	// Index file
 	strcpy(fname,av[5]); // Copy outDic name
 	if((hIndx = fopen(strcat(fname,".hindx"),"rb"))==NULL){
@@ -161,6 +167,9 @@ int main(int ac, char** av){
 		fprintf(stderr, "Error opening fragments final file.\n");
 		return -1;
 	}
+////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "BuffersWritten=%"PRIu64"\n", buffersWritten);
+////////////////////////////////////////////////////////////////////
 
 	// Prepare necessary variables
 	Hit hitsBuff[buffersWritten];
@@ -204,6 +213,9 @@ int main(int ac, char** av){
 	frag.seqY = hitsBuff[i].seqY;
 	frag.block = 0;
 	frag.strand = 'f';
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr,"\tLowestHit: X=%"PRIu32" Y=%"PRIu32" Diag=%"PRId64" PosX=%"PRIu64" L=%"PRIu64"\n",hitsBuff[i].seqX,hitsBuff[i].seqY,hitsBuff[i].diag,hitsBuff[i].posX,hitsBuff[i].length);
+////////////////////////////////////////////////////////////////////////
 
 	// Load new hit
 	if(hitsUnread[i] > 0){
@@ -219,9 +231,21 @@ int main(int ac, char** av){
 	// Search new fragments
 	float newSimilarity;
 	int64_t dist;
-
+///////////////////////////////////////////////////////////////////////
+uint64_t fragmentsWritten=0;
+///////////////////////////////////////////////////////////////////////
 	while(!finished(&hitsUnread[0],buffersWritten)){
+////////////////////////////////////////////////////////////////////////
+//int k;
+//fprintf(stderr, "Unread:\n");
+//for(k=0;k<buffersWritten;++k)
+//	fprintf(stderr, "[%i]=%"PRIu64" ",k,hitsUnread[k]);
+//fprintf(stderr, "\n");
+////////////////////////////////////////////////////////////////////////
 		i = lowestHit(hitsBuff,buffersWritten,&hitsUnread[0]);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr,"\tLowestHit: X=%"PRIu32" Y=%"PRIu32" Diag=%"PRId64" PosX=%"PRIu64" L=%"PRIu64"\n",hitsBuff[i].seqX,hitsBuff[i].seqY,hitsBuff[i].diag,hitsBuff[i].posX,hitsBuff[i].length);
+////////////////////////////////////////////////////////////////////////
 		if(hitsBuff[i].seqX == frag.seqX && 
 				hitsBuff[i].seqY == frag.seqY &&
 				hitsBuff[i].diag == frag.diag){ // Possible fragment
@@ -230,6 +254,9 @@ int main(int ac, char** av){
 			if(dist >= 0){
 				newSimilarity = (100*hitsBuff[i].length + frag.length * frag.similarity)/(hitsBuff[i].length + frag.length + dist);
 				if(newSimilarity >= S_Threshold){ // Collapse fagments
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tFragment collpased\n");
+////////////////////////////////////////////////////////////////////////
 					frag.length = hitsBuff[i].length + hitsBuff[i].posX;
 						frag.xEnd = frag.xStart + frag.length;
 						frag.yEnd = frag.yStart + frag.length;
@@ -237,6 +264,10 @@ int main(int ac, char** av){
 					frag.score += hitsBuff[i].length - dist; // Equal +1; Difference -1
 					frag.similarity = newSimilarity;
 				}else{ // Else write fragment and load next frag
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tNew fragment\n");
+fragmentsWritten++;
+////////////////////////////////////////////////////////////////////////
 					writeFragment(frag,fr);
 					// Upload new fragment
 					frag.xStart = hitsBuff[i].posX;
@@ -250,6 +281,10 @@ int main(int ac, char** av){
 				}
 			}// Else it's collapsable
 		}else{ // New fragment
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tNew fragment. Different sequences or diag.\n");
+fragmentsWritten++;
+////////////////////////////////////////////////////////////////////////
 			// Write fragment
 			writeFragment(frag,fr);
 			// Upload new frag
@@ -276,6 +311,9 @@ int main(int ac, char** av){
 			hitsUnread[i]--;
 		}else hitsUnread[i] = -1;
 	}
+///////////////////////////////////////////////////////////////////
+fprintf(stderr, "Fragments written=%"PRIu64"\n", fragmentsWritten);
+///////////////////////////////////////////////////////////////////
 
 	// Close files
 	fclose(hIndx);

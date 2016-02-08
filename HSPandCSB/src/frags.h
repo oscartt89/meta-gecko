@@ -16,6 +16,9 @@
 #define MAX_BUFF 10000000
 #define MAX_FILE_LENGTH 1024
 
+// LINE FUNCTIONS
+#define SWAP(a,b,t) t=a; a=b; b=t;
+
 // GLOBAL VARAIBLES
 uint64_t buffersWritten;
 uint64_t S_Threshold; // Similarity threshold
@@ -139,5 +142,7 @@ inline void loadHit(Hit*,FILE*);
 uint64_t lowestHit(Hit*,uint64_t,int64_t*);
 bool finished(int64_t*,uint64_t);
 inline void writeFragment(FragFile,FILE*);
+
+void showWord(unsigned char*,uint16_t);
 void SWAP_H(Hit*,Hit*,Hit);
 void copyHit(Hit*,Hit);
