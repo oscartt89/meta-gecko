@@ -276,18 +276,6 @@ inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uin
 }
 
 
-/* This funtion is used to deallocate a wentry array in disk.
- *  @param arr wentry array to be deallocated.
- *  @param length of wentry array.
- */
-inline void freeWArray(wentry *arr,uint64_t length){
-	uint64_t i;
-	for(i=0;i<length;++i)
-		free(arr[i].w.b);
-	free(arr);
-}
-
-
 void showWord(word* w, int wsize) {
 	char Alf[] = { 'A', 'C', 'G', 'T' };
 	char ws[wsize*4+4];

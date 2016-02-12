@@ -53,5 +53,4 @@ bool finished(int64_t*,uint64_t);
 inline void loadWord(wentry*,FILE*);
 uint64_t lowestWord(wentry*,uint64_t,int64_t*);
 inline void writeWord(wentry*,FILE*,FILE*,bool,uint32_t*);
-inline void freeWArray(wentry*,uint64_t length);
 void showWord(word*,int);

@@ -40,6 +40,7 @@ int main(int ac, char** av){
 	uint64_t readW = 0, wordsInBuffer = 0,i; // Absolute and buffer read words and auxiliar variable(i)
 	uint32_t numBuffWritten = 0;
 	char *fname;
+	unsigned char *WordsBlock;
 	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
 
 	// Allocate necessary memory
@@ -52,6 +53,12 @@ int main(int ac, char** av){
 	// Memory for file names handler
 	if((fname = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){
 		fprintf(stderr, "Error allocating memory for file names handler.\n");
+		return -1;
+	}
+
+	// Memory for sequences
+	if((WordsBlock = (unsigned char *)malloc(sizeof(unsigned char)*BYTES_IN_WORD*BUFFER_LENGTH))==NULL){
+		fprintf(stderr, "Error allocating memory for sequences.\n");
 		return -1;
 	}
 
@@ -93,12 +100,10 @@ int main(int ac, char** av){
 	temp.w.WL = WL;
 
 	// Memory for buffer words
-	for(i=0;i<BUFFER_LENGTH;++i){
-		if((buffer[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-			fprintf(stderr, "Error allocating space for word.\n");
-			return -1;
-		}
-	}
+	uint64_t blockIndex = 0;
+	for(i=0;i<BUFFER_LENGTH;++i,blockIndex+=BYTES_IN_WORD)
+		buffer[i].w.b = &WordsBlock[blockIndex];
+
 
 	// Start to read
 	c = fgetc(metag);
@@ -167,7 +172,8 @@ int main(int ac, char** av){
 	}
 
 	// Free buffer space
-	freeWArray(buffer,BUFFER_LENGTH);
+	free(WordsBlock);
+	free(buffer);
 
 	// Read Intermediate files and create final dictionary
 		// Close write buffer and open read buffers
@@ -210,6 +216,12 @@ int main(int ac, char** av){
 	uint32_t reps = 0;
 	uint64_t lastLoaded;
 
+	// Memory for sequences
+	if((WordsBlock = (unsigned char *)malloc(sizeof(unsigned char)*numBuffWritten))==NULL){
+		fprintf(stderr, "Error allocating memory for sequences (merge).\n");
+		return -1;
+	}
+
 	// Read info about buffers
 	i = 0;
 	uint64_t aux64;
@@ -221,11 +233,9 @@ int main(int ac, char** av){
 	}while(i<numBuffWritten);
 
 	// Take memory for words & read first set of words
-	for(i=0 ;i<numBuffWritten ;++i){
-		if((words[i].w.b = (unsigned char*)malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
-			fprintf(stderr, "Error allocating space for word.\n");
-			return -1;
-		}
+	blockIndex = 0;
+	for(i=0 ;i<numBuffWritten ;++i, blockIndex += BYTES_IN_WORD){
+		words[i].w.b = &WordsBlock[blockIndex];
 		fseek(wrds,arrPos[i],SEEK_SET);
 		loadWord(&words[i],wrds);
 		// Update info
@@ -273,8 +283,7 @@ int main(int ac, char** av){
 	fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
 
 	// Deallocate words buffer
-	for(i=0 ;i<numBuffWritten ;++i) // Free words
-		free(words[i].w.b);
+	free(WordsBlock);
 
 	if(removeIntermediataFiles){
 		strcpy(fname,av[2]);
