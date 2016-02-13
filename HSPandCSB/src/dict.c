@@ -212,15 +212,21 @@ int main(int ac, char** av){
 	// Prepare necessary variables
 	uint64_t arrPos[numBuffWritten];
 	int64_t wordsUnread[numBuffWritten];
-	wentry words[numBuffWritten];
+	BuffWentry words[numBuffWritten];
 	uint32_t reps = 0;
-	uint64_t lastLoaded;
-
+	uint64_t lastLoaded, activeBuffers = numBuffWritten;
+	unsigned char *BuffWordsBlock;
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST1\n");
+////////////////////////////////////////////////////////////////////////
 	// Memory for sequences
-	if((WordsBlock = (unsigned char *)malloc(sizeof(unsigned char)*numBuffWritten))==NULL){
+	if((BuffWordsBlock = (unsigned char *)malloc(sizeof(unsigned char)*activeBuffers))==NULL){
 		fprintf(stderr, "Error allocating memory for sequences (merge).\n");
 		return -1;
 	}
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST2\n");
+////////////////////////////////////////////////////////////////////////
 
 	// Read info about buffers
 	i = 0;
@@ -230,60 +236,118 @@ int main(int ac, char** av){
 		fread(&aux64,sizeof(uint64_t),1,bIndx); // Number of words on set
 		wordsUnread[i] = (int64_t) aux64;
 		++i;
-	}while(i<numBuffWritten);
+	}while(i<activeBuffers);
+	fclose(bIndx);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST3\n");
+////////////////////////////////////////////////////////////////////////
 
 	// Take memory for words & read first set of words
 	blockIndex = 0;
-	for(i=0 ;i<numBuffWritten ;++i, blockIndex += BYTES_IN_WORD){
-		words[i].w.b = &WordsBlock[blockIndex];
+	for(i=0 ;i<activeBuffers ;++i, blockIndex += BYTES_IN_WORD){
+		words[i].word.w.b = &BuffWordsBlock[blockIndex];
 		fseek(wrds,arrPos[i],SEEK_SET);
-		loadWord(&words[i],wrds);
+		loadWord(&words[i].word,wrds);
+		words[i].buff = i;
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "%"PRIu64",",i);
+////////////////////////////////////////////////////////////////////////
 		// Update info
 		arrPos[i] = (uint64_t) ftell(wrds);
 		wordsUnread[i]--;
 	}
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\nTEST4\n");
+////////////////////////////////////////////////////////////////////////
+
+	// Sort array
+	quicksort_BW(words,0,activeBuffers-1);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST5\n");
+////////////////////////////////////////////////////////////////////////
 
 	// First entrance
-	i = lowestWord(words,numBuffWritten,&wordsUnread[0]);
 	int k;
 	for(k=0;k<BYTES_IN_WORD;++k)
-		fwrite(&words[i].w.b[k],sizeof(unsigned char),1,wDic); // write first word
+		fwrite(&words[0].word.w.b[k],sizeof(unsigned char),1,wDic); // write first word
 	uint64_t pos = (uint64_t)ftell(pDic);
 	fwrite(&pos,sizeof(uint64_t),1,wDic); // position on pDic
-	fwrite(&words[i].seq,sizeof(uint32_t),1,pDic); // Read index
-	fwrite(&words[i].pos,sizeof(uint64_t),1,pDic); // Position on read
+	fwrite(&words[0].word.seq,sizeof(uint32_t),1,pDic); // Read index
+	fwrite(&words[0].word.pos,sizeof(uint64_t),1,pDic); // Position on read
 	reps++; // Increment number of repetitions
-	storeWord(&temp,words[i]); // Update last word written
-	if(wordsUnread[i] > 0){
-		fseek(wrds,arrPos[i],SEEK_SET);
-		loadWord(&words[i],wrds);
-		lastLoaded = i;
+	storeWord(&temp,words[0].word); // Update last word written
+	if(wordsUnread[words[0].buff] > 0){
+		fseek(wrds,arrPos[words[0].buff],SEEK_SET);
+		loadWord(&words[0].word,wrds);
+		lastLoaded = words[0].buff;
 		arrPos[i] = (uint64_t) ftell(wrds);
 		wordsUnread[i]--;
+		checkOrder(words,activeBuffers,false);
+	}else{
+		checkOrder(words,activeBuffers,true);
+		activeBuffers--;
+		if(activeBuffers <= 0){
+			free(BuffWordsBlock);
+			free(fname);
+			free(temp.w.b);
+			fclose(wDic);
+			fclose(pDic);
+			fclose(wrds);
+			return 0;
+		}
 	}
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST6\n");
+////////////////////////////////////////////////////////////////////////
 
 	// Write final dictionary file
-	while(!finished(&wordsUnread[0],numBuffWritten)){
-		i = lowestWord(words,numBuffWritten,&wordsUnread[0]);
+	while(activeBuffers > 0){	
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tT-%"PRIu64"",activeBuffers);
+////////////////////////////////////////////////////////////////////////
 		// Store word in buffer
-		writeWord(&words[i],wDic,pDic,wordcmp(words[i].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
-		storeWord(&temp,words[i]); // Update last word written
+		writeWord(&words[0].word,wDic,pDic,wordcmp(words[i].word.w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
+		storeWord(&temp,words[0].word); // Update last word written
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "-%"PRIu64"",words[0].buff);
+////////////////////////////////////////////////////////////////////////
 		// Load next word if it's possible
-		if(wordsUnread[i] > 0){
-			if(i != lastLoaded){
-				fseek(wrds,arrPos[i],SEEK_SET);
-				lastLoaded = i;
+		if(wordsUnread[words[0].buff] > 0){
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "-\n");
+////////////////////////////////////////////////////////////////////////
+			if(words[0].buff != lastLoaded){
+				fseek(wrds,arrPos[words[0].buff],SEEK_SET);
+				lastLoaded = words[0].buff;
 			}
-			loadWord(&words[i],wrds);
-			arrPos[i] = (uint64_t) ftell(wrds);
-			wordsUnread[i]--;
-		}else wordsUnread[i] = -1;
+			loadWord(&words[0].word,wrds);
+			arrPos[words[0].buff] = (uint64_t) ftell(wrds);
+			wordsUnread[words[0].buff]--;
+			checkOrder(words,activeBuffers,false);
+		}else{
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "+\n");
+////////////////////////////////////////////////////////////////////////
+			checkOrder(words,activeBuffers,true);
+			activeBuffers--;
+		}
 	}
 	// Write last word index
 	fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
 
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST7\n");
+////////////////////////////////////////////////////////////////////////
+
 	// Deallocate words buffer
-	free(WordsBlock);
+//	free(BuffWordsBlock);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST8\n");
+////////////////////////////////////////////////////////////////////////
+
+	fclose(wDic);
+	fclose(pDic);
+	fclose(wrds);
 
 	if(removeIntermediataFiles){
 		strcpy(fname,av[2]);
@@ -294,7 +358,13 @@ int main(int ac, char** av){
 
 	// Free space
 	free(fname);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST9\n");
+////////////////////////////////////////////////////////////////////////
 	free(temp.w.b);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST10\n");
+////////////////////////////////////////////////////////////////////////
 	// Everything finished. All it's ok.
 	return 0;
 }

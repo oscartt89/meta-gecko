@@ -40,6 +40,13 @@ typedef struct {
     uint32_t seq;
 } wentry;
 
+typedef struct{
+    // Wentry 
+    wentry word;
+    // Buffer index
+    uint64_t buff;
+} BuffWentry;
+
 // FUNCTIONS
 inline void shift_word(word*);
 inline void storeWord(wentry*,wentry);
@@ -47,10 +54,15 @@ int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 int wordcmp(word,word,int);
 int wordComparator(wentry*,wentry*);
 int partition(wentry*,int,int);
+int partitionB(BuffWentry*,int,int);
 int quicksort_W(wentry*,int,int);
+int quicksort_BW(BuffWentry*,int,int);
 long int searchInIndex(word,FILE*,long int,bool*);
 bool finished(int64_t*,uint64_t);
 inline void loadWord(wentry*,FILE*);
 uint64_t lowestWord(wentry*,uint64_t,int64_t*);
 inline void writeWord(wentry*,FILE*,FILE*,bool,uint32_t*);
+void checkOrder(BuffWentry*,uint64_t,bool);
+void SWAP_BW(BuffWentry*,BuffWentry*,BuffWentry);
 void showWord(word*,int);
+int GT(wentry,wentry);

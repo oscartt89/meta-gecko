@@ -183,11 +183,77 @@ int partition(wentry* arr, int left, int right) {
 }
 
 
+/* This function is necessary for quicksort functionality.
+ *  @param arr array to be sorted.
+ *  @param left inde of the sub-array.
+ *  @param right index of the sub-array.
+ */
+int partitionB(BuffWentry* arr, int left, int right) {
+  int i = left;
+  int j = right+1;
+  BuffWentry t;
+  t.word.w.b = (unsigned char *) malloc(sizeof(unsigned char)*BYTES_IN_WORD);
+
+  // left sera el pivote
+  // y contendra la mediana de left, r y (l+r)/2
+  int mid = (left+right)/2;
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tT1(%i,%i,%i)\n",left,mid,right);
+////////////////////////////////////////////////////////////////////////
+
+  if(GT(arr[mid].word,arr[right].word)){
+		SWAP_BW(&arr[mid],&arr[right],t);
+  }
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tT2\n");
+////////////////////////////////////////////////////////////////////////
+
+  if(GT(arr[mid].word,arr[left].word)){
+		SWAP_BW(&arr[mid],&arr[left],t);
+  }
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tT3\n");
+////////////////////////////////////////////////////////////////////////
+
+  if(GT(arr[left].word,arr[right].word)){
+		SWAP_BW(&arr[left],&arr[right],t);
+	}
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tT4\n");
+////////////////////////////////////////////////////////////////////////
+
+	while(1){
+		do{
+			++i;
+		}while(!GT(arr[i].word,arr[left].word) && i <= right);
+
+		do{
+			--j;
+		}while(GT(arr[j].word,arr[left].word) && j >= left);
+
+		if(i >= j) break;
+
+		SWAP_BW(&arr[i],&arr[j],t);
+	}
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tT5\n");
+////////////////////////////////////////////////////////////////////////
+
+	SWAP_BW(&arr[left],&arr[j],t);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tT6\n");
+////////////////////////////////////////////////////////////////////////
+
+	free(t.word.w.b);
+
+	return j;
+}
+
+
 /* This function is used to sort a wentry array.
  *  @param arr array to be sorted.
  *  @param left index where start to sort.
  *  @param right index where end sorting action.
- *
  */
 int quicksort_W(wentry* arr, int left,int right) {
    int j;
@@ -198,6 +264,25 @@ int quicksort_W(wentry* arr, int left,int right) {
        //  j=(left+r)/2;
        quicksort_W( arr, left, j-1);
        quicksort_W( arr, j+1, right);
+   }
+   return 0;
+}
+
+
+/* This function is used to sort a BuffWentry array.
+ *  @param arr array to be sorted.
+ *  @param left index where start to sort.
+ *  @param right index where end sorting action.
+ */
+int quicksort_BW(BuffWentry* arr, int left,int right) {
+   int j;
+
+	if( left < right ) {
+ 	// divide and conquer
+       j = partitionB( arr, left, right);
+       //  j=(left+r)/2;
+       quicksort_BW( arr, left, j-1);
+       quicksort_BW( arr, j+1, right);
    }
    return 0;
 }
@@ -273,6 +358,53 @@ inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uin
 	fwrite(&word->seq,sizeof(uint32_t),1,p); // Read index
 	fwrite(&word->pos,sizeof(uint64_t),1,p); // Position on read
 	*words+=1; // Increment number of repetitions
+}
+
+
+/*
+ */
+void checkOrder(BuffWentry* buff,uint64_t length,bool discardFirst){
+	uint64_t i;
+	BuffWentry t;
+	t.word.w.b = (unsigned char *)malloc(sizeof(unsigned char)*BYTES_IN_WORD);
+	if(discardFirst){
+		// Take first BuffWentry to the end
+		for(i=0; i<length-1; ++i)
+			SWAP_BW(&buff[i],&buff[i+1],t);
+	}else{ // Check new position
+		i=1;
+		do{
+			if(wordComparator(&buff[0].word,&buff[i].word) < 1) break;
+			++i;
+		}while(i<length);
+
+		uint64_t j;
+		for(j=0; j<i-1; ++j)
+			SWAP_BW(&buff[j],&buff[j+1],t);
+	}
+	free(t.word.w.b);
+}
+
+
+void SWAP_BW(BuffWentry *b1, BuffWentry *b2, BuffWentry t){
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\t\tT");
+////////////////////////////////////////////////////////////////////////
+	// SWAP word
+	storeWord(&t.word,b1->word);
+	storeWord(&b1->word,b2->word);
+	storeWord(&b2->word,t.word);
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "T");
+////////////////////////////////////////////////////////////////////////
+
+	//SWAP buffers
+	t.buff = b1->buff;
+	b1->buff = b2-> buff;
+	b2-> buff = t.buff;
+////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "T\n");
+////////////////////////////////////////////////////////////////////////
 }
 
 
