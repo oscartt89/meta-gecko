@@ -40,12 +40,14 @@ typedef struct {
     uint32_t seq;
 } wentry;
 
-typedef struct{
-    // Wentry 
+struct item{
     wentry word;
-    // Buffer index
     uint64_t buff;
-} BuffWentry;
+    struct item *next;
+};
+
+typedef struct item node; 
+
 
 // FUNCTIONS
 inline void shift_word(word*);
@@ -54,15 +56,14 @@ int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 int wordcmp(word,word,int);
 int wordComparator(wentry*,wentry*);
 int partition(wentry*,int,int);
-int partitionB(BuffWentry*,int,int);
 int quicksort_W(wentry*,int,int);
-int quicksort_BW(BuffWentry*,int,int);
 long int searchInIndex(word,FILE*,long int,bool*);
 bool finished(int64_t*,uint64_t);
 inline void loadWord(wentry*,FILE*);
-uint64_t lowestWord(wentry*,uint64_t,int64_t*);
 inline void writeWord(wentry*,FILE*,FILE*,bool,uint32_t*);
-void checkOrder(BuffWentry*,uint64_t,bool);
-void SWAP_BW(BuffWentry*,BuffWentry*,BuffWentry);
-void showWord(word*,int);
+void checkOrder(node**,bool);
 int GT(wentry,wentry);
+void push(node**,node**);
+void move(node**,node**);
+void sortList(node**);
+void showWord(word*,int);
