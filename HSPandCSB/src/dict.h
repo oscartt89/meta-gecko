@@ -17,6 +17,7 @@
 #define BUFFER_LENGTH 10000000
 #define MAX_FILE_LENGTH 1024
 #define FLAG 0
+#define READ_BUFF_LENGTH 10000
 // FUNCTIONS
 #define SWAP_W(a,b,t) t=a; a=b; b=t;
 
@@ -41,8 +42,10 @@ typedef struct {
 } wentry;
 
 struct item{
-    wentry word;
+    wentry *word;
     uint64_t buff;
+    uint64_t index;
+    uint64_t words_loaded;
     struct item *next;
 };
 
@@ -59,7 +62,7 @@ int partition(wentry*,int,int);
 int quicksort_W(wentry*,int,int);
 long int searchInIndex(word,FILE*,long int,bool*);
 bool finished(int64_t*,uint64_t);
-inline void loadWord(wentry*,FILE*);
+uint64_t loadWord(wentry**,FILE*,int64_t);
 inline void writeWord(wentry*,FILE*,FILE*,bool,uint32_t*);
 void checkOrder(node**,bool);
 int GT(wentry,wentry);

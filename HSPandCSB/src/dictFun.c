@@ -215,17 +215,22 @@ bool finished(int64_t *unread, uint64_t length){
 }
 
 
-/* This function is used to load a word from a words intermediate file.
- *  @param word varaible where loaded wentry ill be stored.
+/* This function is used to load an array of words from a words intermediate file.
+ *  @param words array where set will be loaded.
  *  @param wFile pointer to words intermediate file.
+ *  @param unread rest of words on intermediate file.
+ *  @return Number of words read from intermediate file.
  */
-inline void loadWord(wentry *word,FILE* wFile){
-	fread(&word->pos,sizeof(uint64_t),1,wFile); 
-	fread(&word->seq,sizeof(uint32_t),1,wFile);
-	//fread(&word->w.WL,sizeof(uint16_t),1,wFile);
-	int i;
-	for(i=0;i<BYTES_IN_WORD;++i)
-		fread(&word->w.b[i],sizeof(unsigned char),1,wFile);
+uint64_t loadWord(wentry **words,FILE* wFile, int64_t unread){
+	uint64_t i,j;
+	for(j=0; j<READ_BUFF_LENGTH && unread > 0;++j){
+		fread(&(*words)[j].pos,sizeof(uint64_t),1,wFile); 
+		fread(&(*words)[j].seq,sizeof(uint32_t),1,wFile);
+		//fread(&(*word)[j]->w.WL,sizeof(uint16_t),1,wFile);
+		for(i=0;i<BYTES_IN_WORD;++i)
+			fread(&(*words)[j].w.b[i],sizeof(unsigned char),1,wFile);
+	}
+	return j;
 }
 
 
@@ -255,7 +260,10 @@ inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uin
 }
 
 
-/*
+/* This function is used to check the correc order of the first node of a linked list.
+ * If it's incorrect, this function sort it.
+ *  @param list linked list to be checked.
+ *  @param discardFirst a boolean value that indicate if first node should be deleted.
  */
 void checkOrder(node** list,bool discardFirst){
 	node *aux;
@@ -271,7 +279,7 @@ void checkOrder(node** list,bool discardFirst){
 //fprintf(stderr, "a");
 ////////////////////////////////////////////////////////////
 		// Search new position
-		if(GT((*list)->word,(*list)->next->word)==1){
+		if(GT((*list)->word[(*list)->index],(*list)->next->word[(*list)->next->index])==1){
 ////////////////////////////////////////////////////////////
 //fprintf(stderr, "b");
 ////////////////////////////////////////////////////////////
@@ -281,7 +289,7 @@ void checkOrder(node** list,bool discardFirst){
 ////////////////////////////////////////////////////////////
 			while(1){
 				if(curr->next == NULL) break; // End of list
-				else if(GT((*list)->word,curr->next->word)==0) break; // position found
+				else if(GT((*list)->word[(*list)->index],curr->next->word[curr->next->index])==0) break; // position found
 				else curr = curr->next;
 			}
 ////////////////////////////////////////////////////////////
@@ -349,72 +357,72 @@ void sortList(node **first){
 //showWord(&current->next->word.w,BYTES_IN_WORD);
 ////////////////////////////////////////////////////////////////////////
 		if(current->next == NULL) sorted = true;
-		else if(GT(current->next->word,current->word)==0){ // Next is smaller
+		else if(GT(current->next->word[current->index],current->word[current->next->index])==0){ // Next is smaller
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "-");
+//fprintf(stderr, "-");
 ////////////////////////////////////////////////////////////////////////
 			// Search position
-			if(GT(current->next->word,(*first)->word)==0){ // New first node
+			if(GT(current->next->word[current->next->index],(*first)->word[(*first)->index])==0){ // New first node
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "1");
+//fprintf(stderr, "1");
 ////////////////////////////////////////////////////////////////////////
 				aux = current->next->next;
 				current->next->next = *first;
 				*first = current->next;
 				current->next = aux;
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "1");
+//fprintf(stderr, "1");
 ////////////////////////////////////////////////////////////////////////
 			}else{ // Search position
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "2");
+//fprintf(stderr, "2");
 ////////////////////////////////////////////////////////////////////////
 				aux = *first;			
 				while(1){
-					if(GT(aux->next->word,current->next->word)==1) break; // Position found
+					if(GT(aux->next->word[aux->next->index],current->next->word[current->next->index])==1) break; // Position found
 					else aux = aux->next;
 				}
 				move(&aux,&current);
 				// Chekc if it's the last node
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "2");
+//fprintf(stderr, "2");
 ////////////////////////////////////////////////////////////////////////
 				if(current->next == NULL) sorted = true;
 			}
 		}else{ // Go next
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "+");
+//fprintf(stderr, "+");
 ////////////////////////////////////////////////////////////////////////
 			current = current->next;
 			if(current->next == NULL){ // End of the list
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "+");
+//fprintf(stderr, "+");
 ////////////////////////////////////////////////////////////////////////
 				// Search position
-				if(GT(current->next->word,(*first)->word)==0){ // New first node
+				if(GT(current->next->word[current->next->index],(*first)->word[(*first)->index])==0){ // New first node
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "3");
+//fprintf(stderr, "3");
 ////////////////////////////////////////////////////////////////////////
 					aux = current->next->next;
 					current->next->next = *first;
 					*first = current->next;
 					current->next = aux;
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "3");
+//fprintf(stderr, "3");
 ////////////////////////////////////////////////////////////////////////
 				}else{
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "4");
+//fprintf(stderr, "4");
 ////////////////////////////////////////////////////////////////////////
 					aux = *first;			
 					while(1){
 						if(aux->next == NULL) break;
-						if(GT(current->next->word,aux->next->word)==1) break; // Position found
+						if(GT(current->next->word[current->next->index],aux->next->word[aux->next->index])==1) break; // Position found
 						else aux = aux->next;
 					}
 					move(&aux,&current);
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "4");
+//fprintf(stderr, "4");
 ////////////////////////////////////////////////////////////////////////
 				}
 				// List sorted
@@ -422,7 +430,7 @@ fprintf(stderr, "4");
 			}
 		}
 ////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "\n");
+//fprintf(stderr, "\n");
 //fprintf(stderr, "\tList:\n");
 //currNode = *first;
 //while(currNode!=NULL){
