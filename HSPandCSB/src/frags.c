@@ -167,7 +167,14 @@ int main(int ac, char** av){
 	int64_t hitsUnread[buffersWritten];
 	uint64_t positions[buffersWritten];
 	uint64_t lastLoaded, activeBuffers = buffersWritten;
+	Hit *HitsBlock;
 	FragFile frag;
+
+	// Take memory for hits
+	if((HitsBlock = (Hit*) malloc(sizeof(Hit)*activeBuffers*READ_BUFF_LENGTH))==NULL){
+		fprintf(stderr, "Error allocating memory for hits block.\n");
+		return -1
+	}
 
 
 	// Read buffers info
@@ -177,19 +184,23 @@ int main(int ac, char** av){
 		fread(&aux64,sizeof(uint64_t),1,hIndx);
 		hitsUnread[i] = (int64_t) aux64;
 		++i;
-	}while(i < buffersWritten);
+	}while(i < activeBuffers);
 
 	// Load first hits
 	node *currNode;
-	for(i=0 ;i<buffersWritten; ++i){
+	uint64_t read, blockIndex = 0;
+	for(i=0 ;i<activeBuffers; ++i, blockIndex += READ_BUFF_LENGTH){
 		currNode = (node*) malloc(sizeof(node));
 		currNode->next = hitsList;
-		fseek(hts,positions[i],SEEK_SET);
-		loadHit(&currNode->hits,hts);
+		currNode->hits = &HitsBlock[blockIndex];
 		currNode->buff = i;
+		fseek(hts,positions[i],SEEK_SET);
+		read = loadHit(&currNode->hits,hts,hitsUnread[i]);
+		currNode->index = 0;
+		currNode->hits_loaded = read;
 		// Update info
 		positions[i] = (uint64_t) ftell(hts);
-		hitsUnread[i]--;
+		hitsUnread[i]-=read;
 		lastLoaded = i;
 	}
 
@@ -200,63 +211,69 @@ int main(int ac, char** av){
 	sortList(&hitsList);	
 
 	// First fragment = hit[0]
-	frag.diag = hitsList->hits.diag;
-	frag.xStart = hitsList->hits.posX;
-	frag.yStart = hitsList->hits.posY;
-	frag.xEnd = hitsList->hits.posX + hitsList->hits.length;
-	frag.yEnd = hitsList->hits.posY + hitsList->hits.length;
-	frag.length = hitsList->hits.length;
-	frag.ident = hitsList->hits.length;
+	frag.diag = hitsList->hits[hitsList->index].diag;
+	frag.xStart = hitsList->hits[hitsList->index].posX;
+	frag.yStart = hitsList->hits[hitsList->index].posY;
+	frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
+	frag.yEnd = hitsList->hits[hitsList->index].posY + hitsList->hits[hitsList->index].length;
+	frag.length = hitsList->hits[hitsList->index].length;
+	frag.ident = hitsList->hits[hitsList->index].length;
 	frag.score = frag.ident;
 	frag.similarity = 100;
-	frag.seqX = hitsList->hits.seqX;
-	frag.seqY = hitsList->hits.seqY;
+	frag.seqX = hitsList->hits[hitsList->index].seqX;
+	frag.seqY = hitsList->hits[hitsList->index].seqY;
 	frag.block = 0;
 	frag.strand = 'f';
 
+	hitsList->index +=1;
+
 	// Load new hit
-	if(hitsUnread[hitsList->buff] > 0){
-		if(hitsList->buff != lastLoaded){
-			fseek(hts,positions[hitsList->buff],SEEK_SET);
-			lastLoaded = hitsList->buff;
+	if(hitsList->index >= hitsList->hits_loaded){
+		if(hitsUnread[hitsList->buff] > 0){
+			if(hitsList->buff != lastLoaded){
+				fseek(hts,positions[hitsList->buff],SEEK_SET);
+				lastLoaded = hitsList->buff;
+			}
+			read = loadHit(&hitsList->hits[hitsList->index],hts,hitsUnread[hitsList->buff]);
+			hitsList->index = 0;
+			hitsList->hits_loaded = read;
+			positions[hitsList->buff] = (uint64_t) ftell(hts);
+			hitsUnread[hitsList->buff]-=read;
+			checkOrder(&hitsList,false);
+		}else{
+			checkOrder(&hitsList,true);
+			activeBuffers--;
 		}
-		loadHit(&hitsList->hits,hts);
-		positions[hitsList->buff] = (uint64_t) ftell(hts);
-		hitsUnread[hitsList->buff]--;
-		checkOrder(&hitsList,false);
-	}else{
-		checkOrder(&hitsList,true);
-		activeBuffers--;
-	}
+	}else checkOrder(&hitsList,false);
 
 	// Search new fragments
 	float newSimilarity;
 	int64_t dist;
 
 	while(activeBuffers > 0){
-		if(hitsList->hits.seqX == frag.seqX && 
-				hitsList->hits.seqY == frag.seqY &&
-				hitsList->hits.diag == frag.diag){ // Possible fragment
+		if(hitsList->hits[hitsList->index].seqX == frag.seqX && 
+				hitsList->hits[hitsList->index].seqY == frag.seqY &&
+				hitsList->hits[hitsList->index].diag == frag.diag){ // Possible fragment
 			// Check if are collapsable
-			dist = hitsList->hits.posX - frag.xStart + frag.length;
+			dist = hitsList->hits[hitsList->index].posX - frag.xStart + frag.length;
 			if(dist >= 0){
-				newSimilarity = (100*hitsList->hits.length + frag.length * frag.similarity)/(hitsList->hits.length + frag.length + dist);
+				newSimilarity = (100*hitsList->hits[hitsList->index].length + frag.length * frag.similarity)/(hitsList->hits[hitsList->index].length + frag.length + dist);
 				if(newSimilarity >= S_Threshold){ // Collapse fagments
-					frag.length = hitsList->hits.length + hitsList->hits.posX;
+					frag.length = hitsList->hits[hitsList->index].length + hitsList->hits[hitsList->index].posX;
 						frag.xEnd = frag.xStart + frag.length;
 						frag.yEnd = frag.yStart + frag.length;
-					frag.ident += hitsList->hits.length;
-					frag.score += hitsList->hits.length - dist; // Equal +1; Difference -1
+					frag.ident += hitsList->hits[hitsList->index].length;
+					frag.score += hitsList->hits[hitsList->index].length - dist; // Equal +1; Difference -1
 					frag.similarity = newSimilarity;
 				}else{ // Else write fragment and load next frag
 					writeFragment(frag,fr);
 					// Upload new fragment
-					frag.xStart = hitsList->hits.posX;
-					frag.yStart = hitsList->hits.posY;
-					frag.xEnd = hitsList->hits.posX + hitsList->hits.length;
-					frag.yEnd = hitsList->hits.posY + hitsList->hits.length;
-					frag.length = hitsList->hits.length;
-					frag.ident = hitsList->hits.length;
+					frag.xStart = hitsList->hits[hitsList->index].posX;
+					frag.yStart = hitsList->hits[hitsList->index].posY;
+					frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
+					frag.yEnd = hitsList->hits[hitsList->index].posY + hitsList->hits[hitsList->index].length;
+					frag.length = hitsList->hits[hitsList->index].length;
+					frag.ident = hitsList->hits[hitsList->index].length;
 					frag.score = frag.ident;
 					frag.similarity = 100;
 				}
@@ -265,35 +282,41 @@ int main(int ac, char** av){
 			// Write fragment
 			writeFragment(frag,fr);
 			// Upload new frag
-			frag.diag = hitsList->hits.diag;
-			frag.xStart = hitsList->hits.posX;
-			frag.yStart = hitsList->hits.posY;
-			frag.xEnd = hitsList->hits.posX + hitsList->hits.length;
-			frag.yEnd = hitsList->hits.posY + hitsList->hits.length;
-			frag.length = hitsList->hits.length;
-			frag.ident = hitsList->hits.length;
+			frag.diag = hitsList->hits[hitsList->index].diag;
+			frag.xStart = hitsList->hits[hitsList->index].posX;
+			frag.yStart = hitsList->hits[hitsList->index].posY;
+			frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
+			frag.yEnd = hitsList->hits[hitsList->index].posY + hitsList->hits[hitsList->index].length;
+			frag.length = hitsList->hits[hitsList->index].length;
+			frag.ident = hitsList->hits[hitsList->index].length;
 			frag.score = frag.ident;
 			frag.similarity = 100;
-			frag.seqX = hitsList->hits.seqX;
-			frag.seqY = hitsList->hits.seqY;
+			frag.seqX = hitsList->hits[hitsList->index].seqX;
+			frag.seqY = hitsList->hits[hitsList->index].seqY;
 		}
+		hitsList->index +=1;
 		// Load new hit
-		if(hitsUnread[hitsList->buff] > 0){
-			if(hitsList->buff != lastLoaded){
-				fseek(hts,positions[hitsList->buff],SEEK_SET);
-				lastLoaded = hitsList->buff;
+		if(hitsList->index >= hitsList->hits_loaded){
+			if(hitsUnread[hitsList->buff] > 0){
+				if(hitsList->buff != lastLoaded){
+					fseek(hts,positions[hitsList->buff],SEEK_SET);
+					lastLoaded = hitsList->buff;
+				}
+				read = loadHit(&hitsList->hits[hitsList->index],hts);
+				hitsList->index = 0;
+				hitsList->hits_loaded = read;
+				positions[hitsList->buff] = (uint64_t) ftell(hts);
+				hitsUnread[hitsList->buff]-=read;
+				checkOrder(&hitsList,false);
+			}else{
+				checkOrder(&hitsList,true);
+				activeBuffers--;
 			}
-			loadHit(&hitsList->hits,hts);
-			positions[hitsList->buff] = (uint64_t) ftell(hts);
-			hitsUnread[hitsList->buff]--;
-			checkOrder(&hitsList,false);
-		}else{
-			checkOrder(&hitsList,true);
-			activeBuffers--;
-		}
+		}else checkOrder(&hitsList,false);
 	}
 
 	// Close files
+	free(HitsBlock);
 	fclose(hIndx);
 	fclose(hts);
 	fclose(fr);

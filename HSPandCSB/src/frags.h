@@ -15,6 +15,7 @@
 // VARAIBLES
 #define MAX_BUFF 10000000
 #define MAX_FILE_LENGTH 1024
+#define READ_BUFF_LENGTH 10000
 
 // LINE FUNCTIONS
 #define SWAP(a,b,t) t=a; a=b; b=t;
@@ -128,8 +129,10 @@ typedef struct{
 
 //
 struct item{
-    Hit hits;
+    Hit *hits;
     uint64_t buff;
+    uint64_t index;
+    uint64_t hits_loaded;
     struct item *next;
 };
 
@@ -147,7 +150,7 @@ void writeHitsBuff(Hit*,FILE*,FILE*,uint64_t);
 int GT(Hit,Hit);
 int partition(Hit*,int,int);
 void quicksort_H(Hit*,int,int);
-inline void loadHit(Hit*,FILE*);
+uint64_t loadHit(Hit**,FILE*,int64_t);
 uint64_t lowestHit(Hit*,uint64_t,int64_t*);
 bool finished(int64_t*,uint64_t);
 inline void writeFragment(FragFile,FILE*);

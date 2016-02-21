@@ -348,47 +348,20 @@ void quicksort_H(Hit* arr, int left,int right){
 /* This function is used to load a hit from a hits intermediate file.
  *  @param hit varaible where loaded hit will be stored.
  *  @param hFile pointer to hits intermediate file.
+ *  @param unread rest of hits on intermediate file.
+ *  @return Number of hits read from intermediate file.
  */
-inline void loadHit(Hit *hit,FILE* hFile){
-	fread(&hit->seqX,sizeof(uint32_t),1,hFile);
-	fread(&hit->seqY,sizeof(uint32_t),1,hFile);
-	fread(&hit->diag,sizeof(int64_t),1,hFile);
-	fread(&hit->posX,sizeof(uint64_t),1,hFile);
-	fread(&hit->posY,sizeof(uint64_t),1,hFile);
-	fread(&hit->length,sizeof(uint64_t),1,hFile);
-}
-
-
-/* This function is used to return the index of the lowest hit on a hit array.
- *  @param hits array where search.
- *  @param length of hits array.
- *  @return the index of the lowest hit on hits array.
- */
-uint64_t lowestHit(Hit *hits,uint64_t length,int64_t *unread){
-	uint64_t i;
-	int64_t j=-1;
-	// Search first readable
-	for(i=0;i<length && j<0;++i)
-		if(unread[i]>=0) j = i;
-
-	for(i=j+1;i<length;++i)
-		if(unread[i]>=0)
-			if(HComparer(hits[j],hits[i]) > 0) j = i;
-
-	return j;
-}
-
-
-/* This function is used to check if all hits has been read from intermediate file.
- *  @param unread array of unread hits of each buffer segment.
- *  @param length of the unread array.
- *  @return true if there are not unread hits and false in other cases.
- */
-bool finished(int64_t *unread, uint64_t length){
-	uint64_t i;
-	for(i=0; i<length; ++i)
-		if(unread[i] >= 0) return false;
-	return true;
+inline void loadHit(Hit **hit,FILE* hFile, int64_t unread){
+	uint64_t i,j;
+	for(j=0; j<READ_BUFF_LENGTH && unread > 0; ++j){
+		fread(&(*hit)[j].seqX,sizeof(uint32_t),1,hFile);
+		fread(&(*hit)[j].seqY,sizeof(uint32_t),1,hFile);
+		fread(&(*hit)[j].diag,sizeof(int64_t),1,hFile);
+		fread(&(*hit)[j].posX,sizeof(uint64_t),1,hFile);
+		fread(&(*hit)[j].posY,sizeof(uint64_t),1,hFile);
+		fread(&(*hit)[j].length,sizeof(uint64_t),1,hFile);
+		unread--;
+	}
 }
 
 
@@ -476,9 +449,9 @@ void sortList(node **first){
 	// Do until end
 	while(!sorted){
 		if(current->next == NULL) sorted = true;
-		else if(GT(current->next->hits,current->hits)==0){ // Next is smaller
+		else if(GT(current->next->hits[current->index],current->hits[current->next->index])==0){ // Next is smaller
 			// Search position
-			if(GT(current->next->hits,(*first)->hits)==0){ // New first node
+			if(GT(current->next->hits[current->next->index],(*first)->hits[(*first)->index])==0){ // New first node
 				aux = current->next->next;
 				current->next->next = *first;
 				*first = current->next;
@@ -486,7 +459,7 @@ void sortList(node **first){
 			}else{ // Search position
 				aux = *first;			
 				while(1){
-					if(GT(aux->next->hits,current->next->hits)==1) break; // Position found
+					if(GT(aux->next->hits[aux->next->index],current->next->hits[current->next->index])==1) break; // Position found
 					else aux = aux->next;
 				}
 				move(&aux,&current);
@@ -497,7 +470,7 @@ void sortList(node **first){
 			current = current->next;
 			if(current->next == NULL){ // End of the list
 				// Search position
-				if(GT(current->next->hits,(*first)->hits)==0){ // New first node
+				if(GT(current->next->hits[current->next->index],(*first)->hits[(*first)->index])==0){ // New first node
 					aux = current->next->next;
 					current->next->next = *first;
 					*first = current->next;
@@ -506,7 +479,7 @@ void sortList(node **first){
 					aux = *first;			
 					while(1){
 						if(aux->next == NULL) break;
-						if(GT(current->next->hits,aux->next->hits)==1) break; // Position found
+						if(GT(current->next->hits[current->next->index],aux->next->hits[aux->next->index])==1) break; // Position found
 						else aux = aux->next;
 					}
 					move(&aux,&current);
@@ -524,7 +497,7 @@ void sortList(node **first){
  *  @param list linked list to be checked.
  *  @param discardFirst a boolean value that indicate if first node should be deleted.
  */
-void checkOrder(node** list,bool discardFirst){
+oid checkOrder(node** list,bool discardFirst){
 	node *aux;
 	if(discardFirst){
 		aux = *list;
@@ -532,11 +505,11 @@ void checkOrder(node** list,bool discardFirst){
 		free(aux);
 	}else if((*list)->next != NULL){ // Check new position
 		// Search new position
-		if(GT((*list)->hits,(*list)->next->hits)==1){
+		if(GT((*list)->hits[(*list)->index],(*list)->next->hits[(*list)->next->index])==1){
 			node *curr = (*list)->next;
 			while(1){
 				if(curr->next == NULL) break; // End of list
-				else if(GT((*list)->hits,curr->next->hits)==0) break; // position found
+				else if(GT((*list)->hits[(*list)->index],curr->next->hits[curr->next->index])==0) break; // position found
 				else curr = curr->next;
 			}
 			aux = (*list)->next;
