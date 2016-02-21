@@ -441,3 +441,108 @@ void copyHit(Hit* toCopy, Hit copy){
 	toCopy->seqY = copy.seqY;
 	toCopy->length = copy.length;
 }
+
+
+/* This method push node B after A (A->C ==PUSH==> A->B->C)
+ *  @param A node after B will be pushed.
+ *  @param B node to be pushed.
+ */
+void push(node **A,node **B){
+	(*B)->next = (*A)->next;
+	(*A)->next = *B;
+}
+
+
+/* Move node after B to after A position and make linked list consistent.
+ *  @param A reference node.
+ *  @param B node after it will be moved.
+ */
+void move(node **A,node **B){
+	node *temp = (*B)->next->next;
+	push(A,&(*B)->next);
+	(*B)->next = temp;
+}
+
+
+/* This emthod sort a linked list
+ *  @param first node of the linked list.
+ */
+void sortList(node **first){
+	if((*first)->next == NULL) return; // Linked list with only one element
+
+	node *current = *first;
+	node *aux;
+	bool sorted = false;
+	// Do until end
+	while(!sorted){
+		if(current->next == NULL) sorted = true;
+		else if(GT(current->next->hits,current->hits)==0){ // Next is smaller
+			// Search position
+			if(GT(current->next->hits,(*first)->hits)==0){ // New first node
+				aux = current->next->next;
+				current->next->next = *first;
+				*first = current->next;
+				current->next = aux;
+			}else{ // Search position
+				aux = *first;			
+				while(1){
+					if(GT(aux->next->hits,current->next->hits)==1) break; // Position found
+					else aux = aux->next;
+				}
+				move(&aux,&current);
+				// Chekc if it's the last node
+				if(current->next == NULL) sorted = true;
+			}
+		}else{ // Go next
+			current = current->next;
+			if(current->next == NULL){ // End of the list
+				// Search position
+				if(GT(current->next->hits,(*first)->hits)==0){ // New first node
+					aux = current->next->next;
+					current->next->next = *first;
+					*first = current->next;
+					current->next = aux;
+				}else{
+					aux = *first;			
+					while(1){
+						if(aux->next == NULL) break;
+						if(GT(current->next->hits,aux->next->hits)==1) break; // Position found
+						else aux = aux->next;
+					}
+					move(&aux,&current);
+				}
+				// List sorted
+				sorted = true;
+			}
+		}
+	}
+}
+
+
+/* This function is used to check the correc order of the first node of a linked list.
+ * If it's incorrect, this function sort it.
+ *  @param list linked list to be checked.
+ *  @param discardFirst a boolean value that indicate if first node should be deleted.
+ */
+void checkOrder(node** list,bool discardFirst){
+	node *aux;
+	if(discardFirst){
+		aux = *list;
+		*list = (*list)->next;
+		free(aux);
+	}else if((*list)->next != NULL){ // Check new position
+		// Search new position
+		if(GT((*list)->hits,(*list)->next->hits)==1){
+			node *curr = (*list)->next;
+			while(1){
+				if(curr->next == NULL) break; // End of list
+				else if(GT((*list)->hits,curr->next->hits)==0) break; // position found
+				else curr = curr->next;
+			}
+			aux = (*list)->next;
+			(*list)->next = curr->next;
+			curr->next = *list;
+			*list = aux;
+		}
+	}
+}

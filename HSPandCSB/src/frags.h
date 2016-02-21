@@ -126,6 +126,15 @@ typedef struct{
     char strand;
 } FragFile;
 
+//
+struct item{
+    Hit hits;
+    uint64_t buff;
+    struct item *next;
+};
+
+typedef struct item node; 
+
 // FUNCTIONS
 int wordcmp(unsigned char*,unsigned char*,int);
 int HComparer(Hit w1, Hit w2);
@@ -144,3 +153,6 @@ bool finished(int64_t*,uint64_t);
 inline void writeFragment(FragFile,FILE*);
 void SWAP_H(Hit*,Hit*,Hit);
 void copyHit(Hit*,Hit);
+void push(node**,node**);
+void move(node**,node**);
+void sortList(node**);
