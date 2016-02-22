@@ -173,7 +173,7 @@ int main(int ac, char** av){
 	// Take memory for hits
 	if((HitsBlock = (Hit*) malloc(sizeof(Hit)*activeBuffers*READ_BUFF_LENGTH))==NULL){
 		fprintf(stderr, "Error allocating memory for hits block.\n");
-		return -1
+		return -1;
 	}
 
 
@@ -234,7 +234,7 @@ int main(int ac, char** av){
 				fseek(hts,positions[hitsList->buff],SEEK_SET);
 				lastLoaded = hitsList->buff;
 			}
-			read = loadHit(&hitsList->hits[hitsList->index],hts,hitsUnread[hitsList->buff]);
+			read = loadHit(&hitsList->hits,hts,hitsUnread[hitsList->buff]);
 			hitsList->index = 0;
 			hitsList->hits_loaded = read;
 			positions[hitsList->buff] = (uint64_t) ftell(hts);
@@ -302,7 +302,7 @@ int main(int ac, char** av){
 					fseek(hts,positions[hitsList->buff],SEEK_SET);
 					lastLoaded = hitsList->buff;
 				}
-				read = loadHit(&hitsList->hits[hitsList->index],hts);
+				read = loadHit(&hitsList->hits,hts,hitsUnread[hitsList->buff]);
 				hitsList->index = 0;
 				hitsList->hits_loaded = read;
 				positions[hitsList->buff] = (uint64_t) ftell(hts);

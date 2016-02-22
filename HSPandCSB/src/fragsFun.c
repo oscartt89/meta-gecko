@@ -351,7 +351,7 @@ void quicksort_H(Hit* arr, int left,int right){
  *  @param unread rest of hits on intermediate file.
  *  @return Number of hits read from intermediate file.
  */
-inline void loadHit(Hit **hit,FILE* hFile, int64_t unread){
+uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
 	uint64_t i,j;
 	for(j=0; j<READ_BUFF_LENGTH && unread > 0; ++j){
 		fread(&(*hit)[j].seqX,sizeof(uint32_t),1,hFile);
@@ -362,6 +362,7 @@ inline void loadHit(Hit **hit,FILE* hFile, int64_t unread){
 		fread(&(*hit)[j].length,sizeof(uint64_t),1,hFile);
 		unread--;
 	}
+	return j;
 }
 
 
@@ -497,7 +498,7 @@ void sortList(node **first){
  *  @param list linked list to be checked.
  *  @param discardFirst a boolean value that indicate if first node should be deleted.
  */
-oid checkOrder(node** list,bool discardFirst){
+void checkOrder(node** list,bool discardFirst){
 	node *aux;
 	if(discardFirst){
 		aux = *list;
