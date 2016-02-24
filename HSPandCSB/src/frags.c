@@ -125,8 +125,112 @@ int main(int ac, char** av){
 	}
 
 	// Write buffered hits
-	if(hitsInBuffer > 0)
-		writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
+	if(hitsInBuffer > 0){
+		if(buffersWritten > 0)
+			writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
+		else{ // Only one buffer
+			// Sort buffer
+			quicksort_H(buffer,0,hitsInBuffer-1);
+			
+			// Close unnecesary files
+			fclose(mW); fclose(gW);
+			fclose(mP); fclose(gP);
+			fclose(hIndx);
+			fclose(hts);
+
+			// Free unnecesary variables 
+			free(we[0].seq);
+			free(we[1].seq);
+
+			// Declare necessary variables
+			FragFile frag;
+			uint64_t index;
+			float newSimilarity;
+			int64_t dist;
+			
+			// Init first fragment
+			frag.diag = buffer[0].diag;
+			frag.xStart = buffer[0].posX;
+			frag.yStart = buffer[0].posY;
+			frag.xEnd = buffer[0].posX + buffer[0].length;
+			frag.yEnd = buffer[0].posY + buffer[0].length;
+			frag.length = buffer[0].length;
+			frag.ident = buffer[0].length;
+			frag.score = frag.ident;
+			frag.similarity = 100;
+			frag.seqX = buffer[0].seqX;
+			frag.seqY = buffer[0].seqY;
+			frag.block = 0;
+			frag.strand = 'f';
+
+			// Open final files
+			// Open final fragments file
+			strcpy(fname,av[5]); // Copy outDic name
+			if((fr = fopen(strcat(fname,".frags"),"wb"))==NULL){
+				fprintf(stderr, "Error opening fragments final file.\n");
+				return -1;
+			}
+
+			// Generate fragments
+			for(index=1; index < hitsInBuffer; ++index){
+				if(buffer[index].seqX == frag.seqX && 
+						buffer[index].seqY == frag.seqY &&
+						buffer[index].diag == frag.diag){ // Possible fragment
+					// Check if are collapsable
+					dist = buffer[index].posX - frag.xStart + frag.length;
+					if(dist >= 0){
+						newSimilarity = (100*buffer[index].length + frag.length * frag.similarity)/(buffer[index].length + frag.length + dist);
+						if(newSimilarity >= S_Threshold){ // Collapse fagments
+							frag.length = buffer[index].length + buffer[index].posX;
+								frag.xEnd = frag.xStart + frag.length;
+								frag.yEnd = frag.yStart + frag.length;
+							frag.ident += buffer[index].length;
+							frag.score += buffer[index].length - dist; // Equal +1; Difference -1
+							frag.similarity = newSimilarity;
+						}else{ // Else write fragment
+							writeFragment(frag,fr);
+							// Upload new fragment
+							frag.xStart = buffer[index].posX;
+							frag.yStart = buffer[index].posY;
+							frag.xEnd = buffer[index].posX + buffer[index].length;
+							frag.yEnd = buffer[index].posY + buffer[index].length;
+							frag.length = buffer[index].length;
+							frag.ident = buffer[index].length;
+							frag.score = frag.ident;
+							frag.similarity = 100;
+						}
+					}// Else it's collapsable
+				}else{ // New fragment
+					// Write fragment
+					writeFragment(frag,fr);
+					// Upload new frag
+					frag.diag = buffer[index].diag;
+					frag.xStart = buffer[index].posX;
+					frag.yStart = buffer[index].posY;
+					frag.xEnd = buffer[index].posX + buffer[index].length;
+					frag.yEnd = buffer[index].posY + buffer[index].length;
+					frag.length = buffer[index].length;
+					frag.ident = buffer[index].length;
+					frag.score = frag.ident;
+					frag.similarity = 100;
+					frag.seqX = buffer[index].seqX;
+					frag.seqY = buffer[index].seqY;
+				}
+
+				if(index+1 >= hitsInBuffer) // Last fragment
+					writeFragment(frag,fr);
+			}
+
+			// Close output file
+			fclose(fr);
+
+			// Free unnecesary memory
+			free(buffer);
+
+			// End program
+			return 0;
+		}
+	}
 
 	// Free auxiliar buffers
 	free(we[0].seq);
