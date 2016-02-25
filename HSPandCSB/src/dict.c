@@ -167,7 +167,74 @@ int main(int ac, char** av){
 
 	// Write buffered words
 	if(wordsInBuffer != 0){
-		if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
+		if(numBuffWritten == 0){ // Special case, only one buffer
+			// Sort buffer 
+			quicksort_W(buffer,0,wordsInBuffer-1);
+
+			// Close unnecesary files
+			fclose(bIndx);
+			fclose(wrds);
+
+			// Open necessary files
+			// Open positions file
+			strcpy(fname,av[2]); // Copy outDic name
+			if((pDic = fopen(strcat(fname,".d2hP"),"wb"))==NULL){
+				fprintf(stderr, "Error opening positions dictionary file.\n");
+				return -1;
+			}
+
+			// Open dictionary words file 
+			strcpy(fname,av[2]); // Copy outDic name
+			if((wDic = fopen(strcat(fname,".d2hW"),"wb"))==NULL){
+				fprintf(stderr, "Error opening words dictionary file.\n");
+				return -1;
+			}
+			fwrite(&WL,sizeof(uint16_t),1,wDic); // Word length
+
+			// Declare necessary varibles
+			uint32_t reps = 0;
+
+			// First entrance
+			int k;
+			for(k=0;k<BYTES_IN_WORD;++k)
+				fwrite(&buffer[0].w.b[k],sizeof(unsigned char),1,wDic); // write first word
+			uint64_t pos = (uint64_t)ftell(pDic);
+			fwrite(&pos,sizeof(uint64_t),1,wDic); // position on pDic
+			fwrite(&buffer[0].seq,sizeof(uint32_t),1,pDic); // Read index
+			fwrite(&buffer[0].pos,sizeof(uint64_t),1,pDic); // Position on read
+			reps++; // Increment number of repetitions
+			storeWord(&temp,buffer[0]); // Update last word written
+
+			// Write final dictionary file
+			uint64_t index;
+			for(index=1; index<wordsInBuffer; ++index){	
+				// Store word in buffer
+				writeWord(&buffer[index],wDic,pDic,wordcmp(buffer[index].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
+				storeWord(&temp,buffer[index]); // Update last word written
+			}
+			// Write last word index
+			fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
+
+			// Close files
+			fclose(pDic);
+			fclose(wDic);
+
+			// Free memory
+			free(WordsBlock);
+			free(buffer);
+			free(fname);
+			free(temp.w.b);
+
+			// Remove itnermediate files if it's necessary
+			if(removeIntermediataFiles){
+				strcpy(fname,av[2]);
+				remove(strcat(fname,".bindx"));
+				strcpy(fname,av[2]);
+				remove(strcat(fname,".wrds"));
+			}
+			// End program
+			return 0;
+		}else if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
 		else numBuffWritten++;
 	}
 
@@ -297,6 +364,14 @@ int main(int ac, char** av){
 				fclose(wDic);
 				fclose(pDic);
 				fclose(wrds);
+				// Delete intermediate files
+				if(removeIntermediataFiles){
+					strcpy(fname,av[2]);
+					remove(strcat(fname,".bindx"));
+					strcpy(fname,av[2]);
+					remove(strcat(fname,".wrds"));
+				}
+
 				return 0;
 			}
 		}
