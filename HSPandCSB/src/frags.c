@@ -118,9 +118,9 @@ int main(int ac, char** av){
 		if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
 			generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer);
 		// Load next word
-		if(cmp >= 0) // New genome word is necessary
+		if(cmp > 0) // New genome word is necessary
 			readHashEntry(&we[1],gW);
-		if(cmp <= 0) // New metagenome word is necessary
+		if(cmp < 0) // New metagenome word is necessary
 			if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 	}
 
@@ -173,9 +173,9 @@ int main(int ac, char** av){
 
 			// Generate fragments
 			for(index=1; index < hitsInBuffer; ++index){
-				if(buffer[index].seqX == frag.seqX && 
-						buffer[index].seqY == frag.seqY &&
-						buffer[index].diag == frag.diag){ // Possible fragment
+				if( buffer[index].diag == frag.diag &&
+						buffer[index].seqX == frag.seqX && 
+						buffer[index].seqY == frag.seqY){ // Possible fragment
 					// Check if are collapsable
 					dist = buffer[index].posX - frag.xStart + frag.length;
 					if(dist >= 0){
@@ -216,10 +216,10 @@ int main(int ac, char** av){
 					frag.seqX = buffer[index].seqX;
 					frag.seqY = buffer[index].seqY;
 				}
-
-				if(index+1 >= hitsInBuffer) // Last fragment
-					writeFragment(frag,fr);
 			}
+
+			// Last fragment
+			writeFragment(frag,fr);
 
 			// Close output file
 			fclose(fr);
@@ -268,7 +268,7 @@ int main(int ac, char** av){
 
 	// Prepare necessary variables
 	node *hitsList = NULL;
-	int64_t hitsUnread[buffersWritten];
+	uint64_t hitsUnread[buffersWritten];
 	uint64_t positions[buffersWritten];
 	uint64_t lastLoaded, activeBuffers = buffersWritten;
 	Hit *HitsBlock;
@@ -282,11 +282,10 @@ int main(int ac, char** av){
 
 
 	// Read buffers info
-	uint64_t i = 0, aux64;
+	uint64_t i = 0;
 	do{
 		fread(&positions[i],sizeof(uint64_t),1,hIndx);
-		fread(&aux64,sizeof(uint64_t),1,hIndx);
-		hitsUnread[i] = (int64_t) aux64;
+		fread(&hitsUnread[i],sizeof(uint64_t),1,hIndx);
 		++i;
 	}while(i < activeBuffers);
 

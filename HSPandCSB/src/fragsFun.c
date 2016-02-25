@@ -459,10 +459,8 @@ void sortList(node **first){
 				current->next = aux;
 			}else{ // Search position
 				aux = *first;			
-				while(1){
-					if(GT(aux->next->hits[aux->next->index],current->next->hits[current->next->index])==1) break; // Position found
-					else aux = aux->next;
-				}
+				while(GT(aux->next->hits[aux->next->index],current->next->hits[current->next->index])==1)
+					aux = aux->next;
 				move(&aux,&current);
 				// Chekc if it's the last node
 				if(current->next == NULL) sorted = true;
@@ -478,11 +476,8 @@ void sortList(node **first){
 					current->next = aux;
 				}else{
 					aux = *first;			
-					while(1){
-						if(aux->next == NULL) break;
-						if(GT(current->next->hits[current->next->index],aux->next->hits[aux->next->index])==1) break; // Position found
-						else aux = aux->next;
-					}
+					while(aux->next == NULL && GT(current->next->hits[current->next->index],aux->next->hits[aux->next->index])==1)
+						aux = aux->next;
 					move(&aux,&current);
 				}
 				// List sorted
