@@ -118,12 +118,11 @@ int main(int ac, char** av){
 		if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
 			generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer);
 		// Load next word
-		if(cmp > 0) // New genome word is necessary
+		if(cmp >= 0) // New genome word is necessary
 			readHashEntry(&we[1],gW);
-		if(cmp < 0) // New metagenome word is necessary
+		if(cmp <= 0) // New metagenome word is necessary
 			if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 	}
-
 	// Write buffered hits
 	if(hitsInBuffer > 0){
 		if(buffersWritten > 0)
@@ -305,6 +304,7 @@ int main(int ac, char** av){
 		positions[i] = (uint64_t) ftell(hts);
 		hitsUnread[i]-=read;
 		lastLoaded = i;
+		hitsList = currNode;
 	}
 
 	// Assign head
@@ -354,9 +354,9 @@ int main(int ac, char** av){
 	int64_t dist;
 
 	while(activeBuffers > 0){
-		if(hitsList->hits[hitsList->index].seqX == frag.seqX && 
-				hitsList->hits[hitsList->index].seqY == frag.seqY &&
-				hitsList->hits[hitsList->index].diag == frag.diag){ // Possible fragment
+		if(hitsList->hits[hitsList->index].diag == frag.diag &&
+			hitsList->hits[hitsList->index].seqX == frag.seqX && 
+				hitsList->hits[hitsList->index].seqY == frag.seqY){ // Possible fragment
 			// Check if are collapsable
 			dist = hitsList->hits[hitsList->index].posX - frag.xStart + frag.length;
 			if(dist >= 0){
