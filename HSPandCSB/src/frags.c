@@ -226,6 +226,14 @@ int main(int ac, char** av){
 			// Free unnecesary memory
 			free(buffer);
 
+			// Remove intermediate files
+			if(removeIntermediataFiles){
+				strcpy(fname,av[5]);
+				remove(strcat(fname,".hts"));
+				strcpy(fname,av[5]);
+				remove(strcat(fname,".hindx"));
+			}
+
 			// End program
 			return 0;
 		}
