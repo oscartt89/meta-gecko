@@ -176,7 +176,7 @@ int main(int ac, char** av){
 						buffer[index].seqX == frag.seqX && 
 						buffer[index].seqY == frag.seqY){ // Possible fragment
 					// Check if are collapsable
-					dist = buffer[index].posX - frag.xStart + frag.length;
+					dist = buffer[index].posX - (frag.xStart + frag.length);
 					if(dist >= 0){
 						newSimilarity = (100*buffer[index].length + frag.length * frag.similarity)/(buffer[index].length + frag.length + dist);
 						if(newSimilarity >= S_Threshold){ // Collapse fagments
@@ -198,7 +198,15 @@ int main(int ac, char** av){
 							frag.score = frag.ident;
 							frag.similarity = 100;
 						}
-					}// Else it's collapsable
+					}else{ // Else it's collapsable
+						frag.xEnd = buffer[index].posX + buffer[index].length - frag.xStart;
+						frag.yEnd = buffer[index].posY + buffer[index].length - frag.yStart;
+						uint64_t oldLength = frag.length;						
+						frag.length += buffer[index].length - dist;
+						frag.ident += buffer[index].length - dist;
+						frag.score += buffer[index].length - dist;
+						frag.similarity = frag.ident == frag.length? 100: (frag.ident*100 / frag.length);
+					}
 				}else{ // New fragment
 					// Write fragment
 					writeFragment(frag,fr);
@@ -234,9 +242,35 @@ int main(int ac, char** av){
 				remove(strcat(fname,".hindx"));
 			}
 
+			free(fname);
+
 			// End program
 			return 0;
 		}
+	}else if(hitsInBuffer == 0 && buffersWritten == 0){
+		// Free auxiliar buffers
+		free(we[0].seq);
+		free(we[1].seq);
+		free(buffer);
+
+		// Close files
+		fclose(mW); fclose(gW);
+		fclose(mP); fclose(gP);
+		fclose(hIndx);
+		fclose(hts);
+
+		// Remove intermediate files
+		if(removeIntermediataFiles){
+			strcpy(fname,av[5]);
+			remove(strcat(fname,".hts"));
+			strcpy(fname,av[5]);
+			remove(strcat(fname,".hindx"));
+		}
+
+		free(fname);
+
+		// End program
+		return 0;
 	}
 
 	// Free auxiliar buffers
@@ -366,7 +400,7 @@ int main(int ac, char** av){
 			hitsList->hits[hitsList->index].seqX == frag.seqX && 
 				hitsList->hits[hitsList->index].seqY == frag.seqY){ // Possible fragment
 			// Check if are collapsable
-			dist = hitsList->hits[hitsList->index].posX - frag.xStart + frag.length;
+			dist = hitsList->hits[hitsList->index].posX - (frag.xStart + frag.length);
 			if(dist >= 0){
 				newSimilarity = (100*hitsList->hits[hitsList->index].length + frag.length * frag.similarity)/(hitsList->hits[hitsList->index].length + frag.length + dist);
 				if(newSimilarity >= S_Threshold){ // Collapse fagments
@@ -388,7 +422,15 @@ int main(int ac, char** av){
 					frag.score = frag.ident;
 					frag.similarity = 100;
 				}
-			}// Else it's collapsable
+			}else{// Else it's collapsable
+				frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length - frag.xStart;
+				frag.yEnd = hitsList->hits[hitsList->index].posY + hitsList->hits[hitsList->index].length - frag.yStart;
+				uint64_t oldLength = frag.length;
+				frag.length += hitsList->hits[hitsList->index].length - dist;
+				frag.ident += hitsList->hits[hitsList->index].length - dist;
+				frag.score += hitsList->hits[hitsList->index].length - dist;
+				frag.similarity = frag.ident*100 / frag.length;
+			}
 		}else{ // New fragment
 			// Write fragment
 			writeFragment(frag,fr);
@@ -439,6 +481,8 @@ int main(int ac, char** av){
 		strcpy(fname,av[5]);
 		remove(strcat(fname,".hindx"));
 	}
+
+	free(fname);
 
 	// Everything finished OK
 	return 0;
