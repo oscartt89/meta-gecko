@@ -236,6 +236,24 @@ int main(int ac, char** av){
 			return 0;
 		}else if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
 		else numBuffWritten++;
+	}else if(wordsInBuffer == 0 && numBuffWritten == 0){ // Special case
+		free(WordsBlock);
+		free(buffer);
+		free(fname);
+		free(temp.w.b);
+
+		fclose(bIndx);
+		fclose(wrds);
+
+		// Remove itnermediate files if it's necessary
+		if(removeIntermediataFiles){
+			strcpy(fname,av[2]);
+			remove(strcat(fname,".bindx"));
+			strcpy(fname,av[2]);
+			remove(strcat(fname,".wrds"));
+		}
+
+		return 0;
 	}
 
 	// Free buffer space
