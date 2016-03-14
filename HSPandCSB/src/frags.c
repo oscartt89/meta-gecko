@@ -176,11 +176,11 @@ int main(int ac, char** av){
 						buffer[index].seqX == frag.seqX && 
 						buffer[index].seqY == frag.seqY){ // Possible fragment
 					// Check if are collapsable
-					dist = buffer[index].posX - (frag.xStart + frag.length);
+					dist = (int64_t)buffer[index].posX - (int64_t)frag.xEnd;
 					if(dist >= 0){
 						newSimilarity = (100*buffer[index].length + frag.length * frag.similarity)/(buffer[index].length + frag.length + dist);
 						if(newSimilarity >= S_Threshold){ // Collapse fagments
-							frag.length = buffer[index].length + buffer[index].posX;
+							frag.length = buffer[index].length + buffer[index].posX - frag.xStart;
 								frag.xEnd = frag.xStart + frag.length;
 								frag.yEnd = frag.yStart + frag.length;
 							frag.ident += buffer[index].length;
@@ -202,9 +202,9 @@ int main(int ac, char** av){
 						frag.xEnd = buffer[index].posX + buffer[index].length - frag.xStart;
 						frag.yEnd = buffer[index].posY + buffer[index].length - frag.yStart;
 						uint64_t oldLength = frag.length;						
-						frag.length += buffer[index].length - dist;
-						frag.ident += buffer[index].length - dist;
-						frag.score += buffer[index].length - dist;
+						frag.length += buffer[index].length + dist;
+						frag.ident += buffer[index].length + dist;
+						frag.score += buffer[index].length + dist;
 						frag.similarity = frag.ident == frag.length? 100: (frag.ident*100 / frag.length);
 					}
 				}else{ // New fragment
