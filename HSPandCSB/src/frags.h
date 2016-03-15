@@ -23,6 +23,7 @@
 // GLOBAL VARAIBLES
 uint64_t buffersWritten;
 uint64_t S_Threshold; // Similarity threshold
+uint64_t L_Threshold; // Length threshold
 
 // STRUCTS
 typedef struct{

@@ -9,8 +9,8 @@
 
 int main(int ac, char** av){
 	// Check arguments
-	if(ac!=7){
-		fprintf(stderr, "Bad call error.\nUSE: frags metagP metagW genoP genoW out minS\n");
+	if(ac!=9){
+		fprintf(stderr, "Bad call error.\nUSE: frags metagP metagW genoP genoW out minS minL f/r\n");
 		return -1;
 	}
 
@@ -24,6 +24,7 @@ int main(int ac, char** av){
 	uint16_t BytesGenoWord = 8, BytesMetagWord, MinBytes, MaxBytes;
 	buffersWritten = 0;
 	S_Threshold = (uint64_t) atoi(av[6]);
+	L_Threshold = (uint64_t) atoi(av[7]);
 	char *fname;
 	bool removeIntermediataFiles = true;	
 
@@ -160,7 +161,7 @@ int main(int ac, char** av){
 			frag.seqX = buffer[0].seqX;
 			frag.seqY = buffer[0].seqY;
 			frag.block = 0;
-			frag.strand = 'f';
+			frag.strand = av[8][0];
 
 			// Open final files
 			// Open final fragments file
@@ -187,7 +188,8 @@ int main(int ac, char** av){
 							frag.score += buffer[index].length - dist; // Equal +1; Difference -1
 							frag.similarity = newSimilarity;
 						}else{ // Else write fragment
-							writeFragment(frag,fr);
+							if(frag.length >= L_Threshold)
+								writeFragment(frag,fr);
 							// Upload new fragment
 							frag.xStart = buffer[index].posX;
 							frag.yStart = buffer[index].posY;
@@ -209,7 +211,8 @@ int main(int ac, char** av){
 					}
 				}else{ // New fragment
 					// Write fragment
-					writeFragment(frag,fr);
+					if(frag.length >= L_Threshold)
+						writeFragment(frag,fr);
 					// Upload new frag
 					frag.diag = buffer[index].diag;
 					frag.xStart = buffer[index].posX;
@@ -226,7 +229,8 @@ int main(int ac, char** av){
 			}
 
 			// Last fragment
-			writeFragment(frag,fr);
+			if(frag.length >= L_Threshold)
+				writeFragment(frag,fr);
 
 			// Close output file
 			fclose(fr);
@@ -411,7 +415,8 @@ int main(int ac, char** av){
 					frag.score += hitsList->hits[hitsList->index].length - dist; // Equal +1; Difference -1
 					frag.similarity = newSimilarity;
 				}else{ // Else write fragment and load next frag
-					writeFragment(frag,fr);
+					if(frag.length >= L_Threshold)
+						writeFragment(frag,fr);
 					// Upload new fragment
 					frag.xStart = hitsList->hits[hitsList->index].posX;
 					frag.yStart = hitsList->hits[hitsList->index].posY;
@@ -433,7 +438,8 @@ int main(int ac, char** av){
 			}
 		}else{ // New fragment
 			// Write fragment
-			writeFragment(frag,fr);
+			if(frag.length >= L_Threshold)
+				writeFragment(frag,fr);
 			// Upload new frag
 			frag.diag = hitsList->hits[hitsList->index].diag;
 			frag.xStart = hitsList->hits[hitsList->index].posX;
