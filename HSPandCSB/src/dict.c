@@ -164,7 +164,6 @@ int main(int ac, char** av){
 
 	// Free&Close unnecessary varaibles
 	fclose(metag);
-
 	// Write buffered words
 	if(wordsInBuffer != 0){
 		if(numBuffWritten == 0){ // Special case, only one buffer
@@ -234,8 +233,8 @@ int main(int ac, char** av){
 			}
 			// End program
 			return 0;
-		}else if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0) return -1;
-		else numBuffWritten++;
+		}else if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){ return -1;
+		}else numBuffWritten++;
 	}else if(wordsInBuffer == 0 && numBuffWritten == 0){ // Special case
 		free(WordsBlock);
 		free(buffer);

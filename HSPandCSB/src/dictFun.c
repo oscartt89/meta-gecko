@@ -313,25 +313,9 @@ void sortList(node **first){
 				// Chekc if it's the last node
 				if(current->next == NULL) sorted = true;
 			}
-		}else{ // Go next
+		}else{ // Next is bigger, go next
 			current = current->next;
 			if(current->next == NULL){ // End of the list
-				// Search position
-				if(GT(current->next->word[current->next->index],(*first)->word[(*first)->index])==0){ // New first node
-					aux = current->next->next;
-					current->next->next = *first;
-					*first = current->next;
-					current->next = aux;
-				}else{
-					aux = *first;			
-					while(1){
-						if(aux->next == NULL) break;
-						if(GT(current->next->word[current->next->index],aux->next->word[aux->next->index])==1) break; // Position found
-						else aux = aux->next;
-					}
-					move(&aux,&current);
-				}
-				// List sorted
 				sorted = true;
 			}
 		}
