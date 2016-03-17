@@ -14,7 +14,7 @@ int main(int ac, char** av){
 	// Variables
 	uint32_t numReads = 0;
 	uint64_t minLength=0, maxLength=0, currLength = 0;
-	float meanLength = 0;
+	float meanLength = 0, size;
 	char c;
 	FILE *metag;
 	bool firstSeq = true;
@@ -65,11 +65,14 @@ int main(int ac, char** av){
 		c = fgetc(metag);
 	}
 
+	// Take size
+	size = ftell(metag)/1000000; // MB
+
 	// Free&Close unnecessary varaibles
 	fclose(metag);
 
 	// Print info
-	fprintf(stdout, "Metagenome stats of %s\n", av[1]);
+	fprintf(stdout, "Metagenome stats of %s (%f MB)\n", av[1],size);
 	fprintf(stdout, "\t Reads: %"PRIu32"\tMeanLength: %f\n", numReads,meanLength);
 	fprintf(stdout, "\t MinLength: %"PRIu64"\tMaxLength: %"PRIu64"\n", minLength,maxLength);
 
