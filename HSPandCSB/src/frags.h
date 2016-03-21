@@ -191,4 +191,4 @@ void FragFromHit(FragFile*,Hit*,Read*,Sequence*,uint64_t,uint64_t,FILE*);
 char getValue(Sequence*,uint64_t,int);
 Sequence* LeeSeqDB(char*,uint64_t*,uint64_t*);
 Read* LoadMetagenome(char*);
-void freeReads(Read**);
+inline void freeReads(Read**);

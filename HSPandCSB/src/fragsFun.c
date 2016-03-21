@@ -468,18 +468,6 @@ void sortList(node **first){
 		}else{ // Go next
 			current = current->next;
 			if(current->next == NULL){ // End of the list
-				// Search position
-				if(GT(current->next->hits[current->next->index],(*first)->hits[(*first)->index])==0){ // New first node
-					aux = current->next->next;
-					current->next->next = *first;
-					*first = current->next;
-					current->next = aux;
-				}else{
-					aux = *first;			
-					while(aux->next == NULL && GT(current->next->hits[current->next->index],aux->next->hits[aux->next->index])==1)
-						aux = aux->next;
-					move(&aux,&current);
-				}
 				// List sorted
 				sorted = true;
 			}
@@ -863,7 +851,7 @@ Read* LoadMetagenome(char *metagFile){
 /* This function free a read linked list allocated space.
  *  @param metagenome linked list to be deallocated.
  */
-void freeReads(Read **metagenome){
+inline void freeReads(Read **metagenome){
 	Read *aux;
 	while((*metagenome)->next != NULL){
 		aux = *metagenome;
