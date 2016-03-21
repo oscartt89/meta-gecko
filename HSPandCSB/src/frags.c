@@ -215,7 +215,7 @@ int main(int ac, char** av){
 					if(dist > hitLength){ // Not collapsable by extension
 						// Generate fragment 
 						FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr);
-					}
+					}else frag.xEnd = buffer[index].posX + buffer[index].length
 				}else{ // New fragment
 					// Check correct read index
 					//currRead = metagenome;
@@ -424,7 +424,7 @@ int main(int ac, char** av){
 //////////////////////////////////////////////////////////////////////////
 				// Generate fragment 
 				FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr);
-			}
+			}else frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
 		}else{ // Different diag or seq
 //////////////////////////////////////////////////////////////////////////
 //fprintf(stderr, "C -> ");

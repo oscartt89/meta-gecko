@@ -375,8 +375,15 @@ uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
  *  @param fr fragment file where fragment will be written.
  */
 inline void writeFragment(FragFile frag,FILE *fr){
-	fwrite(&frag.seqX,sizeof(uint32_t),1,fr);
-	fwrite(&frag.seqY,sizeof(uint32_t),1,fr);
+	// Parser new format to old
+	uint64_t aux64;
+	aux64 = (uint64_t) frag.seqX;	
+	fwrite(&aux64,sizeof(uint64_t),1,fr);
+	aux64 = (uint64_t) frag.seqY;
+	fwrite(&aux64,sizeof(uint64_t),1,fr);
+	//fwrite(&frag.seqX,sizeof(uint32_t),1,fr);
+	//fwrite(&frag.seqY,sizeof(uint32_t),1,fr);
+	
 	fwrite(&frag.diag,sizeof(int64_t),1,fr);
 	fwrite(&frag.xStart,sizeof(uint64_t),1,fr);
 	fwrite(&frag.yStart,sizeof(uint64_t),1,fr);
