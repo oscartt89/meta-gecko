@@ -10,7 +10,7 @@
 int main(int ac, char** av){
 	// Check arguments
 	if(ac!=9){
-		fprintf(stderr, "Bad call error.\nUSE: frags metagP metagW genoP genoW out minS minL f/r\n");
+		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r\n");
 		return -1;
 	}
 
@@ -19,12 +19,14 @@ int main(int ac, char** av){
 	FILE *hIndx,*hts; // Intermediate files
 	FILE *fr; // Fragments file
 	Hit *buffer;
-	uint64_t hitsInBuffer = 0;
+	uint64_t hitsInBuffer = 0, genomeLength, nStructs;
 	uint16_t gWL = 32,mWL;
 	uint16_t BytesGenoWord = 8, BytesMetagWord, MinBytes, MaxBytes;
 	buffersWritten = 0;
 	S_Threshold = (uint64_t) atoi(av[6]);
 	L_Threshold = (uint64_t) atoi(av[7]);
+	Sequence *genome;
+	Read *metagenome;
 	char *fname;
 	bool removeIntermediataFiles = true;	
 
@@ -43,13 +45,15 @@ int main(int ac, char** av){
 
 	// Open current necessary files
 	// Open metagenome positions file
-	if((mP = fopen(av[1],"rb"))==NULL){
+	strcpy(fname,av[1]);
+	if((mP = fopen(strcat(fname,".d2hP"),"rb"))==NULL){
 		fprintf(stderr, "Error opening metagenome positions dictionaries.\n");
 		return -1;
 	}
 
 	// Open metagenome words file
-	if((mW = fopen(av[2],"rb"))==NULL){
+	strcpy(fname,av[1]);
+	if((mW = fopen(strcat(fname,".d2hW"),"rb"))==NULL){
 		fprintf(stderr, "Error opening metagenome words dictionaries.\n");
 		return -1;
 	}
@@ -70,13 +74,15 @@ int main(int ac, char** av){
 		}
 
 	// Open genome postions file
-	if((gP = fopen(av[3],"rb"))==NULL){
+	strcpy(fname,av[3]);
+	if((gP = fopen(strcat(fname,".d2hP"),"rb"))==NULL){
 		fprintf(stderr, "Error opening genome positions dictionaries.\n");
 		return -1;
 	}
 
 	// Open genome words file
-	if((gW = fopen(av[4],"rb"))==NULL){
+	strcpy(fname,av[3]);
+	if((gW = fopen(strcat(fname,".d2hW"),"rb"))==NULL){
 		fprintf(stderr, "Error opening genome words dictionaries.\n");
 		return -1;
 	}
@@ -94,6 +100,9 @@ int main(int ac, char** av){
 		fprintf(stderr, "Error opening hits repository.\n");
 		return -1;
 	}
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST\n");
+//////////////////////////////////////////////////////////////////////////
 
 	// Search hits
 		// Prepare necessary variables
@@ -124,11 +133,22 @@ int main(int ac, char** av){
 		if(cmp <= 0) // New metagenome word is necessary
 			if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 	}
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST3\n");
+//////////////////////////////////////////////////////////////////////////
+
 	// Write buffered hits
 	if(hitsInBuffer > 0){
 		if(buffersWritten > 0)
 			writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
 		else{ // Only one buffer
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "\tONE ONLY\n");
+//////////////////////////////////////////////////////////////////////////
+			// Load sequences
+			genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
+			metagenome = LoadMetagenome(av[2]);
+
 			// Sort buffer
 			quicksort_H(buffer,0,hitsInBuffer-1);
 			
@@ -149,20 +169,26 @@ int main(int ac, char** av){
 			int64_t dist;
 			
 			// Init first fragment
-			frag.diag = buffer[0].diag;
-			frag.xStart = buffer[0].posX;
-			frag.yStart = buffer[0].posY;
-			frag.xEnd = buffer[0].posX + buffer[0].length;
-			frag.yEnd = buffer[0].posY + buffer[0].length;
-			frag.length = buffer[0].length;
-			frag.ident = buffer[0].length;
-			frag.score = frag.ident;
-			frag.similarity = 100;
-			frag.seqX = buffer[0].seqX;
-			frag.seqY = buffer[0].seqY;
 			frag.block = 0;
 			frag.strand = av[8][0];
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST1\n");
+//////////////////////////////////////////////////////////////////////////
 
+			// Write first fragment
+			Read *currRead;
+				// Search first read
+				currRead = metagenome;
+				while(currRead->seqIndex != buffer[0].seqX){
+					if(currRead->next == NULL){
+						fprintf(stderr, "Error searching first read.\n");
+						return -1;
+					}
+					currRead = currRead->next;
+				}
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST2\n");
+//////////////////////////////////////////////////////////////////////////
 			// Open final files
 			// Open final fragments file
 			strcpy(fname,av[5]); // Copy outDic name
@@ -171,73 +197,51 @@ int main(int ac, char** av){
 				return -1;
 			}
 
+			// Generate first fragment
+			FragFromHit(&frag,&buffer[0],currRead,genome,genomeLength,nStructs,fr);
+			
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST4 - %"PRIu64"\n",hitsInBuffer);
+//////////////////////////////////////////////////////////////////////////
+
 			// Generate fragments
 			for(index=1; index < hitsInBuffer; ++index){
-				if( buffer[index].diag == frag.diag &&
+				if(buffer[index].diag == frag.diag &&
 						buffer[index].seqX == frag.seqX && 
 						buffer[index].seqY == frag.seqY){ // Possible fragment
 					// Check if are collapsable
 					dist = (int64_t)(buffer[index].posX - frag.xEnd);
-					if(dist >= 0){
-						newSimilarity = (100*buffer[index].length + frag.length * frag.similarity)/(buffer[index].length + frag.length + dist);
-						if(newSimilarity >= S_Threshold){ // Collapse fagments
-							frag.length = buffer[index].length + buffer[index].posX - frag.xStart;
-								frag.xEnd = frag.xStart + frag.length;
-								frag.yEnd = frag.yStart + frag.length;
-							frag.ident += buffer[index].length;
-							frag.score += buffer[index].length - dist; // Equal +1; Difference -1
-							frag.similarity = newSimilarity;
-						}else{ // Else write fragment
-							if(frag.length >= L_Threshold)
-								writeFragment(frag,fr);
-							// Upload new fragment
-							frag.xStart = buffer[index].posX;
-							frag.yStart = buffer[index].posY;
-							frag.xEnd = buffer[index].posX + buffer[index].length;
-							frag.yEnd = buffer[index].posY + buffer[index].length;
-							frag.length = buffer[index].length;
-							frag.ident = buffer[index].length;
-							frag.score = frag.ident;
-							frag.similarity = 100;
-						}
-					}else{ // Else it's collapsable
-						uint64_t oldLength = frag.length;
-						frag.length += buffer[index].length + dist;
-						frag.xEnd = frag.xStart + frag.length;
-						frag.yEnd = frag.yStart + frag.length;
-						frag.ident += buffer[index].length + dist;
-						frag.score += buffer[index].length + dist;
-						frag.similarity = frag.ident == frag.length? 100: (frag.ident*100 / frag.length);
+					if(dist > hitLength){ // Not collapsable by extension
+						// Generate fragment 
+						FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr);
 					}
 				}else{ // New fragment
-					// Write fragment
-					if(frag.length >= L_Threshold)
-						writeFragment(frag,fr);
-					// Upload new frag
-					frag.diag = buffer[index].diag;
-					frag.xStart = buffer[index].posX;
-					frag.yStart = buffer[index].posY;
-					frag.xEnd = buffer[index].posX + buffer[index].length;
-					frag.yEnd = buffer[index].posY + buffer[index].length;
-					frag.length = buffer[index].length;
-					frag.ident = buffer[index].length;
-					frag.score = frag.ident;
-					frag.similarity = 100;
-					frag.seqX = buffer[index].seqX;
-					frag.seqY = buffer[index].seqY;
+					// Check correct read index
+					//currRead = metagenome;
+					while(currRead->seqIndex != buffer[index].seqX){
+						if(currRead->next == NULL){
+							fprintf(stderr, "Error searching read index.\n");
+							return -1;
+						}
+						currRead = currRead->next;
+					}
+					// Generate new fragment
+					FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr);
 				}
 			}
-
-			// Last fragment
-			if(frag.length >= L_Threshold)
-				writeFragment(frag,fr);
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST5\n");
+//////////////////////////////////////////////////////////////////////////
 
 			// Close output file
 			fclose(fr);
+			freeReads(&metagenome);
 
 			// Free unnecesary memory
 			free(buffer);
-
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST6\n");
+//////////////////////////////////////////////////////////////////////////
 			// Remove intermediate files
 			if(removeIntermediataFiles){
 				strcpy(fname,av[5]);
@@ -262,6 +266,7 @@ int main(int ac, char** av){
 		fclose(mP); fclose(gP);
 		fclose(hIndx);
 		fclose(hts);
+		freeReads(&metagenome);
 
 		// Remove intermediate files
 		if(removeIntermediataFiles){
@@ -287,6 +292,13 @@ int main(int ac, char** av){
 	fclose(mP); fclose(gP);
 	fclose(hIndx);
 	fclose(hts);
+
+	// Load sequences
+	genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
+	metagenome = LoadMetagenome(av[2]);
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST4\n");
+//////////////////////////////////////////////////////////////////////////
 
 	// Open necessary files
 	// Open intermediate files
@@ -359,100 +371,72 @@ int main(int ac, char** av){
 	// Sort hits
 	sortList(&hitsList);	
 
-	// First fragment = hit[0]
-	frag.diag = hitsList->hits[hitsList->index].diag;
-	frag.xStart = hitsList->hits[hitsList->index].posX;
-	frag.yStart = hitsList->hits[hitsList->index].posY;
-	frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
-	frag.yEnd = hitsList->hits[hitsList->index].posY + hitsList->hits[hitsList->index].length;
-	frag.length = hitsList->hits[hitsList->index].length;
-	frag.ident = hitsList->hits[hitsList->index].length;
-	frag.score = frag.ident;
-	frag.similarity = 100;
-	frag.seqX = hitsList->hits[hitsList->index].seqX;
-	frag.seqY = hitsList->hits[hitsList->index].seqY;
+	// Init fragment info
 	frag.block = 0;
-	frag.strand = 'f';
+	frag.strand = av[8][0];
 
-	hitsList->index +=1;
-
-	// Load new hit
-	if(hitsList->index >= hitsList->hits_loaded){
-		if(hitsUnread[hitsList->buff] > 0){
-			if(hitsList->buff != lastLoaded){
-				fseek(hts,positions[hitsList->buff],SEEK_SET);
-				lastLoaded = hitsList->buff;
+	// Write first fragment
+	Read *currRead;
+		// Search first read
+		currRead = metagenome;
+		while(currRead->seqIndex != hitsList->hits[0].seqX){
+			if(currRead->next == NULL){
+				fprintf(stderr, "Error searching first read.\n");
+				return -1;
 			}
-			read = loadHit(&hitsList->hits,hts,hitsUnread[hitsList->buff]);
-			hitsList->index = 0;
-			hitsList->hits_loaded = read;
-			positions[hitsList->buff] = (uint64_t) ftell(hts);
-			hitsUnread[hitsList->buff]-=read;
-			checkOrder(&hitsList,false);
-		}else{
-			checkOrder(&hitsList,true);
-			activeBuffers--;
+			currRead = currRead->next;
 		}
-	}else checkOrder(&hitsList,false);
 
-	// Search new fragments
-	float newSimilarity;
+	// Generate first fragment
+	FragFromHit(&frag,&hitsList->hits[0],currRead,genome,genomeLength,nStructs,fr);
+
+	// Search hits and generate fragmetents
 	int64_t dist;
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST5\n");
+//////////////////////////////////////////////////////////////////////////
 
+	// Read hits & generate fragments
 	while(activeBuffers > 0){
 		if(hitsList->hits[hitsList->index].diag == frag.diag &&
 			hitsList->hits[hitsList->index].seqX == frag.seqX && 
 				hitsList->hits[hitsList->index].seqY == frag.seqY){ // Possible fragment
 			// Check if are collapsable
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "A -> ");
+//////////////////////////////////////////////////////////////////////////
 			dist = (int64_t)hitsList->hits[hitsList->index].posX - (int64_t)frag.xEnd;
-			if(dist >= 0){
-				newSimilarity = (100*hitsList->hits[hitsList->index].length + frag.length * frag.similarity)/(hitsList->hits[hitsList->index].length + frag.length + dist);
-				if(newSimilarity >= S_Threshold){ // Collapse fagments
-					frag.length = hitsList->hits[hitsList->index].length + hitsList->hits[hitsList->index].posX - frag.xStart;
-						frag.xEnd = frag.xStart + frag.length;
-						frag.yEnd = frag.yStart + frag.length;
-					frag.ident += hitsList->hits[hitsList->index].length;
-					frag.score += hitsList->hits[hitsList->index].length - dist; // Equal +1; Difference -1
-					frag.similarity = newSimilarity;
-				}else{ // Else write fragment and load next frag
-					if(frag.length >= L_Threshold)
-						writeFragment(frag,fr);
-					// Upload new fragment
-					frag.xStart = hitsList->hits[hitsList->index].posX;
-					frag.yStart = hitsList->hits[hitsList->index].posY;
-					frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
-					frag.yEnd = hitsList->hits[hitsList->index].posY + hitsList->hits[hitsList->index].length;
-					frag.length = hitsList->hits[hitsList->index].length;
-					frag.ident = hitsList->hits[hitsList->index].length;
-					frag.score = frag.ident;
-					frag.similarity = 100;
-				}
-			}else{// Else it's collapsable
-				uint64_t oldLength = frag.length;
-				frag.length += hitsList->hits[hitsList->index].length + dist;
-				frag.xEnd = frag.xStart + frag.length;
-				frag.yEnd = frag.yStart + frag.length;
-				frag.ident += hitsList->hits[hitsList->index].length + dist;
-				frag.score += hitsList->hits[hitsList->index].length + dist;
-				frag.similarity = frag.ident*100 / frag.length;
+			if(dist > hitLength){ // Not collapsable by xtension
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "B -> ");
+//////////////////////////////////////////////////////////////////////////
+				// Generate fragment 
+				FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr);
 			}
-		}else{ // New fragment
-			// Write fragment
-			if(frag.length >= L_Threshold)
-				writeFragment(frag,fr);
-			// Upload new frag
-			frag.diag = hitsList->hits[hitsList->index].diag;
-			frag.xStart = hitsList->hits[hitsList->index].posX;
-			frag.yStart = hitsList->hits[hitsList->index].posY;
-			frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
-			frag.yEnd = hitsList->hits[hitsList->index].posY + hitsList->hits[hitsList->index].length;
-			frag.length = hitsList->hits[hitsList->index].length;
-			frag.ident = hitsList->hits[hitsList->index].length;
-			frag.score = frag.ident;
-			frag.similarity = 100;
-			frag.seqX = hitsList->hits[hitsList->index].seqX;
-			frag.seqY = hitsList->hits[hitsList->index].seqY;
+		}else{ // Different diag or seq
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "C -> ");
+//////////////////////////////////////////////////////////////////////////
+			// Check correct read index
+			//currRead = metagenome;
+			while(currRead->seqIndex != hitsList->hits[hitsList->index].seqX){
+				if(currRead->next == NULL){
+					fprintf(stderr, "Error searching read index.\n");
+					return -1;
+				}
+				currRead = currRead->next;
+			}
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "D -> ");
+//////////////////////////////////////////////////////////////////////////
+			// Generate new fragment
+			FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr);
 		}
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "E -> ");
+//////////////////////////////////////////////////////////////////////////
+
+		// Move to next
 		hitsList->index +=1;
 		// Load new hit
 		if(hitsList->index >= hitsList->hits_loaded){
@@ -467,18 +451,36 @@ int main(int ac, char** av){
 				positions[hitsList->buff] = (uint64_t) ftell(hts);
 				hitsUnread[hitsList->buff]-=read;
 				checkOrder(&hitsList,false);
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "(%"PRIu64") [%"PRIu64" - %"PRIu64"] -> ",activeBuffers,hitsList->buff,hitsUnread[hitsList->buff]);
+//////////////////////////////////////////////////////////////////////////
 			}else{
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "+++ (%"PRIu64")-> ",activeBuffers-1);
+//////////////////////////////////////////////////////////////////////////
 				checkOrder(&hitsList,true);
 				activeBuffers--;
 			}
-		}else checkOrder(&hitsList,false);
+		}else{
+			checkOrder(&hitsList,false);
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "2 -> ");
+//////////////////////////////////////////////////////////////////////////
+		}
 	}
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST6\n");
+//////////////////////////////////////////////////////////////////////////
 
 	// Close files
 	free(HitsBlock);
 	fclose(hIndx);
 	fclose(hts);
 	fclose(fr);
+	freeReads(&metagenome);
+//////////////////////////////////////////////////////////////////////////
+//fprintf(stderr, "TEST7\n");
+//////////////////////////////////////////////////////////////////////////
 
 	// Remove intermediate files
 	if(removeIntermediataFiles){

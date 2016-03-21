@@ -135,7 +135,7 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
 	}
 
 	// Prepare necessary variables
-	uint64_t hitLength = (uint64_t)(X.WB*4);
+	hitLength = (uint64_t)(X.WB*4);
 	LocationEntry X_Arr[X.reps];
 	LocationEntry Y_Arr[Y.reps];
 
@@ -237,7 +237,7 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 		
 	// Write hits in hits file
 	for(pos=1; pos<hitsInBuff; ++pos){
-		if(buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY && buff[pos].diag == lastHit.diag && buff[pos].posX < lastHit.posX + lastHit.length){
+		if(buff[pos].diag == lastHit.diag && buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY && buff[pos].posX < lastHit.posX + lastHit.length){
 			continue; // Collapsable
 		}
 		fwrite(&buff[pos].seqX,sizeof(uint32_t),1,hits);
@@ -514,4 +514,361 @@ void checkOrder(node** list,bool discardFirst){
 			*list = aux;
 		}
 	}
+}
+
+
+/* This function generate fragments from a seed (hit) generated in a metagenome-genome comparison. 
+ * If the fragment satisfies the length and similarity thresholds, it will be written.
+ *  @param frag is a FragFile instance where fragment will be stored.
+ *  @param hit is the seed that will be extended.
+ *  @param seqY is the sequence estructure of the genome.
+ *  @param YLength is the seqY length.
+ *  @param nsy is the seqY number (index).
+ *  @param fr is the fragment output file. 
+ */
+void FragFromHit(FragFile *frag, Hit *hit, Read *seqX, Sequence *seqY, uint64_t YLength, uint64_t nsy, FILE *fr){
+	// Declare variables
+	int64_t forwardDiagLength, backwardDiagLength;
+	int64_t XIndex, YIndex;
+	/* for version with backward search */
+	int64_t XIndx_B, YIndx_B;
+	int fragmentLength = hit->length;
+	/* for version Maximum global---*/
+	int64_t XMaxIndex, YMaxIndex;
+	/* for version with backward search */
+	int64_t XMinIndex, YMinIndex;
+	int identitites, maxIdentities;
+	char valueX, valueY;
+	int score, scoreMax;
+
+	// Initialize values
+	// Diagonals info
+	forwardDiagLength = (seqX->length - hit->posX) > (YLength - hit->posY)? (YLength - hit->posX) : (seqX->length - hit->posX);
+	backwardDiagLength = hit->posX > hit->posY? hit->posY : hit->posX;
+	// Positions values
+	XIndex = hit->posX + hit->length; // End of the seed X
+	XIndx_B = hit->posX - 1; // Init of the seed X
+	YIndex = hit->posY + hit->length; // End of seed Y
+	YIndx_B = hit->posY - 1; // Init of seed Y
+	XMaxIndex = XIndex; // Maximum coordiantes on X
+	XMinIndex = XIndx_B; // Minimum coordiantes on X
+	YMaxIndex = YIndex; // Maximum coordiantes on Y
+	YMinIndex = YIndx_B; // Minimum coordiantes on Y
+	// Scoring values
+	identitites = maxIdentities = hit->length; 
+	score = Eq_Value * hit->length; // Init score
+	scoreMax = score;
+	// Seek forward
+	while (fragmentLength < forwardDiagLength) {
+		valueX = seqX->sequence[XIndex];
+		valueY = getValue(seqY, YIndex, nsy);
+
+		// Check end of sequence
+		if(valueX == '*' || valueY == '*'){
+			// Separator between sequences ==> Sequence end
+			break;
+		}
+		// Check match or missmatch
+		if(valueX == valueY){
+			// Match
+			score += Eq_Value;
+			identitites++;
+			if(scoreMax <= score){
+				scoreMax = score;
+				XMaxIndex = XIndex;
+				YMaxIndex = YIndex;
+				maxIdentities = identitites;
+			}
+		}else{ // Missmatch
+			score += Dif_Value;
+		}
+
+		// Move forward
+		XIndex++;
+		YIndex++;
+
+		fragmentLength++;
+		// Check minimum score
+		if(score < Score_Threshold)
+			break;
+	}
+
+	// Backward search --- Based on Oscar (Sept.2013) version
+	fragmentLength = 0; // Reset length
+	score = scoreMax; // Current score is the scoreMax <= Current fragment is maxScoreCoordinates + seed
+	identitites = maxIdentities;
+	XMinIndex = hit->posX; // Update min coordiantes
+	YMinIndex = hit->posY;
+
+	if(XIndx_B >= 0 && YIndx_B >= 0) // Any coordinate are the init
+		while(fragmentLength < backwardDiagLength){
+			valueX = seqX->sequence[XIndx_B];
+			valueY = getValue(seqY, YIndx_B, nsy);
+			// Check end of sequence
+			if(valueX == '*' || valueY == '*')
+				break;
+			
+			// Check match and missmatch
+			if(valueX == valueY){
+				// Match
+				score += Eq_Value;
+				identitites++;
+				if(scoreMax <= score){
+					scoreMax = score;
+					XMinIndex = XIndx_B;
+					YMinIndex = YIndx_B;
+					maxIdentities = identitites;
+				}
+			}else{
+				score += Dif_Value;
+			}
+
+			// Move backward
+			XIndx_B--;
+			YIndx_B--;
+
+			fragmentLength++;
+			// Check minimum score
+			if (score < Score_Threshold)
+				break;
+		}
+
+	// Calc length and similarity
+	frag->length = XMaxIndex - XMinIndex + 1;
+	frag->similarity = 100 * scoreMax / (frag->length * Eq_Value);
+
+	if(frag->length >= L_Threshold && frag->similarity >= S_Threshold){ // Correct fragment
+		// Set the values of the FragFile
+		frag->diag = hit->diag;
+		frag->xStart = XMinIndex;
+		frag->yStart = YMinIndex;
+		frag->xEnd = XMaxIndex;
+		frag->yEnd = YMaxIndex;
+		frag->score = scoreMax;
+		frag->ident = maxIdentities;
+		frag->seqX = hit->seqX;
+		frag->seqY = hit->seqY;		
+		
+		writeFragment(*frag,fr);
+	}//else -> Not good enough
+}
+
+
+/* This function return the nucleotide that correspond to teh position given.
+ *  @param s the sequence structure where search.
+ *  @param pos the position of the nucleotide.
+ *  @param ns the sequence number.
+ *  @return the nucleotide of the position pos.
+ */
+char getValue(Sequence *s, uint64_t pos, int ns){
+	Sequence *aux = s;
+	int nActual = 1;
+
+	while (pos >= MAXLS) {
+		aux++;
+		pos -= MAXLS;
+		nActual++;
+		if(nActual > ns){
+			fprintf(stderr, "Out of sequence.\n");
+			return; // Return null
+		}
+	}
+
+	return aux->datos[pos];
+}
+
+
+/* This function is used to load a genome sequence from a fasta file.
+ *  @param file the genome fasta file.
+ *  @param n where sequence length will be stored.
+ *  @param nStruct number of squence structs used.
+ *  @return the sequence struct array with the genome sequence loaded.
+ */
+Sequence* LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct){
+	char c; // Aux to read
+	uint64_t length = 0, k = 0, ns;
+	uint64_t finalLength = 0;
+	Sequence *sX, *sX2; //sX will be the first elem. sX2 will generate all the structure
+
+	// Open genome file
+	FILE *f;
+
+	if((f = fopen(file,"rt"))==NULL){
+		fprintf(stderr, "LeeSeqDB::Error opening genome file.\n");
+		return 0;
+	}
+
+	//Initialize
+	*n = 0;
+	*nStruct = 0;
+
+	//Memory
+	ns = 1;
+	if ((sX = (Sequence*) malloc(sizeof(Sequence))) == NULL){
+		fprintf(stderr, "LeeSeqDB::Error allocating memory\n");
+		// Close genome file
+		fclose(f);
+		return 0;
+	}
+
+	while ((c = getc(f)) != '>' && !feof(f))
+		; //start seq
+	if (feof(f)){
+		// Close genome file
+		fclose(f);
+		return 0;
+	}
+
+	while ((c = getc(f)) == ' ')
+		;
+
+	while (k < MAXLID && c != '\n' && c != ' ') {
+		if (feof(f)){
+			// Close genome file
+			fclose(f);
+			return 0;
+		}
+
+		sX->ident[k++] = c;
+		c = getc(f);
+	}
+
+	sX->ident[k] = 0; //end of data.
+	while (c != '\n')
+		c = getc(f);
+	c = getc(f);
+
+	//start list with sX2
+	sX2 = sX;
+	while (/*c!='*'&&*/!feof(f)) {
+		c = toupper(c);
+		if (c == '>') {
+			sX2->datos[length++] = '*';
+			while (c != '\n') {
+				if (feof(f)){
+					// Close genome file
+					fclose(f);
+					return 0;
+				}
+				c = getc(f);
+			}
+			//break;
+		}
+		if (isupper(c))
+			sX2->datos[length++] = c;
+		if (c == '*') {
+			sX2->datos[length++] = c;
+		}
+		c = getc(f);
+
+		//Check if the length is the end of this struct
+		if (length >= MAXLS) {
+			finalLength += length;
+			length = 0;
+			ns++;
+			if ((sX = (Sequence*) realloc(sX,ns * sizeof(Sequence))) == NULL){
+				fprintf(stderr, "LeeSeqDB::Error reallicating memory.\n");
+				// Close genome file
+				fclose(f);
+				return 0;
+			}
+			sX2 = sX + ns - 1;
+		}
+	}
+
+	if (length < MAXLS)
+		sX2->datos[length] = 0x00;
+
+	finalLength += length;
+	*nStruct = ns;
+	*n = finalLength;
+
+	// Close genome file
+	fclose(f);
+
+	return sX;
+}
+
+
+/* This function generate a read linked list with all reads of a metagenome file.
+ *  @param metagFile is the absolute or relative path to metagenome file.
+ *  @return the header of a reads linked list.
+ */
+Read* LoadMetagenome(char *metagFile){
+	// Variables
+	Read *head = NULL, *currRead, *lastRead = NULL;
+	FILE *metag;
+	uint32_t seqIndex = 0, seqLen = 0;
+	char c;
+
+	// Open metagenome file
+	if((metag = fopen(metagFile,"rt"))==NULL){
+		fprintf(stderr, "LoadMetagenomeError opening metagenome file.\n");
+		return NULL;
+	}
+
+	// Start to read
+	c = fgetc(metag);
+	while(!feof(metag)){
+		// Check if it's a special line
+		if(!isupper(toupper(c))){ // Comment, empty or quality (+) line
+			if(c=='>'){ // Comment line
+				c = fgetc(metag);
+				while(c != '\n') // Avoid comment line
+					c = fgetc(metag);
+
+				// Check if it's first instance
+				if(currRead != NULL){
+					// Store info
+					currRead->seqIndex = seqIndex;
+					currRead->length = seqLen;
+					if(head == NULL){
+						// First element
+						head = currRead;
+					}else{
+						// Link with last node
+						lastRead->next = currRead;
+					}
+					// Update last node
+					lastRead = currRead;
+				}
+
+				// Generate new node
+				currRead = (Read*) malloc(sizeof(Read));
+
+				// Update info
+				seqIndex++; // New sequence
+				seqLen = 0; // Reset sequence length
+			}
+			c=fgetc(metag); // First char of next sequence
+			continue;
+		}
+		currRead->sequence[seqLen] = c;
+		seqLen++;
+		// Next char
+		c = fgetc(metag);
+	}
+
+	// Link last node
+	currRead->seqIndex = seqIndex;
+	currRead->length = seqLen;
+	currRead->next = NULL;
+	lastRead->next = currRead;
+
+	// Return head
+	return head;
+}
+
+
+/* This function free a read linked list allocated space.
+ *  @param metagenome linked list to be deallocated.
+ */
+void freeReads(Read **metagenome){
+	Read *aux;
+	while((*metagenome)->next != NULL){
+		aux = *metagenome;
+		*metagenome = (*metagenome)->next;
+		free(aux);
+	}
+	free(*metagenome);
 }

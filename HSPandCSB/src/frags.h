@@ -16,6 +16,12 @@
 #define MAX_BUFF 10000000
 #define MAX_FILE_LENGTH 1024
 #define READ_BUFF_LENGTH 10000
+#define Eq_Value 4
+#define Dif_Value -4
+#define Score_Threshold 0
+#define MAXLID 200
+#define MAXLS 100000000
+#define MAX_READ_LENGTH 2000
 
 // LINE FUNCTIONS
 #define SWAP(a,b,t) t=a; a=b; b=t;
@@ -24,6 +30,7 @@
 uint64_t buffersWritten;
 uint64_t S_Threshold; // Similarity threshold
 uint64_t L_Threshold; // Length threshold
+uint64_t hitLength;
 
 // STRUCTS
 typedef struct{
@@ -139,6 +146,26 @@ struct item{
 
 typedef struct item node; 
 
+/*
+ * Structure used to store genomes sequences
+ */
+typedef struct{
+    char ident[MAXLID+1];
+    char datos[MAXLS];
+} Sequence;
+
+/*
+ * Structure used to store short sequences
+ */
+struct ShortSequence{
+    char sequence[MAX_READ_LENGTH]; // Sequence
+    uint32_t seqIndex; // Index of the sequence
+    uint32_t length; // Sequence length
+    struct ShortSequence *next; // Used to create a linked list
+};
+
+typedef struct ShortSequence Read; // Linked list of short sequences
+
 // FUNCTIONS
 int wordcmp(unsigned char*,unsigned char*,int);
 int HComparer(Hit w1, Hit w2);
@@ -160,3 +187,8 @@ void copyHit(Hit*,Hit);
 void push(node**,node**);
 void move(node**,node**);
 void sortList(node**);
+void FragFromHit(FragFile*,Hit*,Read*,Sequence*,uint64_t,uint64_t,FILE*);
+char getValue(Sequence*,uint64_t,int);
+Sequence* LeeSeqDB(char*,uint64_t*,uint64_t*);
+Read* LoadMetagenome(char*);
+void freeReads(Read**);
