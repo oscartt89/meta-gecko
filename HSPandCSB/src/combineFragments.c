@@ -8,6 +8,8 @@
 #include <stdint.h> // unit64_t ...
 #include <inttypes.h> 
 #include <string.h> // String functions
+#include <ctype.h>
+#include <arpa/inet.h>
 
 // Structures
 typedef struct{
@@ -50,9 +52,12 @@ typedef struct{
 } FragFile;
 
 // Functions
-inline void readFragment(FragFile*,FILE*);
-inline void writeFragment(FragFile,FILE*);
+void readFragment(FragFile*,FILE*);
+void writeFragment(FragFile,FILE*);
 int fragmentComparator(FragFile,FragFile);
+void readSequenceLength(uint64_t*,FILE*);
+void writeSequenceLength(uint64_t*,FILE*);
+void endianessConversion(char*,char*,int);
 
 // MAIN
 int main(int ac, char** av){
@@ -94,6 +99,18 @@ int main(int ac, char** av){
 		return -1;
 	}
 
+	uint64_t metagLength,genoLength;
+	// Read headers
+	readSequenceLength(&metagLength,forward);
+	readSequenceLength(&genoLength,forward);
+
+		writeSequenceLength(&metagLength,out);
+		writeSequenceLength(&genoLength,out);
+
+	readSequenceLength(&metagLength,reverse);
+	readSequenceLength(&genoLength,reverse);
+
+
 	// Load first fragments
 	readFragment(&forw,forward);
 	readFragment(&reve,reverse);
@@ -134,65 +151,153 @@ int main(int ac, char** av){
 
 /*
  */
-inline void writeFragment(FragFile frag,FILE *fr){
-	fwrite(&frag.diag,sizeof(int64_t),1,fr);
-	fwrite(&frag.xStart,sizeof(uint64_t),1,fr);
-	fwrite(&frag.yStart,sizeof(uint64_t),1,fr);
-	fwrite(&frag.xEnd,sizeof(uint64_t),1,fr);
-	fwrite(&frag.yEnd,sizeof(uint64_t),1,fr);
-	fwrite(&frag.length,sizeof(uint64_t),1,fr);
-	fwrite(&frag.ident,sizeof(uint64_t),1,fr);
-	fwrite(&frag.score,sizeof(uint64_t),1,fr);
-	fwrite(&frag.similarity,sizeof(float),1,fr);
-	fwrite(&frag.seqX,sizeof(uint64_t),1,fr);
-	fwrite(&frag.seqY,sizeof(uint64_t),1,fr);
-	fwrite(&frag.block,sizeof(int64_t),1,fr);
-	fwrite(&frag.strand,sizeof(char),1,fr);
+void writeFragment(FragFile frag, FILE *f){
+	char tmpArray[8];
+	if(htons(1)==1){
+		//Big endian
+		fwrite(&frag.diag, sizeof(int64_t), 1, f);
+		fwrite(&frag.xStart, sizeof(uint64_t), 1, f);
+		fwrite(&frag.yStart, sizeof(uint64_t), 1, f);
+		fwrite(&frag.xEnd, sizeof(uint64_t), 1, f);
+		fwrite(&frag.yEnd, sizeof(uint64_t), 1, f);
+		fwrite(&frag.length, sizeof(uint64_t), 1, f);
+		fwrite(&frag.ident, sizeof(uint64_t), 1, f);
+		fwrite(&frag.score, sizeof(uint64_t), 1, f);
+		fwrite(&frag.similarity, sizeof(float), 1, f);
+		fwrite(&frag.seqX, sizeof(uint64_t), 1, f);
+		fwrite(&frag.seqY, sizeof(uint64_t), 1, f);
+		fwrite(&frag.block, sizeof(int64_t), 1, f);
+		fputc(frag.strand, f);
+	} else {
+		//Little endian
+		endianessConversion((char *)(&frag.diag), tmpArray, sizeof(int64_t));
+		fwrite(tmpArray, sizeof(int64_t), 1, f);
+		endianessConversion((char *)(&frag.xStart), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.yStart), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.xEnd), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.yEnd), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.length), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.ident), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.score), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.similarity), tmpArray, sizeof(float));
+		fwrite(tmpArray, sizeof(float), 1, f);
+		endianessConversion((char *)(&frag.seqX), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.seqY), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.block), tmpArray, sizeof(int64_t));
+		fwrite(tmpArray, sizeof(int64_t), 1, f);
+		fputc(frag.strand, f);
+	}
 }
 
 
 /**
  * Function to read a fragment from the specified file
  */
-inline void readFragment(FragFile *frag, FILE *f){
-	if(fread(&frag->diag, sizeof(int64_t), 1, f)!=1){
-		if(feof(f))return;
-		fprintf(stderr,"Error reading the HSP diagonal\n");
+void readFragment(FragFile *frag, FILE *f){
+	char tmpArray[8];
+
+	if(htons(1)==1){
+		//big endian
+		if(fread(&frag->diag, sizeof(int64_t), 1, f)!=1){
+			if(feof(f))return;
+			fprintf(stderr,"Error reading the HSP diagonal");
+		}
+		if(fread(&frag->xStart, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP xStart");
+		}
+		if(fread(&frag->yStart, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP yStart");
+		}
+		if(fread(&frag->xEnd, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP xEnd");
+		}
+		if(fread(&frag->yEnd, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP yEnd");
+		}
+		if(fread(&frag->length, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP length");
+		}
+		if(fread(&frag->ident, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP identities");
+		}
+		if(fread(&frag->score, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP score");
+		}
+		if(fread(&frag->similarity, sizeof(float), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP similarity");
+		}
+		if(fread(&frag->seqX, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP seqX");
+		}
+		if(fread(&frag->seqY, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP seqY");
+		}
+		if(fread(&frag->block, sizeof(int64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP block");
+		}
+		frag->strand = fgetc(f);
+	} else {
+		//little endian
+		if(fread(tmpArray, sizeof(int64_t), 1, f)!=1){
+			if(feof(f))return;
+			fprintf(stderr,"Error reading the HSP diagonal");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->diag), sizeof(int64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP xStart");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->xStart), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP yStart");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->yStart), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP xEnd");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->xEnd), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP yEnd");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->yEnd), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP length");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->length), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP identity");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->ident), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP score");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->score), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(float), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP float");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->similarity), sizeof(float)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP seqX");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->seqX), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP seqY");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->seqY), sizeof(uint64_t)); 
+		if(fread(tmpArray, sizeof(int64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading the HSP block");
+		}
+		endianessConversion(tmpArray, (char *)(&frag->block), sizeof(int64_t)); 
+		frag->strand = fgetc(f);
 	}
-	if(fread(&frag->xStart, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP xStart\n");
-	}
-	if(fread(&frag->yStart, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP yStart\n");
-	}
-	if(fread(&frag->xEnd, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP xEnd\n");
-	}
-	if(fread(&frag->yEnd, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP yEnd\n");
-	}
-	if(fread(&frag->length, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP length\n");
-	}
-	if(fread(&frag->ident, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP identities\n");
-	}
-	if(fread(&frag->score, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP score\n");
-	}
-	if(fread(&frag->similarity, sizeof(float), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP similarity\n");
-	}
-	if(fread(&frag->seqX, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP seqX\n");
-	}
-	if(fread(&frag->seqY, sizeof(uint64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP seqY\n");
-	}
-	if(fread(&frag->block, sizeof(int64_t), 1, f)!=1){
-		fprintf(stderr,"Error reading the HSP block\n");
-	}
-	frag->strand = fgetc(f);
 }
 
 
@@ -239,4 +344,50 @@ int fragmentComparator(FragFile f1, FragFile f2){
 	else if(f1.score < f2.score) return -1;
 
 	return 0;
+}
+
+
+/**
+ * Function to read the sequence length
+ */
+void readSequenceLength(uint64_t *length, FILE *f){
+	char tmpArray[8];
+	if(htons(1)==1){
+		//big endian
+		if(fread(length, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading sequence length");
+		}
+	} else {
+		//little endian
+		if(fread(tmpArray, sizeof(uint64_t), 1, f)!=1){
+			fprintf(stderr,"Error reading sequence length");
+		}
+		endianessConversion(tmpArray, (char *)length, sizeof(uint64_t));
+	}
+}
+
+/**
+ * Function to write the sequence length
+ */
+void writeSequenceLength(uint64_t *length, FILE *f){
+	char tmpArray[8];
+	if(htons(1)==1){
+		//big endian
+		fwrite(length, sizeof(uint64_t), 1, f);
+	} else {
+		//little endian
+		endianessConversion((char *)length, tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+	}
+}
+
+
+/*
+ */
+void endianessConversion(char *source, char *target, int numberOfBytes){
+	int i,j;
+	for(i=numberOfBytes-1;i>=0;i--){
+		j=numberOfBytes-1-i;
+		target[j]=source[i];
+	}
 }

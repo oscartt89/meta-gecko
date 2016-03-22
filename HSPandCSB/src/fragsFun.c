@@ -55,16 +55,16 @@ int HComparer(Hit h1, Hit h2){
 
 /* This function is used to load a hashentry from genome dictionary and
  * store it in a wordEntry.
+ * Note: if read wasn't possible, WordEntry values will not change.
  *  @param we word entry where info will be stored.
  *  @param wD genome dictionary file.
- *  @return zero if everything finished well or a negative number in other cases.
  */
 void readHashEntry(WordEntry *we,FILE *wD){
 	hashentry h;
 	// Read hashentry
 	if(fread(&h,sizeof(hashentry),1,wD)!=1){
 		if(!feof(wD))
-			fprintf(stderr, "Couldn't read hashentry.\n");
+			//fprintf(stderr, "Couldn't read hashentry.\n");
 		return; // End process
 	}
 
@@ -120,10 +120,11 @@ int readWordEntrance(WordEntry *we,FILE *wD,uint16_t SeqBytes){
  *  @param outIndx intermediate file necessary if buffer get filled.
  *  @param outBuff intermediate file necessary if buffer get filled.
  *  @param hitsInBuff words stored in buffer.
+ *  @param prefix is the prefix length taken of the word.
  *  @retun a non-negative number if the process finished without errors or a
  *     a negative number in other cases.
  */
-int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FILE* outIndx, FILE* outBuff, uint64_t* hitsInBuff){
+int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FILE* outIndx, FILE* outBuff, uint64_t* hitsInBuff, int prefix){
 	// Positionate on locations files
 	if(fseek(XPFile,X.pos,SEEK_SET)!=0){
 		fprintf(stderr, "generateHits:: Error positioning on X file.\n");
@@ -135,7 +136,7 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
 	}
 
 	// Prepare necessary variables
-	hitLength = (uint64_t)(X.WB*4);
+	hitLength = (uint64_t)(prefix*4);
 	LocationEntry X_Arr[X.reps];
 	LocationEntry Y_Arr[Y.reps];
 
@@ -374,28 +375,54 @@ uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
  *  @param frag fragment to be written.
  *  @param fr fragment file where fragment will be written.
  */
-inline void writeFragment(FragFile frag,FILE *fr){
-	fwrite(&frag.diag,sizeof(int64_t),1,fr);
-	fwrite(&frag.xStart,sizeof(uint64_t),1,fr);
-	fwrite(&frag.yStart,sizeof(uint64_t),1,fr);
-	fwrite(&frag.xEnd,sizeof(uint64_t),1,fr);
-	fwrite(&frag.yEnd,sizeof(uint64_t),1,fr);
-	fwrite(&frag.length,sizeof(uint64_t),1,fr);
-	fwrite(&frag.ident,sizeof(uint64_t),1,fr);
-	fwrite(&frag.score,sizeof(uint64_t),1,fr);
-	fwrite(&frag.similarity,sizeof(float),1,fr);
-
-	// Parser new format to old
-	uint64_t aux64;
-	aux64 = (uint64_t) frag.seqX;	
-	fwrite(&aux64,sizeof(uint64_t),1,fr);
-	aux64 = (uint64_t) frag.seqY;
-	fwrite(&aux64,sizeof(uint64_t),1,fr);
-	//fwrite(&frag.seqX,sizeof(uint32_t),1,fr);
-	//fwrite(&frag.seqY,sizeof(uint32_t),1,fr);
-	
-	fwrite(&frag.block,sizeof(int64_t),1,fr);
-	fwrite(&frag.strand,sizeof(char),1,fr);
+void writeFragment(FragFile frag, FILE *f){
+	char tmpArray[8];
+	uint64_t X,Y;
+	X = (uint64_t) frag.seqX;
+	Y = (uint64_t) frag.seqY;
+	if(htons(1)==1){
+		//Big endian
+		fwrite(&frag.diag, sizeof(int64_t), 1, f);
+		fwrite(&frag.xStart, sizeof(uint64_t), 1, f);
+		fwrite(&frag.yStart, sizeof(uint64_t), 1, f);
+		fwrite(&frag.xEnd, sizeof(uint64_t), 1, f);
+		fwrite(&frag.yEnd, sizeof(uint64_t), 1, f);
+		fwrite(&frag.length, sizeof(uint64_t), 1, f);
+		fwrite(&frag.ident, sizeof(uint64_t), 1, f);
+		fwrite(&frag.score, sizeof(uint64_t), 1, f);
+		fwrite(&frag.similarity, sizeof(float), 1, f);
+		fwrite(&X, sizeof(uint64_t), 1, f);
+		fwrite(&Y, sizeof(uint64_t), 1, f);
+		fwrite(&frag.block, sizeof(int64_t), 1, f);
+		fputc(frag.strand, f);
+	} else {
+		//Little endian
+		endianessConversion((char *)(&frag.diag), tmpArray, sizeof(int64_t));
+		fwrite(tmpArray, sizeof(int64_t), 1, f);
+		endianessConversion((char *)(&frag.xStart), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.yStart), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.xEnd), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.yEnd), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.length), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.ident), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.score), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.similarity), tmpArray, sizeof(float));
+		fwrite(tmpArray, sizeof(float), 1, f);
+		endianessConversion((char *)(&X), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&Y), tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+		endianessConversion((char *)(&frag.block), tmpArray, sizeof(int64_t));
+		fwrite(tmpArray, sizeof(int64_t), 1, f);
+		fputc(frag.strand, f);
+	}
 }
 
 
@@ -790,18 +817,22 @@ Sequence* LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct){
  *  @param metagFile is the absolute or relative path to metagenome file.
  *  @return the header of a reads linked list.
  */
-Read* LoadMetagenome(char *metagFile){
+Read* LoadMetagenome(char *metagFile,uint64_t *totalLength){
 	// Variables
 	Read *head = NULL, *currRead, *lastRead = NULL;
 	FILE *metag;
 	uint32_t seqIndex = 0, seqLen = 0;
 	char c;
+	uint64_t absoluteLength = 0;
 
 	// Open metagenome file
 	if((metag = fopen(metagFile,"rt"))==NULL){
 		fprintf(stderr, "LoadMetagenomeError opening metagenome file.\n");
 		return NULL;
 	}
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "\tA\n");
+///////////////////////////////////////////////////////////////////////////
 
 	// Start to read
 	c = fgetc(metag);
@@ -818,6 +849,7 @@ Read* LoadMetagenome(char *metagFile){
 					// Store info
 					currRead->seqIndex = seqIndex;
 					currRead->length = seqLen;
+					absoluteLength += seqLen;
 					if(head == NULL){
 						// First element
 						head = currRead;
@@ -844,12 +876,21 @@ Read* LoadMetagenome(char *metagFile){
 		// Next char
 		c = fgetc(metag);
 	}
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "C,");
+///////////////////////////////////////////////////////////////////////////
 
 	// Link last node
 	currRead->seqIndex = seqIndex;
 	currRead->length = seqLen;
 	currRead->next = NULL;
 	lastRead->next = currRead;
+
+	absoluteLength += seqLen;
+
+	*totalLength = absoluteLength;
+
+	fclose(metag);
 
 	// Return head
 	return head;
@@ -867,4 +908,31 @@ inline void freeReads(Read **metagenome){
 		free(aux);
 	}
 	free(*metagenome);
+}
+
+
+/**
+ * Function to write the sequence length
+ */
+void writeSequenceLength(uint64_t *length, FILE *f){
+	char tmpArray[8];
+	if(htons(1)==1){
+		//big endian
+		fwrite(length, sizeof(uint64_t), 1, f);
+	} else {
+		//little endian
+		endianessConversion((char *)length, tmpArray, sizeof(uint64_t));
+		fwrite(tmpArray, sizeof(uint64_t), 1, f);
+	}
+}
+
+
+/*
+ */
+void endianessConversion(char *source, char *target, int numberOfBytes){
+	int i,j;
+	for(i=numberOfBytes-1;i>=0;i--){
+		j=numberOfBytes-1-i;
+		target[j]=source[i];
+	}
 }

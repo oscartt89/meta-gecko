@@ -11,6 +11,8 @@
 #include <inttypes.h> 
 #include <string.h> // String functions
 #include <stdbool.h> // Boolean varaibles
+#include <ctype.h>
+#include <arpa/inet.h>
 
 // VARAIBLES
 #define MAX_BUFF 10000000
@@ -31,6 +33,8 @@ uint64_t buffersWritten;
 uint64_t S_Threshold; // Similarity threshold
 uint64_t L_Threshold; // Length threshold
 uint64_t hitLength;
+int prefixSize; // Word size
+
 
 // STRUCTS
 typedef struct{
@@ -171,7 +175,7 @@ int wordcmp(unsigned char*,unsigned char*,int);
 int HComparer(Hit w1, Hit w2);
 void readHashEntry(WordEntry*,FILE*);
 int readWordEntrance(WordEntry*,FILE*,uint16_t);
-int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*);
+int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*,int);
 void loadLocationEntrance(LocationEntry*,FILE*,uint32_t,bool); 
 inline void storeHit(Hit*,LocationEntry,LocationEntry,uint64_t);
 void writeHitsBuff(Hit*,FILE*,FILE*,uint64_t);
@@ -181,7 +185,7 @@ void quicksort_H(Hit*,int,int);
 uint64_t loadHit(Hit**,FILE*,int64_t);
 uint64_t lowestHit(Hit*,uint64_t,int64_t*);
 bool finished(int64_t*,uint64_t);
-inline void writeFragment(FragFile,FILE*);
+void writeFragment(FragFile,FILE*);
 void SWAP_H(Hit*,Hit*,Hit);
 void copyHit(Hit*,Hit);
 void push(node**,node**);
@@ -190,5 +194,7 @@ void sortList(node**);
 void FragFromHit(FragFile*,Hit*,Read*,Sequence*,uint64_t,uint64_t,FILE*);
 char getValue(Sequence*,uint64_t,int);
 Sequence* LeeSeqDB(char*,uint64_t*,uint64_t*);
-Read* LoadMetagenome(char*);
+Read* LoadMetagenome(char*,uint64_t*);
 inline void freeReads(Read**);
+void writeSequenceLength(uint64_t*,FILE*);
+void endianessConversion(char*,char*,int);

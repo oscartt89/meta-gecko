@@ -9,8 +9,8 @@
 
 int main(int ac, char** av){
 	// Check arguments
-	if(ac!=9){
-		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r\n");
+	if(ac!=10){
+		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r prefix\n");
 		return -1;
 	}
 
@@ -19,12 +19,13 @@ int main(int ac, char** av){
 	FILE *hIndx,*hts; // Intermediate files
 	FILE *fr; // Fragments file
 	Hit *buffer;
-	uint64_t hitsInBuffer = 0, genomeLength, nStructs;
+	uint64_t hitsInBuffer = 0, genomeLength, nStructs, metagenomeLength;
 	uint16_t gWL = 32,mWL;
 	uint16_t BytesGenoWord = 8, BytesMetagWord, MinBytes, MaxBytes;
 	buffersWritten = 0;
 	S_Threshold = (uint64_t) atoi(av[6]);
 	L_Threshold = (uint64_t) atoi(av[7]);
+	prefixSize = atoi(av[9]);
 	Sequence *genome;
 	Read *metagenome;
 	char *fname;
@@ -67,8 +68,8 @@ int main(int ac, char** av){
 			return -1;
 		}else{
 			BytesMetagWord = mWL/4;
-			if(BytesMetagWord != BytesGenoWord){
-				fprintf(stderr, "Error: metagenome and genome dictionaries have differents word lengths.\n");
+			if(BytesMetagWord < prefixSize || BytesGenoWord < prefixSize){
+				fprintf(stderr, "Error: prefix is too long.\n");
 				return -1;
 			}
 		}
@@ -104,6 +105,10 @@ int main(int ac, char** av){
 	// Search hits
 		// Prepare necessary variables
 		WordEntry we[2]; // [0]-> Metagenome [1]-> Genome
+		uint64_t lastFirstHit = (uint64_t)ftell(gW);
+		bool firstmatch = true;
+		int cmp;
+
 		// Take memory
 		if((we[0].seq = (unsigned char *) malloc(sizeof(unsigned char)*BytesMetagWord))==NULL){
 			fprintf(stderr, "Error allocating memory for metagenome entrance.\n");
@@ -118,28 +123,81 @@ int main(int ac, char** av){
 	// Read first entrances
 	if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 	readHashEntry(&we[1],gW);
-
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST\n");
+///////////////////////////////////////////////////////////////////////////
 	// Search
-	int cmp;
-	while(!feof(mW) && !feof(gW)){
-		if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
-			generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer);
-		// Load next word
-		if(cmp >= 0) // New genome word is necessary
-			readHashEntry(&we[1],gW);
-		if(cmp <= 0) // New metagenome word is necessary
-			if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
+	if(prefixSize == BytesMetagWord && prefixSize == BytesGenoWord){
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST A\n");
+///////////////////////////////////////////////////////////////////////////
+		while(!feof(mW) && !feof(gW)){
+			if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
+				generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord);
+			// Load next word
+			if(cmp >= 0) // New genome word is necessary
+				readHashEntry(&we[1],gW);
+			if(cmp <= 0) // New metagenome word is necessary
+				if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
+		}
+	}else{
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST B\n");
+///////////////////////////////////////////////////////////////////////////
+		while(!feof(mW)){
+			// Check hit
+			if((cmp = wordcmp(we[0].seq,we[1].seq,prefixSize))==0){ // Hit
+				generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize);
+				if(firstmatch){
+					lastFirstHit = (uint64_t)(ftell(gW) - sizeof(hashentry));
+					firstmatch = false;
+				}
+			}
+			// Check if could be more
+			if(cmp >= 0){ // Could be more
+				// Load next genome word
+				readHashEntry(&we[1],gW);
+				if(feof(gW)){ // End of genome file
+					// Load next metagenome word
+					if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
+					// Reset values and come back at dict
+					firstmatch = true;
+					fseek(gW,lastFirstHit,SEEK_SET); // Reset geno dict
+					readHashEntry(&we[1],gW);
+				}
+			}else if(cmp < 0){ // No more matches, take next metag word
+				// Load next metagenome word
+				if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
+				// Reset values and come back at dict
+				firstmatch = true;
+				fseek(gW,lastFirstHit,SEEK_SET); // Reset geno dict
+				readHashEntry(&we[1],gW);
+			}
+		}
 	}
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST 2\n");
+///////////////////////////////////////////////////////////////////////////
 
 	// Load sequences
 	genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
-	metagenome = LoadMetagenome(av[2]);
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST 2-1\n");
+///////////////////////////////////////////////////////////////////////////
+	metagenome = LoadMetagenome(av[2],&metagenomeLength);
+
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "TEST 3\n");
+///////////////////////////////////////////////////////////////////////////
 
 	// Write buffered hits
 	if(hitsInBuffer > 0){
 		if(buffersWritten > 0)
 			writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
 		else{ // Only one buffer
+///////////////////////////////////////////////////////////////////////////
+fprintf(stderr, "Only one\n");
+///////////////////////////////////////////////////////////////////////////
 			// Sort buffer
 			quicksort_H(buffer,0,hitsInBuffer-1);
 			
@@ -181,6 +239,10 @@ int main(int ac, char** av){
 				fprintf(stderr, "Error opening fragments final file.\n");
 				return -1;
 			}
+
+			// Write headers
+			writeSequenceLength(&metagenomeLength, fr);
+			writeSequenceLength(&genomeLength, fr);
 
 			// Generate first fragment
 			FragFromHit(&frag,&buffer[0],currRead,genome,genomeLength,nStructs,fr);
@@ -292,6 +354,10 @@ int main(int ac, char** av){
 		fprintf(stderr, "Error opening fragments final file.\n");
 		return -1;
 	}
+
+	// Write header
+	writeSequenceLength(&metagenomeLength, fr);
+	writeSequenceLength(&genomeLength, fr);
 
 	// Prepare necessary variables
 	node *hitsList = NULL;
