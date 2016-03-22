@@ -100,9 +100,6 @@ int main(int ac, char** av){
 		fprintf(stderr, "Error opening hits repository.\n");
 		return -1;
 	}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TEST\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Search hits
 		// Prepare necessary variables
@@ -133,9 +130,6 @@ int main(int ac, char** av){
 		if(cmp <= 0) // New metagenome word is necessary
 			if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 	}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TEST3\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Load sequences
 	genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
@@ -146,10 +140,6 @@ int main(int ac, char** av){
 		if(buffersWritten > 0)
 			writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
 		else{ // Only one buffer
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "\tONE ONLY\n");
-//////////////////////////////////////////////////////////////////////////
-
 			// Sort buffer
 			quicksort_H(buffer,0,hitsInBuffer-1);
 			
@@ -167,14 +157,11 @@ int main(int ac, char** av){
 			FragFile frag;
 			uint64_t index;
 			float newSimilarity;
-			int64_t dist;
+			int64_t distX,distY;
 			
 			// Init first fragment
 			frag.block = 0;
 			frag.strand = av[8][0];
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTA1\n");
-//////////////////////////////////////////////////////////////////////////
 
 			// Write first fragment
 			Read *currRead;
@@ -187,9 +174,6 @@ int main(int ac, char** av){
 					}
 					currRead = currRead->next;
 				}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTA2\n");
-//////////////////////////////////////////////////////////////////////////
 			// Open final files
 			// Open final fragments file
 			strcpy(fname,av[5]); // Copy outDic name
@@ -201,9 +185,6 @@ int main(int ac, char** av){
 			// Generate first fragment
 			FragFromHit(&frag,&buffer[0],currRead,genome,genomeLength,nStructs,fr);
 			
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTA4 - %"PRIu64"\n",hitsInBuffer);
-//////////////////////////////////////////////////////////////////////////
 
 			// Generate fragments
 			for(index=1; index < hitsInBuffer; ++index){
@@ -211,11 +192,12 @@ int main(int ac, char** av){
 						buffer[index].seqX == frag.seqX && 
 						buffer[index].seqY == frag.seqY){ // Possible fragment
 					// Check if are collapsable
-					dist = (int64_t)(buffer[index].posX - frag.xEnd);
-					if(dist > hitLength){ // Not collapsable by extension
+					distX = (int64_t)(buffer[index].posX - frag.xEnd);
+					distY = (int64_t)(buffer[index].posY - frag.yEnd);
+					if(distX > 0 || distY > 0){ // Not collapsable by extension
 						// Generate fragment 
 						FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr);
-					}else frag.xEnd = buffer[index].posX + buffer[index].length;
+					}
 				}else{ // New fragment
 					// Check correct read index
 					//currRead = metagenome;
@@ -230,21 +212,12 @@ int main(int ac, char** av){
 					FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr);
 				}
 			}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTA5\n");
-//////////////////////////////////////////////////////////////////////////
 
 			// Close output file
 			fclose(fr);
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTA6\n");
-//////////////////////////////////////////////////////////////////////////
 			freeReads(&metagenome);
 			// Free unnecesary memory
 			free(buffer);
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTA7\n");
-//////////////////////////////////////////////////////////////////////////
 			// Remove intermediate files
 			if(removeIntermediataFiles){
 				strcpy(fname,av[5]);
@@ -296,9 +269,6 @@ int main(int ac, char** av){
 	fclose(hIndx);
 	fclose(hts);
 
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB4\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Open necessary files
 	// Open intermediate files
@@ -337,10 +307,6 @@ int main(int ac, char** av){
 		return -1;
 	}
 
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB4-2\n");
-//////////////////////////////////////////////////////////////////////////
-
 	// Read buffers info
 	uint64_t i = 0;
 	do{
@@ -348,9 +314,6 @@ int main(int ac, char** av){
 		fread(&hitsUnread[i],sizeof(uint64_t),1,hIndx);
 		++i;
 	}while(i < activeBuffers);
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB4-3\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Load first hits
 	node *currNode;
@@ -370,18 +333,12 @@ int main(int ac, char** av){
 		lastLoaded = i;
 		hitsList = currNode;
 	}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB4-4\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Assign head
 	hitsList = currNode;
 
 	// Sort hits
 	sortList(&hitsList);	
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB4-5\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Init fragment info
 	frag.block = 0;
@@ -402,33 +359,45 @@ int main(int ac, char** av){
 	// Generate first fragment
 	FragFromHit(&frag,&hitsList->hits[0],currRead,genome,genomeLength,nStructs,fr);
 
+	// Move to next
+	hitsList->index +=1;
+	// Load new hit
+	if(hitsList->index >= hitsList->hits_loaded){
+		if(hitsUnread[hitsList->buff] > 0){
+			if(hitsList->buff != lastLoaded){
+				fseek(hts,positions[hitsList->buff],SEEK_SET);
+				lastLoaded = hitsList->buff;
+			}
+			read = loadHit(&hitsList->hits,hts,hitsUnread[hitsList->buff]);
+			hitsList->index = 0;
+			hitsList->hits_loaded = read;
+			positions[hitsList->buff] = (uint64_t) ftell(hts);
+			hitsUnread[hitsList->buff]-=read;
+			checkOrder(&hitsList,false);
+		}else{
+			checkOrder(&hitsList,true);
+			activeBuffers--;
+		}
+	}else{
+		checkOrder(&hitsList,false);
+	}
+
 	// Search hits and generate fragmetents
-	int64_t dist;
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB5\n");
-//////////////////////////////////////////////////////////////////////////
+	int64_t distX,distY;
 
 	// Read hits & generate fragments
 	while(activeBuffers > 0){
 		if(hitsList->hits[hitsList->index].diag == frag.diag &&
 			hitsList->hits[hitsList->index].seqX == frag.seqX && 
-				hitsList->hits[hitsList->index].seqY == frag.seqY){ // Possible fragment
+			hitsList->hits[hitsList->index].seqY == frag.seqY){ // Possible fragment
 			// Check if are collapsable
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "A -> ");
-//////////////////////////////////////////////////////////////////////////
-			dist = (int64_t)hitsList->hits[hitsList->index].posX - (int64_t)frag.xEnd;
-			if(dist > hitLength){ // Not collapsable by xtension
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "B -> ");
-//////////////////////////////////////////////////////////////////////////
+			distX = (int64_t)(hitsList->hits[hitsList->index].posX - frag.xEnd);
+			distY = (int64_t)(hitsList->hits[hitsList->index].posY - frag.yEnd);
+			if(distX > 0 || distY > 0){ // Not collapsable by xtension
 				// Generate fragment 
 				FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr);
-			}else frag.xEnd = hitsList->hits[hitsList->index].posX + hitsList->hits[hitsList->index].length;
+			}
 		}else{ // Different diag or seq
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "C -> ");
-//////////////////////////////////////////////////////////////////////////
 			// Check correct read index
 			//currRead = metagenome;
 			while(currRead->seqIndex != hitsList->hits[hitsList->index].seqX){
@@ -438,15 +407,9 @@ int main(int ac, char** av){
 				}
 				currRead = currRead->next;
 			}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "D -> ");
-//////////////////////////////////////////////////////////////////////////
 			// Generate new fragment
 			FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr);
 		}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "E -> ");
-//////////////////////////////////////////////////////////////////////////
 
 		// Move to next
 		hitsList->index +=1;
@@ -463,26 +426,14 @@ int main(int ac, char** av){
 				positions[hitsList->buff] = (uint64_t) ftell(hts);
 				hitsUnread[hitsList->buff]-=read;
 				checkOrder(&hitsList,false);
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "(%"PRIu64") [%"PRIu64" - %"PRIu64"] -> ",activeBuffers,hitsList->buff,hitsUnread[hitsList->buff]);
-//////////////////////////////////////////////////////////////////////////
 			}else{
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "+++ (%"PRIu64")-> ",activeBuffers-1);
-//////////////////////////////////////////////////////////////////////////
 				checkOrder(&hitsList,true);
 				activeBuffers--;
 			}
 		}else{
 			checkOrder(&hitsList,false);
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "2 -> ");
-//////////////////////////////////////////////////////////////////////////
 		}
 	}
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB6\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Close files
 	free(HitsBlock);
@@ -490,9 +441,6 @@ int main(int ac, char** av){
 	fclose(hts);
 	fclose(fr);
 	freeReads(&metagenome);
-//////////////////////////////////////////////////////////////////////////
-//fprintf(stderr, "TESTB7\n");
-//////////////////////////////////////////////////////////////////////////
 
 	// Remove intermediate files
 	if(removeIntermediataFiles){

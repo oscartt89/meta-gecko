@@ -375,15 +375,6 @@ uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
  *  @param fr fragment file where fragment will be written.
  */
 inline void writeFragment(FragFile frag,FILE *fr){
-	// Parser new format to old
-	uint64_t aux64;
-	aux64 = (uint64_t) frag.seqX;	
-	fwrite(&aux64,sizeof(uint64_t),1,fr);
-	aux64 = (uint64_t) frag.seqY;
-	fwrite(&aux64,sizeof(uint64_t),1,fr);
-	//fwrite(&frag.seqX,sizeof(uint32_t),1,fr);
-	//fwrite(&frag.seqY,sizeof(uint32_t),1,fr);
-	
 	fwrite(&frag.diag,sizeof(int64_t),1,fr);
 	fwrite(&frag.xStart,sizeof(uint64_t),1,fr);
 	fwrite(&frag.yStart,sizeof(uint64_t),1,fr);
@@ -393,6 +384,16 @@ inline void writeFragment(FragFile frag,FILE *fr){
 	fwrite(&frag.ident,sizeof(uint64_t),1,fr);
 	fwrite(&frag.score,sizeof(uint64_t),1,fr);
 	fwrite(&frag.similarity,sizeof(float),1,fr);
+
+	// Parser new format to old
+	uint64_t aux64;
+	aux64 = (uint64_t) frag.seqX;	
+	fwrite(&aux64,sizeof(uint64_t),1,fr);
+	aux64 = (uint64_t) frag.seqY;
+	fwrite(&aux64,sizeof(uint64_t),1,fr);
+	//fwrite(&frag.seqX,sizeof(uint32_t),1,fr);
+	//fwrite(&frag.seqY,sizeof(uint32_t),1,fr);
+	
 	fwrite(&frag.block,sizeof(int64_t),1,fr);
 	fwrite(&frag.strand,sizeof(char),1,fr);
 }
@@ -631,20 +632,20 @@ void FragFromHit(FragFile *frag, Hit *hit, Read *seqX, Sequence *seqY, uint64_t 
 	// Calc length and similarity
 	frag->length = XMaxIndex - XMinIndex + 1;
 	frag->similarity = 100 * scoreMax / (frag->length * Eq_Value);
+	frag->diag = hit->diag;
+	frag->xStart = XMinIndex;
+	frag->yStart = YMinIndex;
+	frag->xEnd = XMaxIndex;
+	frag->yEnd = YMaxIndex;
+	frag->score = scoreMax;
+	frag->ident = maxIdentities;
+	frag->seqX = hit->seqX;
+	frag->seqY = hit->seqY;
 
 	if(frag->length >= L_Threshold && frag->similarity >= S_Threshold){ // Correct fragment
-		// Set the values of the FragFile
-		frag->diag = hit->diag;
-		frag->xStart = XMinIndex;
-		frag->yStart = YMinIndex;
-		frag->xEnd = XMaxIndex;
-		frag->yEnd = YMaxIndex;
-		frag->score = scoreMax;
-		frag->ident = maxIdentities;
-		frag->seqX = hit->seqX;
-		frag->seqY = hit->seqY;		
-		
+		// Set the values of the FragFile		
 		writeFragment(*frag,fr);
+		return;
 	}//else -> Not good enough
 }
 
