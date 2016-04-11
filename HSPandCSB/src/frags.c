@@ -6,14 +6,25 @@
  *    of Malaga).
  */
 #include "frags.h"
+#include <time.h>
 
 int main(int ac, char** av){
+////////////////////////////////////////////////////////////////////////////
+clock_t begin, end;
+double time_spent;
+////////////////////////////////////////////////////////////////////////////
+
 	// Check arguments
 	if(ac!=10){
 		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r prefix\n");
 		return -1;
 	}
 
+	/////////////////////////////////////////////////////////////////
+	begin = clock();
+	fprintf(stdout, "\tFrags: Starting fragments program.\n");
+	/////////////////////////////////////////////////////////////////
+	
 	// Variables
 	FILE *mW,*mP,*gW,*gP; // Dictionaries
 	FILE *hIndx,*hts; // Intermediate files
@@ -22,14 +33,14 @@ int main(int ac, char** av){
 	uint64_t hitsInBuffer = 0, genomeLength, nStructs, metagenomeLength;
 	uint16_t gWL = 32,mWL;
 	uint16_t BytesGenoWord = 8, BytesMetagWord, MinBytes, MaxBytes;
-	buffersWritten = 0;
-	S_Threshold = (uint64_t) atoi(av[6]);
-	L_Threshold = (uint64_t) atoi(av[7]);
-	prefixSize = atoi(av[9]);
-	Sequence *genome;
-	Read *metagenome;
-	char *fname;
-	bool removeIntermediataFiles = true;	
+	buffersWritten = 0; // Init global variable (frags.h)1
+	S_Threshold = (uint64_t) atoi(av[6]); // Similarity threshold
+	L_Threshold = (uint64_t) atoi(av[7]); // Length threshold
+	prefixSize = atoi(av[9]); // Prefix array legnth
+	Sequence *genome; // Sequence for genome
+	Read *metagenome; // Short sequence array for metagenome
+	char *fname; // File names handler
+	bool removeIntermediataFiles = true; // Internal variable to delete intermediate files	
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -43,6 +54,11 @@ int main(int ac, char** av){
 		fprintf(stderr, "Error allocating memory for file names handler.\n");
 		return -1;
 	}
+
+	/////////////////////////////////////////////////////////////////
+	fprintf(stdout, "\tFrags: Opening/creating necessary files.");
+	fflush(stdout);
+	/////////////////////////////////////////////////////////////////
 
 	// Open current necessary files
 	// Open metagenome positions file
@@ -122,15 +138,17 @@ int main(int ac, char** av){
 
 	// Read first entrances
 	if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
+
 	readHashEntry(&we[1],gW);
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST\n");
-///////////////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////
+	fprintf(stdout, " (Done)\n");
+	fprintf(stdout, "\tFrags: Generating seeds.");
+	fflush(stdout);
+	/////////////////////////////////////////////////////////////////
+
 	// Search
 	if(prefixSize == BytesMetagWord && prefixSize == BytesGenoWord){
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST A\n");
-///////////////////////////////////////////////////////////////////////////
 		while(!feof(mW) && !feof(gW)){
 			if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
 				generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord);
@@ -141,9 +159,6 @@ fprintf(stderr, "TEST A\n");
 				if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 		}
 	}else{
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST B\n");
-///////////////////////////////////////////////////////////////////////////
 		while(!feof(mW)){
 			// Check hit
 			if((cmp = wordcmp(we[0].seq,we[1].seq,prefixSize))==0){ // Hit
@@ -175,29 +190,36 @@ fprintf(stderr, "TEST B\n");
 			}
 		}
 	}
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST 2\n");
-///////////////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////
+	end = clock();
+	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	fprintf(stdout, " (Generated)");
+fprintf(stdout, " Time: %f\n", time_spent); // \n in line before
+	fprintf(stdout, "\tFrags: Loading sequences of genome.");
+	fflush(stdout);
+	/////////////////////////////////////////////////////////////////
 
 	// Load sequences
 	genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST 2-1\n");
-///////////////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////
+	fprintf(stdout, " (Loaded)\n");
+	fprintf(stdout, "\tFrags: Loading sequences of metagenome.");
+	fflush(stdout);
+	/////////////////////////////////////////////////////////////////
+
 	metagenome = LoadMetagenome(av[2],&metagenomeLength);
 
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "TEST 3\n");
-///////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////
+	fprintf(stdout, " (Loaded)\n");
+	/////////////////////////////////////////////////////////////////
 
 	// Write buffered hits
 	if(hitsInBuffer > 0){
 		if(buffersWritten > 0)
 			writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
 		else{ // Only one buffer
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "Only one\n");
-///////////////////////////////////////////////////////////////////////////
 			// Sort buffer
 			quicksort_H(buffer,0,hitsInBuffer-1);
 			
@@ -244,10 +266,14 @@ fprintf(stderr, "Only one\n");
 			writeSequenceLength(&metagenomeLength, fr);
 			writeSequenceLength(&genomeLength, fr);
 
+			/////////////////////////////////////////////////////////////////
+			fprintf(stdout, "\tFrags: Extending seeds .");
+			fflush(stdout);
+			/////////////////////////////////////////////////////////////////
+
 			// Generate first fragment
 			FragFromHit(&frag,&buffer[0],currRead,genome,genomeLength,nStructs,fr);
 			
-
 			// Generate fragments
 			for(index=1; index < hitsInBuffer; ++index){
 				if(buffer[index].diag == frag.diag &&
@@ -275,9 +301,14 @@ fprintf(stderr, "Only one\n");
 				}
 			}
 
+			/////////////////////////////////////////////////////////////////
+			fprintf(stdout, " (Generated)\n");
+			fprintf(stdout, "\tFrags: Closing the program.\n");
+			/////////////////////////////////////////////////////////////////
+
 			// Close output file
 			fclose(fr);
-			freeReads(&metagenome);
+//			freeReads(&metagenome);
 			// Free unnecesary memory
 			free(buffer);
 			// Remove intermediate files
@@ -294,6 +325,11 @@ fprintf(stderr, "Only one\n");
 			return 0;
 		}
 	}else if(hitsInBuffer == 0 && buffersWritten == 0){
+		/////////////////////////////////////////////////////////////////
+		fprintf(stdout, "\tFrags: Any match found.\n");
+		fprintf(stdout, "\tFrags: Closing the program.\n");
+		/////////////////////////////////////////////////////////////////
+
 		// Free auxiliar buffers
 		free(we[0].seq);
 		free(we[1].seq);
@@ -330,7 +366,6 @@ fprintf(stderr, "Only one\n");
 	fclose(mP); fclose(gP);
 	fclose(hIndx);
 	fclose(hts);
-
 
 	// Open necessary files
 	// Open intermediate files
@@ -406,6 +441,11 @@ fprintf(stderr, "Only one\n");
 	// Sort hits
 	sortList(&hitsList);	
 
+	/////////////////////////////////////////////////////////////////
+	fprintf(stdout, "\tFrags: Extending seeds.");
+	fflush(stdout);
+	/////////////////////////////////////////////////////////////////
+
 	// Init fragment info
 	frag.block = 0;
 	frag.strand = av[8][0];
@@ -452,7 +492,7 @@ fprintf(stderr, "Only one\n");
 	int64_t distX,distY;
 
 	// Read hits & generate fragments
-	while(activeBuffers > 0){
+	while(activeBuffers > 0 && hitsList != NULL){
 		if(hitsList->hits[hitsList->index].diag == frag.diag &&
 			hitsList->hits[hitsList->index].seqX == frag.seqX && 
 			hitsList->hits[hitsList->index].seqY == frag.seqY){ // Possible fragment
@@ -501,12 +541,18 @@ fprintf(stderr, "Only one\n");
 		}
 	}
 
+	/////////////////////////////////////////////////////////////////
+	fprintf(stdout, " (Generated)\n");
+	/////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////
+	fprintf(stdout, "\tFrags: Closing the program.\n");
+	/////////////////////////////////////////////////////////////////
+
 	// Close files
-	free(HitsBlock);
 	fclose(hIndx);
 	fclose(hts);
 	fclose(fr);
-	freeReads(&metagenome);
 
 	// Remove intermediate files
 	if(removeIntermediataFiles){
@@ -516,7 +562,12 @@ fprintf(stderr, "Only one\n");
 		remove(strcat(fname,".hindx"));
 	}
 
+	// Free malloc blocks
+	free(HitsBlock);
 	free(fname);
+
+	// Free linked list
+//	freeReads(&metagenome);
 
 	// Everything finished OK
 	return 0;

@@ -830,9 +830,6 @@ Read* LoadMetagenome(char *metagFile,uint64_t *totalLength){
 		fprintf(stderr, "LoadMetagenomeError opening metagenome file.\n");
 		return NULL;
 	}
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "\tA\n");
-///////////////////////////////////////////////////////////////////////////
 
 	// Start to read
 	c = fgetc(metag);
@@ -876,9 +873,6 @@ fprintf(stderr, "\tA\n");
 		// Next char
 		c = fgetc(metag);
 	}
-///////////////////////////////////////////////////////////////////////////
-fprintf(stderr, "C,");
-///////////////////////////////////////////////////////////////////////////
 
 	// Link last node
 	currRead->seqIndex = seqIndex;
@@ -901,18 +895,24 @@ fprintf(stderr, "C,");
  *  @param metagenome linked list to be deallocated.
  */
 inline void freeReads(Read **metagenome){
+	// Check
+	if(*metagenome == NULL) return;
+
 	Read *aux;
 	while((*metagenome)->next != NULL){
 		aux = *metagenome;
 		*metagenome = (*metagenome)->next;
 		free(aux);
 	}
+
 	free(*metagenome);
 }
 
 
 /**
  * Function to write the sequence length
+ *  @param length is the length to be written.
+ *  @param f is the file where the length will be written
  */
 void writeSequenceLength(uint64_t *length, FILE *f){
 	char tmpArray[8];
@@ -927,7 +927,10 @@ void writeSequenceLength(uint64_t *length, FILE *f){
 }
 
 
-/*
+/* This function is used to change between Little and big endian formats
+ *  @param source is the original char sequence.
+ *  @param target is the container of the translated char sequence.
+ *  @param numberOfBytes is the lenght f the char sequence (1 byte = 1 char)
  */
 void endianessConversion(char *source, char *target, int numberOfBytes){
 	int i,j;

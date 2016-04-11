@@ -19,7 +19,7 @@
 //Struct for reads index tuple
 struct rIndex {
     uint64_t pos;      //Start position of read
-    uint64_t Lac;      // accumulated length
+    uint64_t Lac;      // accumulated length == offset
 };
 
 
