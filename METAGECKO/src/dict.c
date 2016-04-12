@@ -305,7 +305,11 @@ int main(int ac, char** av){
 			fprintf(stderr, "Error opening buffer index file (read).\n");
 			return -1;
 		}
-		fread(&WL,sizeof(uint16_t),1,bIndx); // Read header = word length
+		
+		if(fread(&WL,sizeof(uint16_t),1,bIndx) != 1){ // Read header = word length
+			fprintf(stderr, "Error reading word length at header. Value not found.\n");
+			return -1;
+		} 
 
 		// Open words repo
 		strcpy(fname,av[2]);
@@ -334,7 +338,7 @@ int main(int ac, char** av){
 	int64_t wordsUnread[numBuffWritten];
 	node_W *words = NULL;
 	uint32_t reps = 0;
-	uint64_t lastLoaded, activeBuffers = numBuffWritten;
+	uint64_t lastLoaded = -1, activeBuffers = numBuffWritten;
 	unsigned char *BuffWordsBlock;
 	wentry *WentryBlock;
 
@@ -353,8 +357,14 @@ int main(int ac, char** av){
 	i = 0;
 	uint64_t aux64;
 	do{
-		fread(&arrPos[i],sizeof(uint64_t),1,bIndx); // Position on words file
-		fread(&aux64,sizeof(uint64_t),1,bIndx); // Number of words on set
+		if(fread(&arrPos[i],sizeof(uint64_t),1,bIndx)!=1){ // Position on words file
+			fprintf(stderr, "Error reading position on P file.\n");
+			return -1;
+		}
+		if(fread(&aux64,sizeof(uint64_t),1,bIndx)!=1){// Number of words on set
+			fprintf(stderr, "Error reading number of repetitions at W file.\n");
+			return -1;
+		}
 		wordsUnread[i] = (int64_t) aux64;
 		++i;
 	}while(i<activeBuffers);
@@ -363,7 +373,7 @@ int main(int ac, char** av){
 	// Take memory for words & read first set of words
 	blockIndex = 0;
 	uint64_t wblockIndex = 0, j,read;
-	node_W *currNode; 
+	node_W *currNode = NULL; 
 	for(i=0 ;i<activeBuffers ;++i, wblockIndex += READ_BUFF_LENGTH){
 		currNode = (node_W*) malloc(sizeof(node_W)); // New node
 		currNode->word = &WentryBlock[wblockIndex]; // Wentry array

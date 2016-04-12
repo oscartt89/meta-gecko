@@ -192,16 +192,25 @@ int quicksort_W(wentry* arr, int left,int right) {
  *  @param words array where set will be loaded.
  *  @param wFile pointer to words intermediate file.
  *  @param unread rest of words on intermediate file.
- *  @return Number of words read from intermediate file.
+ *  @return Number of words read from intermediate file. Or a negative number if any error hapens.
  */
 uint64_t loadWord(wentry **words,FILE* wFile, int64_t unread){
 	uint64_t i,j;
 	for(j=0; j<READ_BUFF_LENGTH && unread > 0;++j){
-		fread(&(*words)[j].pos,sizeof(uint64_t),1,wFile); 
-		fread(&(*words)[j].seq,sizeof(uint32_t),1,wFile);
+		if(fread(&(*words)[j].pos,sizeof(uint64_t),1,wFile)!=1){
+			fprintf(stderr, "loadWord:: Error reading position value.\n");
+			return -1;
+		} 
+		if(fread(&(*words)[j].seq,sizeof(uint32_t),1,wFile)!=1){
+			fprintf(stderr, "loadWord:: Error reading index value.\n");
+			return -1;
+		}
 		//fread(&(*word)[j]->w.WL,sizeof(uint16_t),1,wFile);
 		for(i=0;i<BYTES_IN_WORD;++i)
-			fread(&(*words)[j].w.b[i],sizeof(unsigned char),1,wFile);
+			if(fread(&(*words)[j].w.b[i],sizeof(unsigned char),1,wFile)!=1){
+				fprintf(stderr, "loadWord:: Error reading sequence at num=%"PRIu64"\n", i);
+				return -1;
+			}
 		unread--;
 	}
 	return j;
