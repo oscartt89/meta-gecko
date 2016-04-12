@@ -44,7 +44,6 @@ int main(int ac, char** av){
 
     // Variables
     FILE *frags, *fIndx, *fBuff;
-    char c;
     Read *f_reads, *r_reads, *curr_f, *curr_r;
     uint64_t num_f_reads, num_r_reads, metagLength, genoLength;
     uint64_t fragsInBuffer, buffersWritten = 0;
@@ -316,13 +315,19 @@ int main(int ac, char** av){
     // Read buffers info
     uint64_t i = 0;
     do{
-        fread(&positions[i],sizeof(uint64_t),1,fIndx);
-        fread(&fragsUnread[i],sizeof(uint64_t),1,fIndx);
+        if(fread(&positions[i],sizeof(uint64_t),1,fIndx)!=1){
+            fprintf(stderr, "Error reading position at fIndx.\n");
+            return -1;
+        }
+        if(fread(&fragsUnread[i],sizeof(uint64_t),1,fIndx)!=1){
+            fprintf(stderr, "Error reading unread fragments at fIndx.\n");
+            return -1;
+        }
         ++i;
     }while(i < activeBuffers);
 
     // Load first hits
-    fnode *currNode;
+    fnode *currNode = NULL;
     uint64_t read, blockIndex = 0;
     for(i=0 ;i<activeBuffers; ++i, blockIndex += READ_BUFF_LENGTH){
         currNode = (fnode*) malloc(sizeof(fnode));
@@ -690,12 +695,12 @@ uint64_t loadStats(Read **head,char *filePath){
     char c;
     uint64_t readLen, totalLen=0, nReads=0;
     *head = NULL;
-    Read *currRead,*lastRead;
+    Read *currRead = NULL,*lastRead = NULL;
 
     // Open file
     if((file = fopen(filePath,"rt"))==NULL){
         fprintf(stderr, "Error opening stats file: %s\n", filePath);
-        return;
+        return '\0';
     }    
 
     // initialize first read
@@ -834,7 +839,6 @@ void writeFragBuffer(FragFile* buff,FILE* index,FILE* frags,uint64_t fragsInBuff
 
     // Write info on index file
     uint64_t pos = (uint64_t) ftell(frags);
-    FragFile lastFrag;
     
     fwrite(&pos,sizeof(uint64_t),1,index);
     fwrite(&fragsInBuff,sizeof(uint64_t),1,index);
