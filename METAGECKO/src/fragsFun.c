@@ -177,13 +177,22 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 	uint32_t i;
 	if(metagenome){
 		for(i=0; i<reps;++i){
-			fread(&arr[i].seq,sizeof(uint32_t),1,PFile);
-			fread(&arr[i].pos,sizeof(uint64_t),1,PFile);
+			if(fread(&arr[i].seq,sizeof(uint32_t),1,PFile)!=1){
+				fprintf(stderr, "loadLocationEntrance:: Error reading sequence index.[%"PRIu32"]\n",i);
+				return;
+			}
+			if(fread(&arr[i].pos,sizeof(uint64_t),1,PFile)!=1){
+				fprintf(stderr, "loadLocationEntrance:: Error reading position.[%"PRIu32"]\n",i);
+				return;
+			}
 		}
 	}else{
 		location aux;
 		for(i=0; i<reps;++i){
-			fread(&aux,sizeof(location),1,PFile);
+			if(fread(&aux,sizeof(location),1,PFile)!=1){
+				fprintf(stderr, "loadLocationEntrance:: Error reading location\n");
+				return;
+			}
 			arr[i].seq = (uint32_t) aux.seq;
 			arr[i].pos = aux.pos;
 		}
@@ -350,17 +359,35 @@ void quicksort_H(Hit* arr, int left,int right){
  *  @param hit varaible where loaded hit will be stored.
  *  @param hFile pointer to hits intermediate file.
  *  @param unread rest of hits on intermediate file.
- *  @return Number of hits read from intermediate file.
+ *  @return Number of hits read from intermediate file or negative number if any error happens.
  */
 uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
-	uint64_t i,j;
+	uint64_t j;
 	for(j=0; j<READ_BUFF_LENGTH && unread > 0; ++j){
-		fread(&(*hit)[j].seqX,sizeof(uint32_t),1,hFile);
-		fread(&(*hit)[j].seqY,sizeof(uint32_t),1,hFile);
-		fread(&(*hit)[j].diag,sizeof(int64_t),1,hFile);
-		fread(&(*hit)[j].posX,sizeof(uint64_t),1,hFile);
-		fread(&(*hit)[j].posY,sizeof(uint64_t),1,hFile);
-		fread(&(*hit)[j].length,sizeof(uint64_t),1,hFile);
+		if(fread(&(*hit)[j].seqX,sizeof(uint32_t),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading X index.\n");
+			return -1;
+		}
+		if(fread(&(*hit)[j].seqY,sizeof(uint32_t),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading Y index.\n");
+			return -1;
+		}
+		if(fread(&(*hit)[j].diag,sizeof(int64_t),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading diagonal.\n");
+			return -1;
+		}
+		if(fread(&(*hit)[j].posX,sizeof(uint64_t),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading X position.\n");
+			return -1;
+		}
+		if(fread(&(*hit)[j].posY,sizeof(uint64_t),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading Y position.\n");
+			return -1;
+		}
+		if(fread(&(*hit)[j].length,sizeof(uint64_t),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading length.\n");
+			return -1;
+		}
 		unread--;
 	}
 	return j;
@@ -678,7 +705,7 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
  *  @param s the sequence structure where search.
  *  @param pos the position of the nucleotide.
  *  @param ns the sequence number.
- *  @return the nucleotide of the position pos.
+ *  @return the nucleotide of the position pos or an end of line if any error hapens
  */
 char getValue(Sequence *s, uint64_t pos, int ns){
 	Sequence *aux = s;
@@ -690,7 +717,7 @@ char getValue(Sequence *s, uint64_t pos, int ns){
 		nActual++;
 		if(nActual > ns){
 			fprintf(stderr, "Out of sequence.\n");
-			return; // Return null
+			return '\0'; // Return null
 		}
 	}
 
@@ -816,7 +843,7 @@ Sequence* LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct){
  */
 Reads* LoadMetagenome(char *metagFile,uint64_t *totalLength){
 	// Variables
-	Reads *head = NULL, *currRead, *lastRead = NULL;
+	Reads *head = NULL, *currRead = NULL, *lastRead = NULL;
 	FILE *metag;
 	uint32_t seqIndex = 0, seqLen = 0;
 	char c;

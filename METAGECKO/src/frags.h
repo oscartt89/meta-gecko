@@ -54,6 +54,7 @@ void copyHit(Hit*,Hit);
 void push(node_H**,node_H**);
 void move(node_H**,node_H**);
 void sortList(node_H**);
+void checkOrder(node_H**,bool);
 void FragFromHit(FragFile*,Hit*,Reads*,Sequence*,uint64_t,uint64_t,FILE*);
 char getValue(Sequence*,uint64_t,int);
 Sequence* LeeSeqDB(char*,uint64_t*,uint64_t*);

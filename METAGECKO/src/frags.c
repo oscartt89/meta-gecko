@@ -24,8 +24,8 @@ int main(int ac, char** av){
 	FILE *fr; // Fragments file
 	Hit *buffer;
 	uint64_t hitsInBuffer = 0, genomeLength, nStructs, metagenomeLength;
-	uint16_t gWL = 32,mWL;
-	uint16_t BytesGenoWord = 8, BytesMetagWord, MinBytes, MaxBytes;
+	uint16_t mWL;
+	uint16_t BytesGenoWord = 8, BytesMetagWord;
 	buffersWritten = 0; // Init global variable (frags.h)1
 	S_Threshold = (uint64_t) atoi(av[6]); // Similarity threshold
 	L_Threshold = (uint64_t) atoi(av[7]); // Length threshold
@@ -226,7 +226,6 @@ int main(int ac, char** av){
 			// Declare necessary variables
 			FragFile frag;
 			uint64_t index;
-			float newSimilarity;
 			int64_t distX,distY;
 			
 			// Init first fragment
@@ -388,7 +387,7 @@ int main(int ac, char** av){
 	node_H *hitsList = NULL;
 	uint64_t hitsUnread[buffersWritten];
 	uint64_t positions[buffersWritten];
-	uint64_t lastLoaded, activeBuffers = buffersWritten;
+	uint64_t lastLoaded = -1, activeBuffers = buffersWritten;
 	Hit *HitsBlock;
 	FragFile frag;
 
@@ -401,13 +400,19 @@ int main(int ac, char** av){
 	// Read buffers info
 	uint64_t i = 0;
 	do{
-		fread(&positions[i],sizeof(uint64_t),1,hIndx);
-		fread(&hitsUnread[i],sizeof(uint64_t),1,hIndx);
+		if(fread(&positions[i],sizeof(uint64_t),1,hIndx)!=1){ // Take position on hits file
+			fprintf(stderr, "Error reading position at hIndx file.\n");
+			return -1;
+		}
+		if(fread(&hitsUnread[i],sizeof(uint64_t),1,hIndx)!=1){
+			fprintf(stderr, "Error reading hits in buffer at hIndx file.\n");
+			return -1;
+		}
 		++i;
 	}while(i < activeBuffers);
 
 	// Load first hits
-	node_H *currNode;
+	node_H *currNode = NULL;
 	uint64_t read, blockIndex = 0;
 	for(i=0 ;i<activeBuffers; ++i, blockIndex += READ_BUFF_LENGTH){
 		currNode = (node_H*) malloc(sizeof(node_H));
