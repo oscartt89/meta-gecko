@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-O3 -D_FILE_OFFSET_BITS=64 -Wall
 BIN=../bin
 
-all: gecko meta_gecko
+all: gecko meta_gecko write
 
 gecko: words sortWords w2hd reverseComplement
 
@@ -31,3 +31,6 @@ fixeReverse: fixeReverseFragments.c
 
 combineFragments: combineFragments.c
 	$(CC) $(CFLAGS) combineFragments.c -o $(BIN)/combineFragments
+
+write: write.c
+	$(CC) $(CFLAGS) write.c -o $(BIN)/write
