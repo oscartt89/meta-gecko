@@ -5,18 +5,32 @@
  */
 #include "dict.h"
 
-/**
- * This main function encodes the workflow of metagenome dictionary
- * creation. The workflow is:
- *   1 - Read a char of a read.
- *   2 - IF sequence is not long and good enough GO TO 1.
- *   3 - Store sequence (word) on words buffer.
- *   4 - IF bufer is full, write buffer sorted on intermediate files.
- *   5 - IF there are more Reads or chars unread on current Read GO 
- *       TO 1.
- *   6 - Write buffered words on intermediate files after sort it.
- *   7 - Read intermediate files word per word and write final dictionary
- *       files.
+/* This main contains the workflow to read a FASTA format file and take the sequences
+ * words to generate a hashtable that links all found words (without repetitions) with 
+ * the positions where it appears.
+ * The way to invoke the program is:
+ *   @use dict FASTA_File out WL
+ * Where the parameters used are:
+ *   @param FASTA_File is the FASTA format file where sequence that will be readed is 
+ *          stored.
+ *   @param out is the basename of the file where fragmetns will be stored.
+ *   @param WL is the word length to use to create the dictionary. Only well formed
+ *          words of length = WL will be stored on dictionary.
+ * The result of the program will be the following:
+ *   @file <out>.d2hW is a file that contains the words and a linkage to the second 
+ *         final file. This linkage is formed by the number of positions that are linked
+ *         to the current word and where start to read this positions in the second file.
+ *   @file <out>.d2hP is a file that contains the pairs of coordinates. This pairs are
+ *         formed by the sequence index and the position on the sequence where the
+ *         linked word appears.
+ * The program will write some messages in default output stream that shows the action that
+ * is being done by the program each moment.
+ * Warning: if any error is launched, the program automatically stops, if it happens is
+ * normal that the following files appear in your output folder:
+ *   @file <out>.bindx is an auxiliary file with information about some buffer used in the 
+ *         program process.
+ *   @file <out>.wrds is an auxilary file with information about the words read during 
+ *         the read process.
  */
 int main(int ac, char** av){
 	// Check arguments

@@ -7,10 +7,48 @@
  */
 #include "frags.h"
 
+/* This main contains the workflow to find hits, filter and extend it to generate
+ * fragments over a length and similarity wanted. There are two ways to invoke the
+ * the program:
+ *   @use frag metagDict metagFile genoDic genoFile out minS minL f/r prefix
+ *   @use frag metagDict metagFile genoDic genoFile out minS minL f/r prefix startIndx
+ * Where the parameters used are:
+ *   @param metagDict the string with the basename of the metagenome dictionary to be
+ *          used. Must contain the relative/absolute path to the file if it's not in
+ *          the invocation folder. Note: the base name is <basename>.(d2hP/W)
+ *   @param metagFile is the FASTA (or any otther extension) metagenome file used to
+ *          generate the metagenome dictionary given.
+ *   @param genoDict the string with the basename of the genome dictionary to be
+ *          used. Must contain the relative/absolute path to the file if it's not in
+ *          the invocation folder. Note: the base name is <basename>.(d2hP/W)
+ *   @param genoFile is the FASTA (or any otther extension) genome file used to
+ *          generate the genome dictionary given.
+ *   @param out is the basename of the file where fragmetns will be stored.
+ *   @param minS is the minimum similarity that must have a fragment to be stored.
+ *   @param minL is the minimum length that must have a fragment to be stored.
+ *   @param f/r a char that indicates the direction of the genome dictionary forward (f)
+ *          or reverse (r).
+ *   @param prefix is the subsequence length that will be used of the dictionaries words.
+ *          Note: length = prefix * 4. If length is bigger than dictionary words length an
+ *          error will be launched.
+ *   @param startIndex is a base value used to adjust the genomes indexes. This value will 
+ *          be directly included to all genomes values.
+ * The result of the program will be the following:
+ *   @file <out>.frags file with all fragments generated that satisfies the similarity and
+ *         length thresholds.
+ * The program will write some messages in default output stream that shows the action that
+ * is being done by the program each moment.
+ * Warning: if any error is launched, the program automatically stops, if it happens is
+ * normal that the following files appear in your output folder:
+ *   @file <out>.hindx is an auxiliary file with information about some buffer used in the 
+ *         program process.
+ *   @file <out>.hts is an auxilary file with information about the seed generated during 
+ *         the comparisson process.
+ */
 int main(int ac, char** av){
 	// Check arguments
-	if(ac!=10){
-		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r prefix\n");
+	if(ac!=10 && ac!=11){
+		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r prefix\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r prefix startIndx\n");
 		return -1;
 	}
 
@@ -34,6 +72,10 @@ int main(int ac, char** av){
 	Reads *metagenome; // Short sequence array for metagenome
 	char *fname; // File names handler
 	bool removeIntermediataFiles = true; // Internal variable to delete intermediate files	
+	if(ac == 11) // Store index base
+		startIndex = atoi(av[10]);
+	else
+		startIndex = -1;
 
 	// Allocate necessary memory
 	// Memory for buffer
@@ -256,7 +298,7 @@ int main(int ac, char** av){
 			writeSequenceLength(&genomeLength, fr);
 
 			/////////////////////////////////////////////////////////////////
-			fprintf(stdout, "\tFrags: Extending seeds .");
+			fprintf(stdout, "\tFrags: Extending seeds. [%"PRIu64"]",buffersWritten);
 			fflush(stdout);
 			/////////////////////////////////////////////////////////////////
 
@@ -277,7 +319,7 @@ int main(int ac, char** av){
 					}
 				}else{ // New fragment
 					// Check correct read index
-					//currRead = metagenome;
+					if(currRead->seqIndex > buffer[index].seqX) currRead = metagenome;
 					while(currRead->seqIndex != buffer[index].seqX){
 						if(currRead->next == NULL){
 							fprintf(stderr, "Error searching read index.\n");
@@ -437,7 +479,7 @@ int main(int ac, char** av){
 	sortList(&hitsList);	
 
 	/////////////////////////////////////////////////////////////////
-	fprintf(stdout, "\tFrags: Extending seeds.");
+	fprintf(stdout, "\tFrags: Extending seeds. [%"PRIu64"]",buffersWritten);
 	fflush(stdout);
 	/////////////////////////////////////////////////////////////////
 
@@ -500,7 +542,7 @@ int main(int ac, char** av){
 			}
 		}else{ // Different diag or seq
 			// Check correct read index
-			//currRead = metagenome;
+			if(currRead->seqIndex > hitsList->hits[hitsList->index].seqX) currRead = metagenome;
 			while(currRead->seqIndex != hitsList->hits[hitsList->index].seqX){
 				if(currRead->next == NULL){
 					fprintf(stderr, "Error searching read index.\n");

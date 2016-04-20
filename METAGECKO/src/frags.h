@@ -31,6 +31,7 @@ uint64_t S_Threshold; // Similarity threshold
 uint64_t L_Threshold; // Length threshold
 uint64_t hitLength;
 int prefixSize; // Word size
+int startIndex; // Base index
 
 
 // FUNCTIONS

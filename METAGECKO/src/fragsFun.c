@@ -195,6 +195,8 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 			}
 			arr[i].seq = (uint32_t) aux.seq;
 			arr[i].pos = aux.pos;
+
+			if(startIndex > 0) arr[i].seq += startIndex; // Fixe index
 		}
 	}
 }
@@ -233,7 +235,9 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 	uint64_t pos = (uint64_t) ftell(hits);
 	uint64_t numHits = 0;
 	Hit lastHit;
-	fwrite(&pos,sizeof(uint64_t),1,index);
+	if(fwrite(&pos,sizeof(uint64_t),1,index)!=1){
+		fprintf(stderr, "writeHitsBuff:: Error writting position on index file.\n");
+	}
 	
 	// Write first hit
 	fwrite(&buff[0].seqX,sizeof(uint32_t),1,hits);
@@ -248,6 +252,7 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 	// Write hits in hits file
 	for(pos=1; pos<hitsInBuff; ++pos){
 		if(buff[pos].diag == lastHit.diag && buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY && buff[pos].posX < lastHit.posX + lastHit.length){
+			lastHit = buff[pos];
 			continue; // Collapsable
 		}
 		fwrite(&buff[pos].seqX,sizeof(uint32_t),1,hits);
@@ -260,7 +265,9 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 		numHits++;
 	}
 	// Write final number of hits
-	fwrite(&numHits,sizeof(uint64_t),1,index);
+	if(fwrite(&numHits,sizeof(uint64_t),1,index)!=1){
+		fprintf(stderr, "writeHitsBuff:: Error writting num hits on index file.\n");
+	}
 	buffersWritten++;
 }
 
