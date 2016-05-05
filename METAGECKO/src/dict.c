@@ -5,6 +5,8 @@
  */
 #include "dict.h"
 
+int exists(char*);
+
 /* This main contains the workflow to read a FASTA format file and take the sequences
  * words to generate a hashtable that links all found words (without repetitions) with 
  * the positions where it appears.
@@ -37,14 +39,24 @@ int main(int ac, char** av){
 	if(ac!=4){
 		fprintf(stderr, "Bad call error.\nUSE: dict metag.IN dictName WL\n");
 		return -1;
-	}else if(atoi(av[3])%4 != 0){
-		fprintf(stderr, "Error WL must be a 4 multiple and it's \"%s\".\n", av[3]);
-		return -1;
 	}
 
-	/////////////////////////////////////////////////////////////////
+	/////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, "\tDict: Starting dictionaries program.\n");
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
+
+    // Check arguments
+    if(!exists(av[1])){ // Check if metagenome file exists
+    	fprintf(stderr, "Error:: Metagenome file specified doesn't exists.\n");
+    	return -1;
+    }
+    if(!isdigit(av[3])){
+    	fprintf(stderr, "Error:: Word length specified isn't a number.\n");
+    	return -1;
+    }else if(atoi(av[3])%4 != 0){
+		fprintf(stderr, "Error:: Word length must be a 4 multiple.\n");
+		return -1;
+	}
 
 	// Variables
 	uint16_t WL = (uint16_t) atoi(av[3]); // Word length
@@ -59,11 +71,11 @@ int main(int ac, char** av){
 	unsigned char *WordsBlock;
 	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
 
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, "\tDict: Opening/creating necessary files.");
     fflush(stdout);
-    /////////////////////////////////////////////////////////////////
-
+	/////////////////////////// CHECKPOINT ///////////////////////////
+	
 	// Allocate necessary memory
 	// Memory for buffer
 	if((buffer = (wentry*) malloc(sizeof(wentry)*BUFFER_LENGTH))==NULL){
@@ -107,11 +119,11 @@ int main(int ac, char** av){
 		return -1;
 	}
 
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, " (Done)\n");
     fprintf(stdout, "\tDict: Reading k-mers.");
     fflush(stdout);
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
 
 	// START WORKFLOW
 	// Read metagenome file
@@ -194,11 +206,11 @@ int main(int ac, char** av){
 	// Write buffered words
 	if(wordsInBuffer != 0){
 		if(numBuffWritten == 0){ // Special case, only one buffer
-            /////////////////////////////////////////////////////////////////
+            /////////////////////////// CHECKPOINT ///////////////////////////
             fprintf(stdout, " (Done)\n");
             fprintf(stdout, "\tDict: Writting dictionary.");
             fflush(stdout);
-            /////////////////////////////////////////////////////////////////
+            /////////////////////////// CHECKPOINT ///////////////////////////
 
 			// Sort buffer 
 			quicksort_W(buffer,0,wordsInBuffer-1);
@@ -247,11 +259,11 @@ int main(int ac, char** av){
 			// Write last word index
 			fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
 
-            /////////////////////////////////////////////////////////////////
+            /////////////////////////// CHECKPOINT ///////////////////////////
             fprintf(stdout, " (Done)\n");
             fprintf(stdout, "\tDict: Closing the program.\n");
             fflush(stdout);
-            /////////////////////////////////////////////////////////////////
+            /////////////////////////// CHECKPOINT ///////////////////////////
 
 			// Close files
 			fclose(pDic);
@@ -275,10 +287,10 @@ int main(int ac, char** av){
 		}else if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){ return -1;
 		}else numBuffWritten++;
 	}else if(wordsInBuffer == 0 && numBuffWritten == 0){ // Special case
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////// CHECKPOINT ///////////////////////////
         fprintf(stdout, "\tDict: Any k-mer found.\n");
         fprintf(stdout, "\tDict: Closing the program.\n");
-        /////////////////////////////////////////////////////////////////
+        /////////////////////////// CHECKPOINT ///////////////////////////
 
 		free(WordsBlock);
 		free(buffer);
@@ -303,11 +315,11 @@ int main(int ac, char** av){
 	free(WordsBlock);
 	free(buffer);
 
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, " (Done)\n");
     fprintf(stdout, "\tDict: Writting dictionary.");
     fflush(stdout);
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
 
 	// Read Intermediate files and create final dictionary
 		// Close write buffer and open read buffers
@@ -482,11 +494,11 @@ int main(int ac, char** av){
 	// Write last word index
 	fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
 
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, " (Done)\n");
     fprintf(stdout, "\tDict: Closing the program.\n");
     fflush(stdout);
-    /////////////////////////////////////////////////////////////////
+    /////////////////////////// CHECKPOINT ///////////////////////////
 
 	// Deallocate words buffer
 	free(BuffWordsBlock);
@@ -508,4 +520,15 @@ int main(int ac, char** av){
 	free(temp.w.b);
 	// Everything finished. All it's ok.
 	return 0;
+}
+
+
+/* This function is used to check if a file exists or not.
+ *  @param file is a string with the absolute/relative path to the file.
+ *  @return a positive number if the file exists and the program have access
+ *          or zero in other cases.
+ */
+int exists(char *file){
+	if(access(file,F_OK) != (-1)) return 1;
+	else return 0;
 }
