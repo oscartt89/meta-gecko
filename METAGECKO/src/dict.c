@@ -41,9 +41,6 @@ int main(int ac, char** av){
 		return -1;
 	}
 
-	/////////////////////////// CHECKPOINT ///////////////////////////
-    fprintf(stdout, "\tDict: Starting dictionaries program.\n");
-    /////////////////////////// CHECKPOINT ///////////////////////////
 
     // Check arguments
     if(!exists(av[1])){ // Check if metagenome file exists
@@ -53,10 +50,14 @@ int main(int ac, char** av){
     if(!isdigit(av[3])){
     	fprintf(stderr, "Error:: Word length specified isn't a number.\n");
     	return -1;
-    }else if(atoi(av[3])%4 != 0){
-		fprintf(stderr, "Error:: Word length must be a 4 multiple.\n");
+    }else if(atoi(av[3])%4 != 0 && atoi(av[3]) > 0){
+		fprintf(stderr, "Error:: Word length must be a 4 multiple and positive.\n");
 		return -1;
 	}
+
+	/////////////////////////// CHECKPOINT ///////////////////////////
+    fprintf(stdout, "\tDict: Starting dictionaries program.\n");
+    /////////////////////////// CHECKPOINT ///////////////////////////
 
 	// Variables
 	uint16_t WL = (uint16_t) atoi(av[3]); // Word length
@@ -75,7 +76,7 @@ int main(int ac, char** av){
     fprintf(stdout, "\tDict: Opening/creating necessary files.");
     fflush(stdout);
 	/////////////////////////// CHECKPOINT ///////////////////////////
-	
+
 	// Allocate necessary memory
 	// Memory for buffer
 	if((buffer = (wentry*) malloc(sizeof(wentry)*BUFFER_LENGTH))==NULL){
