@@ -19,19 +19,19 @@
 int BYTES_IN_WORD;
 
 // FUNCTIONS
+void checkOrder(node_W**,bool);
+int exists(char*);
+int GT(wentry,wentry);
+int is_int(char const*);
+uint64_t loadWord(wentry**,FILE*,int64_t);
+void move(node_W**,node_W**);
+int partition(wentry*,int,int);
+void push(node_W**,node_W**);
+int quicksort_W(wentry*,int,int);
 inline void shift_word(Word*);
+void sortList(node_W**);
 inline void storeWord(wentry*,wentry);
-int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 int wordcmp(Word,Word,int);
 int wordComparator(wentry*,wentry*);
-int partition(wentry*,int,int);
-int quicksort_W(wentry*,int,int);
-uint64_t loadWord(wentry**,FILE*,int64_t);
+int writeBuffer(wentry*,FILE*,FILE*,uint64_t);
 inline void writeWord(wentry*,FILE*,FILE*,bool,uint32_t*);
-void checkOrder(node_W**,bool);
-int GT(wentry,wentry);
-void push(node_W**,node_W**);
-void move(node_W**,node_W**);
-void sortList(node_W**);
-int exists(char*);
-int is_int(char const*);
