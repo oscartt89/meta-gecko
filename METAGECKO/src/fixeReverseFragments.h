@@ -10,7 +10,7 @@
 #include <ctype.h>
 #include <arpa/inet.h>
 #include <stdbool.h> // Boolean varaibles
-#include "metag_structs.h"
+#include "metag_common.h"
 
 #define FRAG_BUFFER_SIZE 100000
 #define MAX_FILE_LENGTH 1024 // Already exists

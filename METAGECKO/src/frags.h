@@ -4,14 +4,7 @@
  *    of Malaga).
  */
 
-#include <stdio.h> // IO functions
-#include <stdlib.h> // Memory functions
-#include <errno.h> // errors
-#include <string.h> // String functions
-#include <stdbool.h> // Boolean varaibles
-#include <ctype.h>
-#include <arpa/inet.h>
-#include "metag_structs.h"
+#include "metag_common.h"
 
 // VARAIBLES
 #define MAX_BUFF 10000000
@@ -27,7 +20,7 @@
 
 // GLOBAL VARAIBLES
 uint64_t buffersWritten;
-uint64_t S_Threshold; // Similarity threshold
+float S_Threshold; // Similarity threshold
 uint64_t L_Threshold; // Length threshold
 uint64_t hitLength;
 int prefixSize; // Word size
@@ -63,3 +56,6 @@ Reads* LoadMetagenome(char*,uint64_t*);
 inline void freeReads(Reads**);
 void writeSequenceLength(uint64_t*,FILE*);
 void endianessConversion(char*,char*,int);
+int exists(char*);
+int is_int(char const*);
+int is_float(char const*);

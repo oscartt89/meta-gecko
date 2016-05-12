@@ -56,6 +56,71 @@ int main(int ac, char** av){
 	fprintf(stdout, "\tFrags: Starting fragments program.\n");
 	/////////////////////////////////////////////////////////////////
 	
+	// Necessary variables
+	char *fname; // File names handler
+
+	// Memory for file names handler
+	if((fname = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){
+		fprintf(stderr, "Error allocating memory for file names handler.\n");
+		return -1;
+	}
+
+
+	// Check arguments
+	strcpy(fname,av[1]);
+	if(!exists(strcat(fname,".d2hP"))){ // Check metagenome dict 
+		fprintf(stderr, "Error:: couldn't find metagenome dictionary.\n");
+		return -1;
+	}
+	if(!exists(av[2])){ // Check metagenome file
+		fprintf(stderr, "Error:: Metagenome file specified doesn't exists\n");
+		return -1;
+	}
+	strcpy(fname,av[3]);
+	if(!exists(strcat(fname,".d2hP"))){ // Check genome dict 
+		fprintf(stderr, "Error:: couldn't find genome dictionary.\n");
+		return -1;
+	}
+	if(!exists(av[4])){ // Check metagenome dict 
+		fprintf(stderr, "Error:: Genome file specified doesn't exists\n");
+		return -1;
+	}
+	if(is_float(av[6])){ // Check similarity threshold
+		fprintf(stderr, "Error:: Similarity threshold specified isn't a float number\n");
+		return -1;
+	}else if(atof(av[6]) < 0 || atof(av[6]) > 100){
+		fprintf(stderr, "Error:: Similarity threshold specified isn't contained in range [0,100]\n");
+		return -1;
+	}
+	if(!is_int(av[7])){ // Check length threshold
+		fprintf(stderr, "Error:: Length threshold specified isn't a number.\n");
+		return -1;
+	}else if(atoi(av[7]) < 0){
+		fprintf(stderr, "Error:: Similarity threshold must be positive.\n");
+		return -1;
+	}
+	if(av[8][0]!='f' && av[8][0]!='r'){ // Check forward/reverse argument
+		fprintf(stderr, "Error:: Forward/reverse argument must be <f> or <r>\n");
+		return -1;
+	}
+	if(!is_int(av[9])){ // Check prefix
+		fprintf(stderr, "Error:: Prefix specified isn't a number.\n");
+		return -1;
+	}else if(atoi(av[9]) < 1){
+		fprintf(stderr, "Error:: Prefix must be >1.\n");
+		return -1;
+	}
+	if(ac == 11){
+		if(!is_int(av[10])){ // Check prefix
+			fprintf(stderr, "Error:: Base index specified isn't a number.\n");
+			return -1;
+		}else if(atoi(av[10]) < 0){
+			fprintf(stderr, "Error:: Base index must be positive.\n");
+			return -1;
+		}
+	}
+
+
 	// Variables
 	FILE *mW,*mP,*gW,*gP; // Dictionaries
 	FILE *hIndx,*hts; // Intermediate files
@@ -65,12 +130,11 @@ int main(int ac, char** av){
 	uint16_t mWL;
 	uint16_t BytesGenoWord = 8, BytesMetagWord;
 	buffersWritten = 0; // Init global variable (frags.h)1
-	S_Threshold = (uint64_t) atoi(av[6]); // Similarity threshold
+	S_Threshold = (float) atof(av[6]); // Similarity threshold
 	L_Threshold = (uint64_t) atoi(av[7]); // Length threshold
 	prefixSize = atoi(av[9]); // Prefix array legnth
 	Sequence *genome; // Sequence for genome
 	Reads *metagenome; // Short sequence array for metagenome
-	char *fname; // File names handler
 	bool removeIntermediataFiles = true; // Internal variable to delete intermediate files	
 	if(ac == 11) // Store index base
 		startIndex = atoi(av[10]);
@@ -81,12 +145,6 @@ int main(int ac, char** av){
 	// Memory for buffer
 	if((buffer = (Hit*) malloc(sizeof(Hit)*MAX_BUFF))==NULL){
 		fprintf(stderr, "Error allocating memory for hits buffer.\n");
-		return -1;
-	}
-
-	// Memory for file names handler
-	if((fname = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){
-		fprintf(stderr, "Error allocating memory for file names handler.\n");
 		return -1;
 	}
 

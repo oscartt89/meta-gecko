@@ -5,8 +5,6 @@
  */
 #include "dict.h"
 
-int exists(char*);
-
 /* This main contains the workflow to read a FASTA format file and take the sequences
  * words to generate a hashtable that links all found words (without repetitions) with 
  * the positions where it appears.
@@ -41,13 +39,12 @@ int main(int ac, char** av){
 		return -1;
 	}
 
-
     // Check arguments
     if(!exists(av[1])){ // Check if metagenome file exists
     	fprintf(stderr, "Error:: Metagenome file specified doesn't exists.\n");
     	return -1;
     }
-    if(!isdigit(av[3])){
+    if(!is_int(av[3])){
     	fprintf(stderr, "Error:: Word length specified isn't a number.\n");
     	return -1;
     }else if(atoi(av[3])%4 != 0 && atoi(av[3]) > 0){
@@ -521,15 +518,4 @@ int main(int ac, char** av){
 	free(temp.w.b);
 	// Everything finished. All it's ok.
 	return 0;
-}
-
-
-/* This function is used to check if a file exists or not.
- *  @param file is a string with the absolute/relative path to the file.
- *  @return a positive number if the file exists and the program have access
- *          or zero in other cases.
- */
-int exists(char *file){
-	if(access(file,F_OK) != (-1)) return 1;
-	else return 0;
 }

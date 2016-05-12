@@ -330,3 +330,27 @@ void sortList(node_W **first){
 		}
 	}
 }
+
+
+/* This function is used to check if a file exists or not.
+ *  @param file is a string with the absolute/relative path to the file.
+ *  @return a positive number if the file exists and the program have access
+ *          or zero in other cases.
+ */
+int exists(char *file){
+    if(access(file,F_OK) != (-1)) return 1;
+    else return 0;
+}
+
+
+/* This function is used to check if a string given is an integer.
+ *  @param str is the string to be checked.
+ *  @return a positive number if it's an integer or zero in other cases. 
+ */
+int is_int(char const *str){
+    int integer = atoi(str); // Return the first integer found on the string
+    char str2[1024];
+    sprintf((char*)&str2,"%d",integer); // int -> string
+    int isInteger = strcmp(str2, str) == 0; // Check if there are equals => String==Integer
+    return isInteger;
+}

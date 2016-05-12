@@ -4,28 +4,19 @@
  *    of Malaga).
  */
 
-#include <stdio.h> // IO functions
-#include <stdlib.h> // Memory functions
-#include <errno.h> // errors
-
-#include <string.h> // String functions
-#include <ctype.h> // Char functions: isupper,...
-#include <stdbool.h> // Boolean varaibles
-
-#include "metag_structs.h"
+#include "metag_common.h"
 
 // VARIABLES
 #define BUFFER_LENGTH 10000000
 #define MAX_FILE_LENGTH 1024
 #define FLAG 0
 #define READ_BUFF_LENGTH 10000
-// FUNCTIONS
+
+// INLINE FUNCTIONS
 #define SWAP_W(a,b,t) t=a; a=b; b=t;
 
+// GLOBAL VARIABLES
 int BYTES_IN_WORD;
-
- 
-
 
 // FUNCTIONS
 inline void shift_word(Word*);
@@ -42,3 +33,5 @@ int GT(wentry,wentry);
 void push(node_W**,node_W**);
 void move(node_W**,node_W**);
 void sortList(node_W**);
+int exists(char*);
+int is_int(char const*);

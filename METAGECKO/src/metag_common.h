@@ -8,6 +8,13 @@
 #include <stdint.h> // write uint64_t ...
 #include <inttypes.h>  // uint64_t ...
 #include <unistd.h>  // System checks
+#include <ctype.h> // Char and string functions
+#include <arpa/inet.h> // some IO functions
+#include <stdio.h> // IO functions
+#include <stdlib.h> // Memory functions
+#include <errno.h> // errors
+#include <string.h> // String functions
+#include <stdbool.h> // Boolean varaibles
 
 // Constants
 #define MAXLID 200
