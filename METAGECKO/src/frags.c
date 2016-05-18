@@ -244,7 +244,7 @@ int main(int ac, char** av){
 	if(prefixSize == BytesMetagWord && prefixSize == BytesGenoWord){
 		while(!feof(mW) && !feof(gW)){
 			if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
-				generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord);
+				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord) < 0) return -1;
 			// Load next word
 			if(cmp >= 0) // New genome word is necessary
 				readHashEntry(&we[1],gW);
@@ -255,7 +255,7 @@ int main(int ac, char** av){
 		while(!feof(mW)){
 			// Check hit
 			if((cmp = wordcmp(we[0].seq,we[1].seq,prefixSize))==0){ // Hit
-				generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize);
+				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize) < 0) return -1;
 				if(firstmatch){
 					lastFirstHit = (uint64_t)(ftell(gW) - sizeof(hashentry));
 					firstmatch = false;

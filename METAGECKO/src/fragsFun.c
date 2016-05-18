@@ -855,7 +855,7 @@ Reads* LoadMetagenome(char *metagFile,uint64_t *totalLength){
 	uint32_t seqIndex = 0, seqLen = 0;
 	char c;
 	uint64_t absoluteLength = 0;
-
+	
 	// Open metagenome file
 	if((metag = fopen(metagFile,"rt"))==NULL){
 		fprintf(stderr, "LoadMetagenomeError opening metagenome file.\n");
@@ -889,8 +889,16 @@ Reads* LoadMetagenome(char *metagFile,uint64_t *totalLength){
 					lastRead = currRead;
 				}
 
+				// Check posible errors
+				if(seqLen > MAX_READ_LENGTH){
+					fprintf(stderr, "\n\tError, current read length is higher than maximum allowed.\n\t\tRead:%"PRIu32",Len:%"PRIu32"\n", seqIndex, seqLen);
+				}
+
 				// Generate new node
-				currRead = (Reads*) malloc(sizeof(Reads));
+				if((currRead = (Reads*) malloc(sizeof(Reads)))==NULL){ // ## El error salta en esta linea tras muchas iteraciones. El caracter que entra cuando ocurre el error es "\n"
+					fprintf(stderr, "\n\tMemory pointer returned is NULL. Memory corrupted.\n");
+					exit(-1);
+				}
 
 				// Update info
 				seqIndex++; // New sequence
