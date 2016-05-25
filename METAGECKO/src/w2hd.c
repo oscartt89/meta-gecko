@@ -50,6 +50,7 @@ int main(int ac, char** av){
 	while(!feof(fw)){
 		  loc.pos=we.pos;
 		  loc.seq=we.seq;
+		  loc.strand=we.strand;
 		  if (wordcmp(&he.w.b[0],&we.w.b[0],32)!=0) {
 			 fwrite(&he,sizeof(hashentry),1,fOut1);
 			 memcpy(&he.w.b[0],&we.w.b[0],8);

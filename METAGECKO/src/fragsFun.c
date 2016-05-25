@@ -25,9 +25,10 @@ int wordcmp(unsigned char *w1, unsigned char *w2, int n){
  * criterion:
  *    1 - Sequence X
  *    2 - Sequence Y
- *    3 - Diagonal
- *    4 - Position on X
- *    5 - Length 
+ *    3 - Sequence strands
+ *    4 - Diagonal
+ *    5 - Position on X
+ *    6 - Length
  *  @param h1 word to be compared.
  *  @param h2 word to be compared
  *  @return zero if both are equal, a positive number if w1 is greater or a
@@ -39,6 +40,12 @@ int HComparer(Hit h1, Hit h2){
 
 	if(h1.seqY > h2.seqY) return 1;
 	else if(h1.seqY < h2.seqY) return -1;
+
+	if(h1.strandX=='f' && h2.strandX=='r') return 1;
+	else if(h1.strandX=='r' && h2.strandX=='f') return -1;
+
+	if(h1.strandY=='f' && h2.strandY=='r') return 1;
+	else if(h1.strandY=='r' && h2.strandY=='f') return -1;
 
 	if(h1.diag > h2.diag) return 1;
 	else if(h1.diag < h2.diag) return -1;
@@ -185,6 +192,8 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 				fprintf(stderr, "loadLocationEntrance:: Error reading position.[%"PRIu32"]\n",i);
 				return;
 			}
+			// Write strand
+			arr[i].strand = 'f';
 		}
 	}else{
 		location aux;
@@ -195,6 +204,7 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool m
 			}
 			arr[i].seq = (uint32_t) aux.seq;
 			arr[i].pos = aux.pos;
+			arr[i].strand = aux.strand;
 
 			if(startIndex > 0) arr[i].seq += startIndex; // Fixe index
 		}
@@ -215,6 +225,8 @@ inline void storeHit(Hit* hit,LocationEntry X,LocationEntry Y,uint64_t HitLength
 	hit->posY = Y.pos;
 	hit->seqY = Y.seq;
 	hit->length = HitLength;
+	hit->strandX = X.strand;
+	hit->strandY = Y.strand;
 }
 
 
@@ -246,6 +258,8 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 	fwrite(&buff[0].posX,sizeof(uint64_t),1,hits);
 	fwrite(&buff[0].posY,sizeof(uint64_t),1,hits);
 	fwrite(&buff[0].length,sizeof(uint64_t),1,hits);
+	fwrite(&buff[0].strandX,sizeof(char),1,hits);
+	fwrite(&buff[0].strandY,sizeof(char),1,hits);
 	numHits++;
 	lastHit = buff[0];
 		
@@ -261,6 +275,8 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 		fwrite(&buff[pos].posX,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].posY,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].length,sizeof(uint64_t),1,hits);
+		fwrite(&buff[pos].strandX,sizeof(char),1,hits);
+		fwrite(&buff[pos].strandY,sizeof(char),1,hits);
 		lastHit = buff[pos];
 		numHits++;
 	}
@@ -276,9 +292,10 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
  * criterion:
  *    1 - Sequence X
  *    2 - Sequence Y
- *    3 - Diagonal
- *    4 - Position on X
- *    5 - Length 
+ *    3 - Strands
+ *    4 - Diagonal
+ *    5 - Position on X
+ *    6 - Length 
  *  @param h1 word to be compared.
  *  @param h2 word to be compared
  *  @return zero if w2 are greater or equal and a positive number if
@@ -290,6 +307,12 @@ int GT(Hit h1, Hit h2){
 
 	if(h1.seqY > h2.seqY) return 1;
 	else if(h1.seqY < h2.seqY) return 0;
+
+	if(h1.strandX=='f' h2.strandX=='r') return 1;
+	else if(h1.strandX=='r' h2.strandX=='f') return 0;
+
+	if(h1.strandY=='f' h2.strandY=='r') return 1;
+	else if(h1.strandY=='r' h2.strandY=='f') return 0;
 
 	if(h1.diag > h2.diag) return 1;
 	else if(h1.diag < h2.diag) return 0;
@@ -395,6 +418,14 @@ uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
 			fprintf(stderr, "loadHit:: Error reading length.\n");
 			return -1;
 		}
+		if(fread(&(*hit)[j].strandX,sizeof(char),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading X strand.\n");
+			return -1;
+		}
+		if(fread(&(*hit)[j].strandY,sizeof(char),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading Y strand.\n");
+			return -1;
+		}
 		unread--;
 	}
 	return j;
@@ -480,6 +511,8 @@ void copyHit(Hit* toCopy, Hit copy){
 	toCopy->seqX = copy.seqX;
 	toCopy->seqY = copy.seqY;
 	toCopy->length = copy.length;
+	toCopy->strandX = copy.strandX;
+	toCopy->strandY = copy.strandY;
 }
 
 

@@ -24,6 +24,8 @@ typedef struct {
     //reflects in what sequence occurs the
     //word
     uint64_t seq;
+    //Forward or reverse
+    char strand;
 } wentry;
 
 //Struct for w2hd program
@@ -47,6 +49,8 @@ typedef struct {
     //reflects in what sequence occurs the
     //word
     uint64_t seq;
+    //Forward or reverse
+    char strand;
 } location;
 
 //Struct for hits, sortHits and filterHits programs

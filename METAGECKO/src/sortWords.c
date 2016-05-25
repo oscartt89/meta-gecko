@@ -33,6 +33,11 @@ int GT(BaseType a1, BaseType a2){
 	else if(a1.seq < a2.seq) return 0;
 
 	if(a1.pos > a2.pos) return 1;
+	else if(a1.pos < a2.pos) return 0;
+	
+	if(a1.strand=='f' && a2.strand=='r') return 1;
+	else if(a1.strand=='r' && a2.strand=='f') return 0;
+
 	return 0;
 }
 

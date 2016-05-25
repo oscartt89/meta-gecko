@@ -86,6 +86,7 @@ typedef struct{
 typedef struct{
     uint32_t seq; // Sequence index
     uint64_t pos; // Position on sequence
+    char strand; // Direction on original sequence
 } LocationEntry;
 
 
@@ -111,6 +112,10 @@ typedef struct {
     uint32_t seqY;
     // Length of the hit
     uint64_t length;
+    // SeqX strand
+    char strandX;
+    // SequY strand
+    char strandY;
 } Hit;
 
 
@@ -152,6 +157,8 @@ typedef struct {
     //reflects in what sequence occurs the
     //word
     uint64_t seq;
+    //Forward or reverse
+    char strand;
 } location;
 
 
