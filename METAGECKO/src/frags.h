@@ -30,10 +30,10 @@ int startIndex; // Base index
 // FUNCTIONS
 int wordcmp(unsigned char*,unsigned char*,int);
 int HComparer(Hit w1, Hit w2);
-void readHashEntry(WordEntry*,FILE*);
+//void readHashEntry(WordEntry*,FILE*);
 int readWordEntrance(WordEntry*,FILE*,uint16_t);
 int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*,int);
-void loadLocationEntrance(LocationEntry*,FILE*,uint32_t,bool); 
+void loadLocationEntrance(LocationEntry*,FILE*,uint32_t); 
 inline void storeHit(Hit*,LocationEntry,LocationEntry,uint64_t);
 void writeHitsBuff(Hit*,FILE*,FILE*,uint64_t);
 int GT(Hit,Hit);

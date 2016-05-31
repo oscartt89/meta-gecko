@@ -59,30 +59,30 @@ int HComparer(Hit h1, Hit h2){
  *  @param we word entry where info will be stored.
  *  @param wD genome dictionary file.
  */
-void readHashEntry(WordEntry *we,FILE *wD){
-	hashentry h;
-	// Read hashentry
-	if(fread(&h,sizeof(hashentry),1,wD)!=1){
-		if(!feof(wD))
-			//fprintf(stderr, "Couldn't read hashentry.\n");
-		return; // End process
-	}
+//void readHashEntry(WordEntry *we,FILE *wD){
+//	hashentry h;
+//	// Read hashentry
+//	if(fread(&h,sizeof(hashentry),1,wD)!=1){
+//		if(!feof(wD))
+//			//fprintf(stderr, "Couldn't read hashentry.\n");
+//		return; // End process
+//	}
+//
+//	// Store info
+//	we->metag = false;
+//	// we->WB <- It is written out of the function 
+//	we->pos = h.pos;
+//	we->reps = (uint32_t) h.num;
+//	int i;
+//	for(i=0;i<8;++i)
+//		we->seq[i] = h.w.b[i];
+//}
 
-	// Store info
-	we->metag = false;
-	// we->WB <- It is written out of the function 
-	we->pos = h.pos;
-	we->reps = (uint32_t) h.num;
-	int i;
-	for(i=0;i<8;++i)
-		we->seq[i] = h.w.b[i];
-}
 
-
-/* This function is used to load a hashentry from metagenome dictionary and
+/* This function is used to load a hashentry from metagecko dictionaries and
  * store it in a wordEntry.
  *  @param we word entry where info will be stored.
- *  @param wD metagenome dictionary file.
+ *  @param wD dictionary file.
  *  @return zero if everything finished well or a negative number in other cases.
  */
 int readWordEntrance(WordEntry *we,FILE *wD,uint16_t SeqBytes){
@@ -123,6 +123,8 @@ int readWordEntrance(WordEntry *we,FILE *wD,uint16_t SeqBytes){
  *  @param prefix is the prefix length taken of the word.
  *  @retun a non-negative number if the process finished without errors or a
  *     a negative number in other cases.
+ *  @note only seqY reverse is used to generate hits because use X.reverse and Y.reverse
+ *        is the same than use X.forward and Y.forward.
  */
 int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FILE* outIndx, FILE* outBuff, uint64_t* hitsInBuff, int prefix){
 	// Positionate on locations files
@@ -141,8 +143,8 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
 	LocationEntry Y_Arr[Y.reps];
 
 	// Load entrances
-	loadLocationEntrance(&X_Arr[0],XPFile,X.reps,X.metag);
-	loadLocationEntrance(&Y_Arr[0],YPFile,Y.reps,Y.metag);
+	loadLocationEntrance(&X_Arr[0],XPFile,X.reps);
+	loadLocationEntrance(&Y_Arr[0],YPFile,Y.reps);
 
 	// Check buffer space
 	if(*hitsInBuff == MAX_BUFF){
@@ -153,15 +155,16 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
 	// Generate all hits
 	uint32_t i,j;
 	for(i=0; i<X.reps; ++i)
-		for(j=0; j<Y.reps; ++j){
-			storeHit(&buff[*hitsInBuff],X_Arr[i],Y_Arr[j],hitLength);
-			*hitsInBuff+=1;
-			// Check buffer space
-			if(*hitsInBuff == MAX_BUFF){
-				writeHitsBuff(buff,outIndx,outBuff,*hitsInBuff);
-				*hitsInBuff=0;
-			}			
-		}
+		if(X_Arr[i].strand == 'f') // Discard X reverse
+			for(j=0; j<Y.reps; ++j){
+				storeHit(&buff[*hitsInBuff],X_Arr[i],Y_Arr[j],hitLength);
+				*hitsInBuff+=1;
+				// Check buffer space
+				if(*hitsInBuff == MAX_BUFF){
+					writeHitsBuff(buff,outIndx,outBuff,*hitsInBuff);
+					*hitsInBuff=0;
+				}			
+			}
 	return 0;
 }
 
@@ -170,33 +173,21 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
  *  @param arr array where locations will be stored.
  *  @param PFile from load the locations.
  *  @param reps number of locations to be loaded.
- *  @param metagenome if it's true PFile must be a new format file, else will be read as 
- *     an old format genome dictionary file.
  */
-void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps, bool metagenome){
+void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps){
 	uint32_t i;
-	if(metagenome){
-		for(i=0; i<reps;++i){
-			if(fread(&arr[i].seq,sizeof(uint32_t),1,PFile)!=1){
-				fprintf(stderr, "loadLocationEntrance:: Error reading sequence index.[%"PRIu32"]\n",i);
-				return;
-			}
-			if(fread(&arr[i].pos,sizeof(uint64_t),1,PFile)!=1){
-				fprintf(stderr, "loadLocationEntrance:: Error reading position.[%"PRIu32"]\n",i);
-				return;
-			}
+	for(i=0; i<reps;++i){
+		if(fread(&arr[i].seq,sizeof(uint32_t),1,PFile)!=1){
+			fprintf(stderr, "loadLocationEntrance:: Error reading sequence index.[%"PRIu32"]\n",i);
+			return;
 		}
-	}else{
-		location aux;
-		for(i=0; i<reps;++i){
-			if(fread(&aux,sizeof(location),1,PFile)!=1){
-				fprintf(stderr, "loadLocationEntrance:: Error reading location\n");
-				return;
-			}
-			arr[i].seq = (uint32_t) aux.seq;
-			arr[i].pos = aux.pos;
-
-			if(startIndex > 0) arr[i].seq += startIndex; // Fixe index
+		if(fread(&arr[i].pos,sizeof(uint64_t),1,PFile)!=1){
+			fprintf(stderr, "loadLocationEntrance:: Error reading position.[%"PRIu32"]\n",i);
+			return;
+		}
+		if(fread(&arr[i].strand,sizeof(char),1,PFile)!=1){
+			fprintf(stderr, "loadLocationEntrance:: Error reading strand.[%"PRIu32"]\n",i);
+			return;
 		}
 	}
 }
@@ -215,6 +206,8 @@ inline void storeHit(Hit* hit,LocationEntry X,LocationEntry Y,uint64_t HitLength
 	hit->posY = Y.pos;
 	hit->seqY = Y.seq;
 	hit->length = HitLength;
+	hit->strandX = X.strand;
+	hit->strandY = Y.strand;
 }
 
 
@@ -246,6 +239,8 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 	fwrite(&buff[0].posX,sizeof(uint64_t),1,hits);
 	fwrite(&buff[0].posY,sizeof(uint64_t),1,hits);
 	fwrite(&buff[0].length,sizeof(uint64_t),1,hits);
+	fwrite(&buff[0].strandX,sizeof(char),1,hits);
+	fwrite(&buff[0].strandY,sizeof(char),1,hits);
 	numHits++;
 	lastHit = buff[0];
 		
@@ -261,6 +256,8 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 		fwrite(&buff[pos].posX,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].posY,sizeof(uint64_t),1,hits);
 		fwrite(&buff[pos].length,sizeof(uint64_t),1,hits);
+		fwrite(&buff[pos].strandX,sizeof(char),1,hits);
+		fwrite(&buff[pos].strandY,sizeof(char),1,hits);
 		lastHit = buff[pos];
 		numHits++;
 	}
@@ -278,7 +275,9 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
  *    2 - Sequence Y
  *    3 - Diagonal
  *    4 - Position on X
- *    5 - Length 
+ *    5 - Strand on X
+ *    6 - Strando on Y
+ *    7 - Length 
  *  @param h1 word to be compared.
  *  @param h2 word to be compared
  *  @return zero if w2 are greater or equal and a positive number if
@@ -297,8 +296,14 @@ int GT(Hit h1, Hit h2){
 	if(h1.posX > h2.posX) return 1;
 	else if(h1.posX < h2.posX) return 0;
 
+	if(h1.strandX=='f' && h2.strandX=='r') return 1;
+	else if(h1.strandX=='r' && h2.strandX=='f') return 0;
+
+	if(h1.strandY=='f' && h2.strandY=='r') return 1;
+	else if(h1.strandY=='r' && h2.strandY=='f') return 0;
+
 	if(h1.length > h2.length) return 1;
-	return 0;
+	else return 0;
 }
 
 
@@ -395,6 +400,14 @@ uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
 			fprintf(stderr, "loadHit:: Error reading length.\n");
 			return -1;
 		}
+		if(fread(&(*hit)[j].strandX,sizeof(char),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading strand X.\n");
+			return -1;
+		}
+		if(fread(&(*hit)[j].strandY,sizeof(char),1,hFile)!=1){
+			fprintf(stderr, "loadHit:: Error reading strand Y.\n");
+			return -1;
+		}
 		unread--;
 	}
 	return j;
@@ -480,6 +493,8 @@ void copyHit(Hit* toCopy, Hit copy){
 	toCopy->seqX = copy.seqX;
 	toCopy->seqY = copy.seqY;
 	toCopy->length = copy.length;
+	toCopy->strandX = copy.strandX;
+	toCopy->strandY = copy.strandY;
 }
 
 
@@ -597,13 +612,26 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 
 	// Initialize values
 	// Diagonals info
-	forwardDiagLength = (seqX->length - hit->posX) > (YLength - hit->posY)? (YLength - hit->posX) : (seqX->length - hit->posX);
-	backwardDiagLength = hit->posX > hit->posY? hit->posY : hit->posX;
+	if(hit->strandY == 'f'){
+		forwardDiagLength = (seqX->length - hit->posX) > (YLength - hit->posY)? (YLength - hit->posY) : (seqX->length - hit->posX);
+		backwardDiagLength = hit->posX > hit->posY? hit->posY : hit->posX;
+	}else{
+		forwardDiagLength = (seqX->length - hit->posX) > hit->posY? hit->posY : (seqX->length - hit->posX);
+		backwardDiagLength = hit->posX > (YLength - hit->posY)? (YLength - hit->posY) : hit->posX;
+	}
+	
 	// Positions values
 	XIndex = hit->posX + hit->length; // End of the seed X
 	XIndx_B = hit->posX - 1; // Init of the seed X
-	YIndex = hit->posY + hit->length; // End of seed Y
-	YIndx_B = hit->posY - 1; // Init of seed Y
+	
+	if(hit->strandY=='f'){ // Forward strand
+		YIndex = hit->posY + hit->length; // End of seed Y
+		YIndx_B = hit->posY - 1; // Init of seed Y
+	}else{ // Reverse strand
+		YIndex = hit->posY -1; // End of seed (init in forward direction)
+		YIndx_B = hit->posY + hit->length; // Init of seed Y
+	}
+	
 	XMaxIndex = XIndex; // Maximum coordiantes on X
 	XMinIndex = XIndx_B; // Minimum coordiantes on X
 	YMaxIndex = YIndex; // Maximum coordiantes on Y
@@ -639,7 +667,8 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 
 		// Move forward
 		XIndex++;
-		YIndex++;
+		if(hit->strandY == 'f') YIndex++;
+		else YIndex--;
 
 		fragmentLength++;
 		// Check minimum score
@@ -652,7 +681,10 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 	score = scoreMax; // Current score is the scoreMax <= Current fragment is maxScoreCoordinates + seed
 	identitites = maxIdentities;
 	XMinIndex = hit->posX; // Update min coordiantes
-	YMinIndex = hit->posY;
+	if(hit->strandY == 'f')
+		YMinIndex = hit->posY;
+	else
+		YMinIndex = hit->posY + hit->length;
 
 	if(XIndx_B >= 0 && YIndx_B >= 0) // Any coordinate are the init
 		while(fragmentLength < backwardDiagLength){
@@ -679,7 +711,10 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 
 			// Move backward
 			XIndx_B--;
-			YIndx_B--;
+			if(hit->strandY == 'f')
+				YIndx_B--;
+			else
+				YIndx_B++;
 
 			fragmentLength++;
 			// Check minimum score
@@ -699,6 +734,7 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 	frag->ident = maxIdentities;
 	frag->seqX = (uint64_t)hit->seqX;
 	frag->seqY = (uint64_t)hit->seqY;
+	frag->strand = hit->strandY;
 
 	if(frag->length >= L_Threshold && frag->similarity >= S_Threshold){ // Correct fragment
 		// Set the values of the FragFile		

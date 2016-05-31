@@ -47,8 +47,8 @@
  */
 int main(int ac, char** av){
 	// Check arguments
-	if(ac!=10 && ac!=11){
-		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r prefix\nUSE: frags metagDic metagFile genoDic genoFile out minS minL f/r prefix startIndx\n");
+	if(ac!=10 && ac!=9){
+		fprintf(stderr, "Bad call error.\nUSE: frags metagDic metagFile genoDic genoFile out minS minL prefix\nUSE: frags metagDic metagFile genoDic genoFile out minS minL prefix startIndx\n");
 		return -1;
 	}
 
@@ -99,22 +99,18 @@ int main(int ac, char** av){
 		fprintf(stderr, "Error:: Similarity threshold must be positive.\n");
 		return -1;
 	}
-	if(av[8][0]!='f' && av[8][0]!='r'){ // Check forward/reverse argument
-		fprintf(stderr, "Error:: Forward/reverse argument must be <f> or <r>\n");
-		return -1;
-	}
-	if(!is_int(av[9])){ // Check prefix
+	if(!is_int(av[8])){ // Check prefix
 		fprintf(stderr, "Error:: Prefix specified isn't a number.\n");
 		return -1;
-	}else if(atoi(av[9]) < 1){
+	}else if(atoi(av[8]) < 1){
 		fprintf(stderr, "Error:: Prefix must be >1.\n");
 		return -1;
 	}
-	if(ac == 11){
-		if(!is_int(av[10])){ // Check prefix
+	if(ac == 10){
+		if(!is_int(av[9])){ // Check prefix
 			fprintf(stderr, "Error:: Base index specified isn't a number.\n");
 			return -1;
-		}else if(atoi(av[10]) < 0){
+		}else if(atoi(av[9]) < 0){
 			fprintf(stderr, "Error:: Base index must be positive.\n");
 			return -1;
 		}
@@ -127,17 +123,17 @@ int main(int ac, char** av){
 	FILE *fr; // Fragments file
 	Hit *buffer;
 	uint64_t hitsInBuffer = 0, genomeLength, nStructs, metagenomeLength;
-	uint16_t mWL;
-	uint16_t BytesGenoWord = 8, BytesMetagWord;
+	uint16_t mWL,gWL;
+	uint16_t BytesGenoWord, BytesMetagWord;
 	buffersWritten = 0; // Init global variable (frags.h)1
 	S_Threshold = (float) atof(av[6]); // Similarity threshold
 	L_Threshold = (uint64_t) atoi(av[7]); // Length threshold
-	prefixSize = atoi(av[9]); // Prefix array legnth
+	prefixSize = atoi(av[8]); // Prefix array legnth
 	Sequence *genome; // Sequence for genome
 	Reads *metagenome; // Short sequence array for metagenome
 	bool removeIntermediataFiles = true; // Internal variable to delete intermediate files	
 	if(ac == 11) // Store index base
-		startIndex = atoi(av[10]);
+		startIndex = atoi(av[9]);
 	else
 		startIndex = -1;
 
@@ -170,18 +166,13 @@ int main(int ac, char** av){
 	// Read words header = WordLength
 		// Check
 		if(fread(&mWL,sizeof(uint16_t),1,mW)!=1){ 
-			fprintf(stderr, "Error, couldn't find word length.\n");
+			fprintf(stderr, "Error, couldn't find word length on metagenome dictionary.\n");
 			return -1;
 		}else if(mWL % 4 != 0){
 			fprintf(stderr, "Error, word length of metagenome dictionary isn't a 4 multiple.\n");
 			return -1;
-		}else{
+		}else
 			BytesMetagWord = mWL/4;
-			if(BytesMetagWord < prefixSize || BytesGenoWord < prefixSize){
-				fprintf(stderr, "Error: prefix is too long.\n");
-				return -1;
-			}
-		}
 
 	// Open genome postions file
 	strcpy(fname,av[3]);
@@ -194,6 +185,22 @@ int main(int ac, char** av){
 	strcpy(fname,av[3]);
 	if((gW = fopen(strcat(fname,".d2hW"),"rb"))==NULL){
 		fprintf(stderr, "Error opening genome words dictionaries.\n");
+		return -1;
+	}
+
+	// Read words header = WordLength
+		// Check
+		if(fread(&gWL,sizeof(uint16_t),1,gW)!=1){ 
+			fprintf(stderr, "Error, couldn't find word length on genome dictionary.\n");
+			return -1;
+		}else if(gWL % 4 != 0){
+			fprintf(stderr, "Error, word length of genome dictionary isn't a 4 multiple.\n");
+			return -1;
+		}else
+			BytesGenoWord = gWL/4;
+
+	if(BytesMetagWord < prefixSize || BytesGenoWord < prefixSize){
+		fprintf(stderr, "Error: prefix is too long.\n");
 		return -1;
 	}
 
@@ -232,7 +239,7 @@ int main(int ac, char** av){
 	// Read first entrances
 	if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 
-	readHashEntry(&we[1],gW);
+	readWordEntrance(&we[1],gW,BytesGenoWord);
 
 	/////////////////////////// CHECKPOINT ///////////////////////////
 	fprintf(stdout, " (Done)\n");
@@ -247,7 +254,7 @@ int main(int ac, char** av){
 				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord) < 0) return -1;
 			// Load next word
 			if(cmp >= 0) // New genome word is necessary
-				readHashEntry(&we[1],gW);
+				if(readWordEntrance(&we[1],gW,BytesGenoWord)<0)return -1;
 			if(cmp <= 0) // New metagenome word is necessary
 				if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 		}
@@ -264,14 +271,14 @@ int main(int ac, char** av){
 			// Check if could be more
 			if(cmp >= 0){ // Could be more
 				// Load next genome word
-				readHashEntry(&we[1],gW);
+				readWordEntrance(&we[1],gW,BytesGenoWord);
 				if(feof(gW)){ // End of genome file
 					// Load next metagenome word
 					if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 					// Reset values and come back at dict
 					firstmatch = true;
 					fseek(gW,lastFirstHit,SEEK_SET); // Reset geno dict
-					readHashEntry(&we[1],gW);
+					readWordEntrance(&we[1],gW,BytesGenoWord);
 				}
 			}else if(cmp < 0){ // No more matches, take next metag word
 				// Load next metagenome word
@@ -279,7 +286,7 @@ int main(int ac, char** av){
 				// Reset values and come back at dict
 				firstmatch = true;
 				fseek(gW,lastFirstHit,SEEK_SET); // Reset geno dict
-				readHashEntry(&we[1],gW);
+				readWordEntrance(&we[1],gW,BytesGenoWord);
 			}
 		}
 	}
@@ -330,7 +337,6 @@ int main(int ac, char** av){
 			
 			// Init first fragment
 			frag.block = 0;
-			frag.strand = av[8][0];
 
 			// Write first fragment
 			Reads *currRead;

@@ -88,6 +88,7 @@ typedef struct{
 typedef struct{
     uint32_t seq; // Sequence index
     uint64_t pos; // Position on sequence
+    char strand; // Strand on the sequence
 } LocationEntry;
 
 
@@ -113,6 +114,10 @@ typedef struct {
     uint32_t seqY;
     // Length of the hit
     uint64_t length;
+    // Strand on sequence X
+    char strandX;
+    // Strand on sequence Y
+    char strandY;
 } Hit;
 
 
@@ -196,7 +201,7 @@ typedef struct{
     uint64_t seqY;
     //synteny block id
     int64_t block;
-    //'f' for the forward strain and 'r' for the reverse
+    //Strand of the seuqnece Y.'f' for the forward strain and 'r' for the reverse
     char strand;
 } FragFile;
 
