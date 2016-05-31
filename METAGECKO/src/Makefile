@@ -44,4 +44,4 @@ metagStats: metagfilestats.c
 	$(CC) $(CFLAGS) metagfilestats.c -o $(BIN)/metagfilestats
 
 fragStats: metagfragstats.c
-	$(CC) $(CFLAGS) metagfragstats.c -o $(BIN)/metagfragstats
+	$(CC) $(CFLAGS) metagfragstats.c fragsFun.c -o $(BIN)/metagfragstats
