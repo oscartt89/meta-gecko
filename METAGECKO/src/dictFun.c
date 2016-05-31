@@ -56,22 +56,13 @@ inline void storeWord(wentry* container,wentry word){
  *     the process finished correctly.
  */
 int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
-//////////////////////////////////////////////////////////////////
-//fprintf(stderr, "a,");
-//////////////////////////////////////////////////////////////////
 	// Sort buffer
 	quicksort_W(buff,0,numWords-1);
-//////////////////////////////////////////////////////////////////
-//fprintf(stderr, "b,");
-//////////////////////////////////////////////////////////////////
 	
 	// Write buffer info on buffer index file
 	uint64_t pos = (uint64_t) ftell(words); // Buffer start position
 	fwrite(&pos,sizeof(uint64_t),1,index);
 	fwrite(&numWords,sizeof(uint64_t),1,index); // Number of words
-//////////////////////////////////////////////////////////////////
-//fprintf(stderr, "c,");
-//////////////////////////////////////////////////////////////////
 	// Write words on words file
 	for(pos=0;pos<numWords;++pos){
 		fwrite(&buff[pos].pos,sizeof(uint64_t),1,words); 
@@ -82,9 +73,6 @@ int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
 		for(i=0;i<BYTES_IN_WORD;++i)
 			fwrite(&buff[pos].w.b[i],sizeof(unsigned char),1,words);
 	}
-//////////////////////////////////////////////////////////////////
-//fprintf(stderr, "d,");
-//////////////////////////////////////////////////////////////////
 	// Buffer correctly written on intermediate files
 	return 0;
 }
