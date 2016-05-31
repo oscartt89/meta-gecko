@@ -6,10 +6,23 @@
 #include "dict.h"
 
 
-/* This function is used to shift bits in a unsigned char array
+/* This function is used to shift left bits in a unsigned char array
  *	@param w: word structure where char array to be shifted is stored.
  */
-void shift_word(Word* w){
+void shift_word_left(Word* w){
+	int i;
+	for(i=BYTES_IN_WORD-1;i>0;i++){
+		w->b[i]>>=2;
+		w->b[i]|=(w->b[i-1]<<6);
+	}
+	w->b[0]<<=2;
+}
+
+
+/* This function is used to shift right bits in a unsigned char array
+ *	@param w: word structure where char array to be shifted is stored.
+ */
+void shift_word_right(Word* w){
 	int i;
 	for(i=0;i<BYTES_IN_WORD-1;i++){
 		w->b[i]<<=2;
@@ -27,6 +40,7 @@ inline void storeWord(wentry* container,wentry word){
 	container->pos = word.pos;
 	container->seq = word.seq;
 	container->w.WL = word.w.WL;
+	container->strand = word.strand;
 	int i;
 	for(i=0;i<BYTES_IN_WORD;++i)
 		container->w.b[i] = word.w.b[i];
@@ -42,22 +56,35 @@ inline void storeWord(wentry* container,wentry word){
  *     the process finished correctly.
  */
 int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
+//////////////////////////////////////////////////////////////////
+//fprintf(stderr, "a,");
+//////////////////////////////////////////////////////////////////
 	// Sort buffer
 	quicksort_W(buff,0,numWords-1);
+//////////////////////////////////////////////////////////////////
+//fprintf(stderr, "b,");
+//////////////////////////////////////////////////////////////////
 	
 	// Write buffer info on buffer index file
 	uint64_t pos = (uint64_t) ftell(words); // Buffer start position
 	fwrite(&pos,sizeof(uint64_t),1,index);
 	fwrite(&numWords,sizeof(uint64_t),1,index); // Number of words
+//////////////////////////////////////////////////////////////////
+//fprintf(stderr, "c,");
+//////////////////////////////////////////////////////////////////
 	// Write words on words file
 	for(pos=0;pos<numWords;++pos){
 		fwrite(&buff[pos].pos,sizeof(uint64_t),1,words); 
 		fwrite(&buff[pos].seq,sizeof(uint32_t),1,words);
+		fwrite(&buff[pos].strand,sizeof(char),1,words);
 		//fwrite(&buff[pos].w.WL,sizeof(uint16_t),1,words);
 		int i;
 		for(i=0;i<BYTES_IN_WORD;++i)
 			fwrite(&buff[pos].w.b[i],sizeof(unsigned char),1,words);
 	}
+//////////////////////////////////////////////////////////////////
+//fprintf(stderr, "d,");
+//////////////////////////////////////////////////////////////////
 	// Buffer correctly written on intermediate files
 	return 0;
 }
@@ -98,6 +125,9 @@ int wordComparator(wentry* w1,wentry* w2){
 
 	if(w1->pos > w2->pos) return 1;
 	else if(w1->pos < w2->pos) return -1;
+
+	if(w1->strand == 'f' && w2->strand == 'r') return 1;
+	else if(w1->strand == 'r' && w2->strand == 'f') return -1;
 	
 	return 0;
 }
@@ -119,7 +149,10 @@ int GT(wentry w1, wentry w2){
 	else if(w1.seq < w2.seq) return 0;
 
 	if(w1.pos > w2.pos) return 1;
-	return 0;
+	else if(w1.pos < w2.pos) return 0;
+
+	if(w1.strand == 'f' && w2.strand == 'r') return 1;
+	else return 0;
 }
 
 
@@ -205,6 +238,10 @@ uint64_t loadWord(wentry **words,FILE* wFile, int64_t unread){
 			fprintf(stderr, "loadWord:: Error reading index value.\n");
 			return -1;
 		}
+		if(fread(&(*words)[j].strand,sizeof(char),1,wFile)!=1){
+			fprintf(stderr, "loadWord:: Error reading strand value.\n");
+			return -1;
+		} 
 		//fread(&(*word)[j]->w.WL,sizeof(uint16_t),1,wFile);
 		for(i=0;i<BYTES_IN_WORD;++i)
 			if(fread(&(*words)[j].w.b[i],sizeof(unsigned char),1,wFile)!=1){
@@ -239,6 +276,7 @@ inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uin
 	}
 	fwrite(&word->seq,sizeof(uint32_t),1,p); // Read index
 	fwrite(&word->pos,sizeof(uint64_t),1,p); // Position on read
+	fwrite(&word->strand,sizeof(char),1,p); // Strand on read
 	*words+=1; // Increment number of repetitions
 }
 

@@ -46,6 +46,8 @@ typedef struct {
     uint64_t pos;
     // Read index
     uint32_t seq;
+    // Strand on the sequence (f or r)
+    char strand;
 } wentry;
 
 

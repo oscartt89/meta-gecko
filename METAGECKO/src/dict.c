@@ -16,6 +16,9 @@
  *   @param out is the basename of the file where fragmetns will be stored.
  *   @param WL is the word length to use to create the dictionary. Only well formed
  *          words of length = WL will be stored on dictionary.
+ *   @param strand is the direction of the sequence used to calculate the dictionary.
+ *          can be 'f' (forward) or 'r' (reverse). NOTE: this parameter is optional. If
+ *          it's not specified, both strands will be used to calculate the dictionary.
  * The result of the program will be the following:
  *   @file <out>.d2hW is a file that contains the words and a linkage to the second 
  *         final file. This linkage is formed by the number of positions that are linked
@@ -34,8 +37,8 @@
  */
 int main(int ac, char** av){
 	// Check arguments
-	if(ac!=4){
-		fprintf(stderr, "Bad call error.\nUSE: dict metag.IN dictName WL\n");
+	if(ac!=4 && ac!=5){
+		fprintf(stderr, "Bad call error.\nUSE: dict metag.IN dictName WL\nOR:  dict metag.IN dictName WL strand\n");
 		return -1;
 	}
 
@@ -50,6 +53,12 @@ int main(int ac, char** av){
     }else if(atoi(av[3])%4 != 0 && atoi(av[3]) > 0){
 		fprintf(stderr, "Error:: Word length must be a 4 multiple and positive.\n");
 		return -1;
+	}
+	if(ac==5){
+		if(av[4][0]!='f' && av[4][0]!='r'){ // Check forward/reverse argument
+			fprintf(stderr, "Error:: Strand argument must be <f> or <r>\n");
+			return -1;
+		}
 	}
 
 	/////////////////////////// CHECKPOINT ///////////////////////////
@@ -68,6 +77,21 @@ int main(int ac, char** av){
 	char *fname;
 	unsigned char *WordsBlock;
 	bool removeIntermediataFiles = true; // Config it if you want save or not the itnermediate files
+	bool strandF = false, strandR = false;
+
+	if(ac==5){
+		if(av[4][0]=='f') strandF = true;
+		else if(av[4][0]=='r') strandR = true;
+	}else{
+		strandF = true;
+		strandR = true;
+	}
+
+	// Check
+	if(!strandF && !strandR){
+		fprintf(stderr, "Error, no strand specified.\n");
+		return -1;
+	}
 
     /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, "\tDict: Opening/creating necessary files.");
@@ -120,6 +144,9 @@ int main(int ac, char** av){
     /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, " (Done)\n");
     fprintf(stdout, "\tDict: Reading k-mers.");
+    if(strandF && strandR) fprintf(stdout, "[f,r]");
+    else if(strandF) fprintf(stdout, "[f]");
+    else if(strandR) fprintf(stdout, "[r]");
     fflush(stdout);
     /////////////////////////// CHECKPOINT ///////////////////////////
 
@@ -128,13 +155,21 @@ int main(int ac, char** av){
 	// Necessary variables
 	uint64_t seqPos = 0, crrSeqL = 0;
 	char c; // Auxiliar -> Read char per char
-	wentry temp; // Auxiliar word variable
+	wentry temp,rev_temp; // Auxiliar word variable
 	if((temp.w.b = (unsigned char*) malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
 		fprintf(stderr, "Error allocating memory for temp.\n");
 		return -1;
 	}
+	if((rev_temp.w.b = (unsigned char*) malloc(sizeof(unsigned char)*BYTES_IN_WORD))==NULL){
+		fprintf(stderr, "Error allocating memory for rev_temp.\n");
+		return -1;
+	}
+
 	temp.seq = 0;
 	temp.w.WL = WL;
+	rev_temp.w.WL = WL;
+	temp.strand='f';
+	rev_temp.strand='r';
 
 	// Memory for buffer words
 	uint64_t blockIndex = 0;
@@ -158,22 +193,26 @@ int main(int ac, char** av){
 			c=fgetc(metag); // First char of next sequence
 			continue;
 		}
-		shift_word(&temp.w); // Shift bits sequence
+		if(strandF) shift_word_right(&temp.w); // Shift bits sequence
+		if(strandR) shift_word_left(&rev_temp.w); // Shift bits sequence
 		// Add new nucleotid
 		switch (c) {
 			case 'A': // A = 00 
 				crrSeqL++;
 				break;
 			case 'C': // C = 01
-				temp.w.b[BYTES_IN_WORD-1]|=1;
+				if(strandF) temp.w.b[BYTES_IN_WORD-1]|=1;
+				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=64;
 				crrSeqL++;
 				break;
 			case 'G': // G = 10
-				temp.w.b[BYTES_IN_WORD-1]|=2;
+				if(strandF) temp.w.b[BYTES_IN_WORD-1]|=2;
+				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=128;
 				crrSeqL++;
 				break;
 			case 'T': // T = 11
-				temp.w.b[BYTES_IN_WORD-1]|=3;
+				if(strandF) temp.w.b[BYTES_IN_WORD-1]|=3;
+				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=192;
 				crrSeqL++;
 				break;
 			default : // Bad formed sequence
@@ -181,23 +220,43 @@ int main(int ac, char** av){
 		}
 		seqPos++;
 		if(crrSeqL >= (uint64_t)WL){ // Full well formed sequence 
-			temp.pos = seqPos - WL; // Take position on read
-			// Store the new word
-			storeWord(&buffer[wordsInBuffer],temp);
-			readW++; wordsInBuffer++;
-			if(wordsInBuffer == BUFFER_LENGTH){ // Buffer is full
-				if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){
-					return -1;
-				}else{
-					// Update info
-					//readW += wordsInBuffer;
-					wordsInBuffer = 0;
-					numBuffWritten++;
+			if(strandF){
+				temp.pos = seqPos - WL; // Take position on read
+				// Store the new word
+				storeWord(&buffer[wordsInBuffer],temp);
+				readW++; wordsInBuffer++;
+				if(wordsInBuffer == BUFFER_LENGTH){ // Buffer is full
+					if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){
+						return -1;
+					}else{
+						// Update info
+						//readW += wordsInBuffer;
+						wordsInBuffer = 0;
+						numBuffWritten++;
+					}
 				}
 			}
-		}
+					if(strandR){
+				rev_temp.pos = temp.pos; // Take position on read
+				rev_temp.seq = temp.seq;
+				// Store the new word
+				storeWord(&buffer[wordsInBuffer],rev_temp);
+				readW++; wordsInBuffer++;
+				if(wordsInBuffer == BUFFER_LENGTH){ // Buffer is full
+					if(writeBuffer(buffer,bIndx,wrds,wordsInBuffer) < 0){
+						return -1;
+					}else{
+						// Update info
+						//readW += wordsInBuffer;
+						wordsInBuffer = 0;
+						numBuffWritten++;
+					}
+				}
+			}
+				}
 		c = fgetc(metag);
 	}
+
 
 	// Free&Close unnecessary varaibles
 	fclose(metag);
@@ -244,6 +303,7 @@ int main(int ac, char** av){
 			fwrite(&pos,sizeof(uint64_t),1,wDic); // position on pDic
 			fwrite(&buffer[0].seq,sizeof(uint32_t),1,pDic); // Read index
 			fwrite(&buffer[0].pos,sizeof(uint64_t),1,pDic); // Position on read
+			fwrite(&buffer[0].strand,sizeof(char),1,pDic); // Strand
 			reps++; // Increment number of repetitions
 			storeWord(&temp,buffer[0]); // Update last word written
 
@@ -272,6 +332,7 @@ int main(int ac, char** av){
 			free(buffer);
 			free(fname);
 			free(temp.w.b);
+			free(rev_temp.w.b);
 
 			// Remove itnermediate files if it's necessary
 			if(removeIntermediataFiles){
@@ -294,6 +355,7 @@ int main(int ac, char** av){
 		free(buffer);
 		free(fname);
 		free(temp.w.b);
+		free(rev_temp.w.b);
 
 		fclose(bIndx);
 		fclose(wrds);
@@ -448,6 +510,7 @@ int main(int ac, char** av){
 				free(WentryBlock);
 				free(fname);
 				free(temp.w.b);
+				free(rev_temp.w.b);
 				fclose(wDic);
 				fclose(pDic);
 				fclose(wrds);
@@ -516,6 +579,7 @@ int main(int ac, char** av){
 	// Free space
 	free(fname);
 	free(temp.w.b);
+	free(rev_temp.w.b);
 	// Everything finished. All it's ok.
 	return 0;
 }
