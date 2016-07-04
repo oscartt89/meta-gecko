@@ -59,3 +59,4 @@ void endianessConversion(char*,char*,int);
 int exists(char*);
 int is_int(char const*);
 int is_float(char const*);
+void printWe(WordEntry we);
