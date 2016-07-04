@@ -127,10 +127,12 @@ int readWordEntrance(WordEntry *we,FILE *wD,uint16_t SeqBytes){
 int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FILE* outIndx, FILE* outBuff, uint64_t* hitsInBuff, int prefix){
 	// Positionate on locations files
 	if(fseek(XPFile,X.pos,SEEK_SET)!=0){
+		fprintf(stderr, "generateHits:: POS:%"PRIu64"\n", X.pos);
 		fprintf(stderr, "generateHits:: Error positioning on X file.\n");
 		return -1;
 	}
 	if(fseek(YPFile,Y.pos,SEEK_SET)!=0){
+		fprintf(stderr, "generateHits:: POS:%"PRIu64"\n", Y.pos);
 		fprintf(stderr, "generateHits:: Error positioning on Y file.\n");
 		return -1;
 	}
@@ -1015,3 +1017,8 @@ int is_float(char const *str){
     int isFloat = strcmp(str2, str) == 0; // Check if there are equals => String==Float
     return isFloat;
 }
+
+void printWe(WordEntry we){
+	fprintf(stdout, "%s %"PRIu16" %d %"PRIu64" %"PRIu32"\n", we.metag ? "True" : "False", we.WB, we.seq, we.pos, we.reps);
+}
+

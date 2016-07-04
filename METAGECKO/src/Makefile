@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O3 -D_FILE_OFFSET_BITS=64 -Wall
+CFLAGS=-O3 -D_FILE_OFFSET_BITS=64
 BIN=../bin
 
 all: gecko meta_gecko stats write

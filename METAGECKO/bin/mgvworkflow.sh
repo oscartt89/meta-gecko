@@ -33,7 +33,7 @@ if [ $# != 5 ]; then
 fi
 
 
-MGDIR=$(dirname "$1")
+MGDIR=$(pwd)
 
 metagenome=$(basename "$1")
 genome=$(basename "$2")
@@ -43,7 +43,11 @@ metagenome="${metagenome%.*}"
 genome="${genome%.*}"
 
 
-#Copy Database to metagenome folder if they are not in the same folder
+#Copy Metagenome and Database to current folder
+if [[ ! -e "$MGDIR/$(basename "$1")" ]]; then
+    ln $1 $MGDIR/$(basename "$1")
+fi 
+
 if [[ ! -e "$MGDIR/$(basename "$2")" ]]; then
     ln $2 $MGDIR/$(basename "$2")
 fi 
@@ -130,8 +134,9 @@ if [[ -f ${MGDIR}/fragments/${metagenome}-${genome}-revercomp.frags && -f ${MGDI
 fi
 #END
 
-#Remove hard link
+#Remove hard link and complemented db
 rm $MGDIR/$(basename "$2")
+rm ${MGDIR}/${genome}-revercomp.${genoExt}
 
 
 

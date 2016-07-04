@@ -23,7 +23,7 @@ int main(int ac, char** av) {
 	FILE *fIn, *fOut;
 	int64_t i, j, nR, seqLen = 0;
 	char *seq, c, toW;
-	long offset[NREADS];
+	uint64_t offset[NREADS];
 
 	if (ac != 3)
 		terror("USE: reverseComplement seqFile.IN reverseComplementarySeq.OUT");

@@ -59,12 +59,12 @@ void main_FILE(char * inFile, char * outFile){
 
 	wentry WE;
 	WE.seq=0;
-	unsigned long index=0;
-	unsigned long inEntry=0;
-	unsigned long NW=0;
-	unsigned long Tot=0;
-	unsigned long NoACGT=0;
-	unsigned long NoC=0;
+	uint64_t index=0;
+	uint64_t inEntry=0;
+	uint64_t NW=0;
+	uint64_t Tot=0;
+	uint64_t NoACGT=0;
+	uint64_t NoC=0;
 	c=fgetc(f);
 	while(!feof(f)){
 		if (!isupper(toupper(c))){
@@ -100,7 +100,7 @@ void main_FILE(char * inFile, char * outFile){
 		}
 		index++;
 		Tot++;
-		if(inEntry>=(unsigned long)WORD_SIZE){
+		if(inEntry>=(uint64_t)WORD_SIZE){
 			WE.pos=index-WORD_SIZE;
 			NW++;
 			fwrite(&WE,sizeof(wentry),1,f2);

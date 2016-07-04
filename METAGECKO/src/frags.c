@@ -6,6 +6,7 @@
  *    of Malaga).
  */
 #include "frags.h"
+#include "commonFunctions.h"
 
 /* This main contains the workflow to find hits, filter and extend it to generate
  * fragments over a length and similarity wanted. There are two ways to invoke the
@@ -45,6 +46,33 @@
  *   @file <out>.hts is an auxilary file with information about the seed generated during 
  *         the comparisson process.
  */
+ 
+ 
+void showWord(WordEntry *we, char *ws) {
+	char Alf[] = { 'A', 'C', 'G', 'T' };
+	int i;
+	int wsize = 8;
+	unsigned char c;
+	for (i = 0; i < wsize; i++) {
+		c = we->seq[i];
+		c = c >> 6;
+		ws[4*i] = Alf[(int) c];
+		c = we->seq[i];
+		c = c << 2;
+		c = c >> 6;
+		ws[4*i+1] = Alf[(int) c];
+		c = we->seq[i];
+		c = c << 4;
+		c = c >> 6;
+		ws[4*i+2] = Alf[(int) c];
+		c = we->seq[i];
+		c = c << 6;
+		c = c >> 6;
+		ws[4*i+3] = Alf[(int) c];
+	}
+}
+ 
+ 
 int main(int ac, char** av){
 	// Check arguments
 	if(ac!=10 && ac!=11){
@@ -229,10 +257,41 @@ int main(int ac, char** av){
 			return -1;
 		}else we[1].WB = BytesGenoWord;
 
+
+	//Check size of dictionaries
+	int nwords=0;
+	while(!feof(mW)){
+		readWordEntrance(&we[0], mW, BytesMetagWord);
+		nwords++;
+	}
+	
+	int nHashEntry=0;
+	while(!feof(gW)){
+		readHashEntry(&we[1], gW);
+		nHashEntry++;
+	}
+	fprintf(stdout, "Total entries in metagenome words dictionary: %d\n", nwords);
+	fprintf(stdout, "Total entries in genome hash dictionary: %d\n", nHashEntry);
+
+	fseek(mW, 0, SEEK_SET);
+	fread(&mWL,sizeof(uint16_t),1,mW);
+	fseek(gW, 0, SEEK_SET);
+
 	// Read first entrances
 	if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 
 	readHashEntry(&we[1],gW);
+	
+	//Before looping
+	fprintf(stdout, "Before looping\n");
+	printWe(we[0]);
+	printWe(we[1]);
+	char *W;
+	W=(char *)malloc(33*sizeof(char));
+	showWord(&we[0], W);
+	fprintf(stdout, "\nFirst word entry: %.32s", W);
+	showWord(&we[1], W);
+	fprintf(stdout, "\nFirst hash entry: %.32s", W);
 
 	/////////////////////////// CHECKPOINT ///////////////////////////
 	fprintf(stdout, " (Done)\n");
@@ -241,21 +300,45 @@ int main(int ac, char** av){
 	/////////////////////////// CHECKPOINT ///////////////////////////
 
 	// Search
+	int onWord = 1;
+	int onHash = 1;
+	
 	if(prefixSize == BytesMetagWord && prefixSize == BytesGenoWord){
 		while(!feof(mW) && !feof(gW)){
 			if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
-				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord) < 0) return -1;
+				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord) < 0){
+					printWe(we[0]);
+					printWe(we[1]);
+					fprintf(stderr, "Died on word entry: %d and hash entry: %d\n", onWord, onHash);
+					showWord(&we[0], W);
+					fprintf(stdout, "\Word entry: %.32s", W);
+					showWord(&we[1], W);
+					fprintf(stdout, "\nHash entry: %.32s", W);
+					return -1;
+				}
 			// Load next word
 			if(cmp >= 0) // New genome word is necessary
+				onHash++;
 				readHashEntry(&we[1],gW);
+				
 			if(cmp <= 0) // New metagenome word is necessary
+				onWord++;
 				if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 		}
 	}else{
 		while(!feof(mW)){
 			// Check hit
 			if((cmp = wordcmp(we[0].seq,we[1].seq,prefixSize))==0){ // Hit
-				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize) < 0) return -1;
+				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize) < 0){
+					printWe(we[0]);
+					printWe(we[1]);
+					fprintf(stderr, "Died on word entry: %d and hash entry: %d\n", onWord, onHash);
+					showWord(&we[0], W);
+					fprintf(stdout, "\Word entry: %.32s", W);
+					showWord(&we[1], W);
+					fprintf(stdout, "\nHash entry: %.32s", W);
+					return -1;
+				}
 				if(firstmatch){
 					lastFirstHit = (uint64_t)(ftell(gW) - sizeof(hashentry));
 					firstmatch = false;
@@ -265,20 +348,25 @@ int main(int ac, char** av){
 			if(cmp >= 0){ // Could be more
 				// Load next genome word
 				readHashEntry(&we[1],gW);
+				onHash++;
 				if(feof(gW)){ // End of genome file
 					// Load next metagenome word
+					onWord++;
 					if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 					// Reset values and come back at dict
 					firstmatch = true;
 					fseek(gW,lastFirstHit,SEEK_SET); // Reset geno dict
 					readHashEntry(&we[1],gW);
+					onHash++;
 				}
 			}else if(cmp < 0){ // No more matches, take next metag word
 				// Load next metagenome word
+				onWord++;
 				if(readWordEntrance(&we[0],mW,BytesMetagWord)<0) return -1;
 				// Reset values and come back at dict
 				firstmatch = true;
 				fseek(gW,lastFirstHit,SEEK_SET); // Reset geno dict
+				onHash++;
 				readHashEntry(&we[1],gW);
 			}
 		}

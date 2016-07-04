@@ -32,6 +32,31 @@
  *   @file <out>.wrds is an auxilary file with information about the words read during 
  *         the read process.
  */
+ 
+void showWord(wentry *we, char *ws) {
+	char Alf[] = { 'A', 'C', 'G', 'T' };
+	int i;
+	int wsize = 8;
+	unsigned char c;
+	for (i = 0; i < wsize; i++) {
+		c = we->w.b[i];
+		c = c >> 6;
+		ws[4*i] = Alf[(int) c];
+		c = we->w.b[i];
+		c = c << 2;
+		c = c >> 6;
+		ws[4*i+1] = Alf[(int) c];
+		c = we->w.b[i];
+		c = c << 4;
+		c = c >> 6;
+		ws[4*i+2] = Alf[(int) c];
+		c = we->w.b[i];
+		c = c << 6;
+		c = c >> 6;
+		ws[4*i+3] = Alf[(int) c];
+	}
+}
+ 
 int main(int ac, char** av){
 	// Check arguments
 	if(ac!=4){
@@ -141,7 +166,18 @@ int main(int ac, char** av){
 	for(i=0;i<BUFFER_LENGTH;++i,blockIndex+=BYTES_IN_WORD)
 		buffer[i].w.b = &WordsBlock[blockIndex];
 
-
+	
+	
+	//Used to print words and debug
+	char *W;
+	W=(char *)malloc(33*sizeof(char));
+	
+	
+	//Accumulate the highest value of pos to find when it dies
+	uint64_t max_reached = 0;
+	wentry aux_store;
+	aux_store.w.b = (unsigned char*) malloc(sizeof(unsigned char)*BYTES_IN_WORD);
+	
 	// Start to read
 	c = fgetc(metag);
 	while(!feof(metag)){
@@ -182,6 +218,10 @@ int main(int ac, char** av){
 		seqPos++;
 		if(crrSeqL >= (uint64_t)WL){ // Full well formed sequence 
 			temp.pos = seqPos - WL; // Take position on read
+			if(max_reached < temp.pos){
+				max_reached = temp.pos;
+				storeWord(&aux_store,temp);
+			}
 			// Store the new word
 			storeWord(&buffer[wordsInBuffer],temp);
 			readW++; wordsInBuffer++;
@@ -198,6 +238,17 @@ int main(int ac, char** av){
 		}
 		c = fgetc(metag);
 	}
+	
+	
+	//Printf max reached and corresponding word
+	fprintf(stdout, "ITERA 1\n");
+	fprintf(stdout, "Maximum pos reached : %"PRIu64"\n", max_reached);
+	showWord(&aux_store, W);
+	fprintf(stdout, "Corresponding word: : %.32s", W);
+
+	//Restart counter
+	max_reached = 0;
+
 
 	// Free&Close unnecessary varaibles
 	fclose(metag);
@@ -206,7 +257,7 @@ int main(int ac, char** av){
 		if(numBuffWritten == 0){ // Special case, only one buffer
             /////////////////////////// CHECKPOINT ///////////////////////////
             fprintf(stdout, " (Done)\n");
-            fprintf(stdout, "\tDict: Writting dictionary.");
+            fprintf(stdout, "\tDict: Writing dictionary.");
             fflush(stdout);
             /////////////////////////// CHECKPOINT ///////////////////////////
 
@@ -469,6 +520,11 @@ int main(int ac, char** av){
 		// Store word in buffer
 		writeWord(&words->word[words->index],wDic,pDic,wordcmp(words->word[words->index].w,temp.w,BYTES_IN_WORD)!=0? false:true,&reps);
 		storeWord(&temp,words->word[words->index]); // Update last word written
+		if(max_reached < temp.pos){
+			max_reached = temp.pos;
+			storeWord(&aux_store,temp);
+		}
+		
 		words->index += 1;
 		if(words->index >= words->words_loaded){
 			// Load next word if it's possible
@@ -489,6 +545,14 @@ int main(int ac, char** av){
 			}
 		}else checkOrder(&words,false);
 	}
+	
+	//Debug 2 for printing words and max reached
+	fprintf(stdout, "ITERA 2\n");
+	fprintf(stdout, "Maximum pos reached : %"PRIu64"\n", max_reached);
+	showWord(&aux_store, W);
+	fprintf(stdout, "Corresponding word: : %.32s", W);
+	
+	
 	// Write last word index
 	fwrite(&reps,sizeof(uint32_t),1,wDic); // Write num of repetitions
 
