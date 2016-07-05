@@ -18,11 +18,11 @@
 
 // Constants
 #define MAXLID 200
-#define MAX_READ_LENGTH 3000
+#define MAX_READ_LENGTH 5000
 #define MAXLS 100000000
 
 // STRUCTS
-/* Structure used to store a sequence (k-mer) and his length.
+/* Structure used to store a sequence (k-mer) and its length.
  *  @program META-GECKO dictionaries.
  */
 typedef struct {

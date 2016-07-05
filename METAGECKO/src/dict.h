@@ -23,7 +23,7 @@ void checkOrder(node_W**,bool);
 int exists(char*);
 int GT(wentry,wentry);
 int is_int(char const*);
-uint64_t loadWord(wentry**,FILE*,int64_t);
+uint64_t loadWord(wentry*,FILE*,int64_t);
 void move(node_W**,node_W**);
 int partition(wentry*,int,int);
 void push(node_W**,node_W**);

@@ -9,26 +9,26 @@
 /* This function is used to shift left bits in a unsigned char array
  *	@param w: word structure where char array to be shifted is stored.
  */
-void shift_word_left(Word* w){
-	int i;
-	for(i=BYTES_IN_WORD-1;i>0;i++){
-		w->b[i]>>=2;
-		w->b[i]|=(w->b[i-1]<<6);
-	}
-	w->b[0]<<=2;
+void shift_word_left(Word *w) {
+    int i;
+    for (i = 0; i < BYTES_IN_WORD - 1; i++) {
+        w->b[i] <<= 2;
+        w->b[i] |= (w->b[i + 1] >> 6);
+    }
+    w->b[BYTES_IN_WORD - 1] <<= 2;
 }
 
 
 /* This function is used to shift right bits in a unsigned char array
  *	@param w: word structure where char array to be shifted is stored.
  */
-void shift_word_right(Word* w){
-	int i;
-	for(i=0;i<BYTES_IN_WORD-1;i++){
-		w->b[i]<<=2;
-		w->b[i]|=(w->b[i+1]>>6);
-	}
-	w->b[BYTES_IN_WORD-1]<<=2;
+void shift_word_right(Word *w) {
+    int i;
+    for (i = BYTES_IN_WORD - 1; i > 0; i--) {
+        w->b[i] >>= 2;
+        w->b[i] |= (w->b[i - 1] << 6);
+    }
+    w->b[i] >>= 2;
 }
 
 
@@ -37,13 +37,7 @@ void shift_word_right(Word* w){
  *  @param word taht will be stored.
  */
 inline void storeWord(wentry* container,wentry word){
-	container->pos = word.pos;
-	container->seq = word.seq;
-	container->w.WL = word.w.WL;
-	container->strand = word.strand;
-	int i;
-	for(i=0;i<BYTES_IN_WORD;++i)
-		container->w.b[i] = word.w.b[i];
+	memcpy(container, &word, sizeof(wentry));
 }
 
 
@@ -64,14 +58,16 @@ int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
 	fwrite(&pos,sizeof(uint64_t),1,index);
 	fwrite(&numWords,sizeof(uint64_t),1,index); // Number of words
 	// Write words on words file
+	
+	
 	for(pos=0;pos<numWords;++pos){
 		fwrite(&buff[pos].pos,sizeof(uint64_t),1,words); 
 		fwrite(&buff[pos].seq,sizeof(uint32_t),1,words);
 		fwrite(&buff[pos].strand,sizeof(char),1,words);
 		//fwrite(&buff[pos].w.WL,sizeof(uint16_t),1,words);
-		int i;
-		for(i=0;i<BYTES_IN_WORD;++i)
-			fwrite(&buff[pos].w.b[i],sizeof(unsigned char),1,words);
+		
+		fwrite(&buff[pos].w.b, sizeof(unsigned char), BYTES_IN_WORD, words);
+
 	}
 	// Buffer correctly written on intermediate files
 	return 0;
@@ -215,30 +211,8 @@ int quicksort_W(wentry* arr, int left,int right) {
  *  @param unread rest of words on intermediate file.
  *  @return Number of words read from intermediate file. Or a negative number if any error hapens.
  */
-uint64_t loadWord(wentry **words,FILE* wFile, int64_t unread){
-	uint64_t i,j;
-	for(j=0; j<READ_BUFF_LENGTH && unread > 0;++j){
-		if(fread(&(*words)[j].pos,sizeof(uint64_t),1,wFile)!=1){
-			fprintf(stderr, "loadWord:: Error reading position value.\n");
-			return -1;
-		} 
-		if(fread(&(*words)[j].seq,sizeof(uint32_t),1,wFile)!=1){
-			fprintf(stderr, "loadWord:: Error reading index value.\n");
-			return -1;
-		}
-		if(fread(&(*words)[j].strand,sizeof(char),1,wFile)!=1){
-			fprintf(stderr, "loadWord:: Error reading strand value.\n");
-			return -1;
-		} 
-		//fread(&(*word)[j]->w.WL,sizeof(uint16_t),1,wFile);
-		for(i=0;i<BYTES_IN_WORD;++i)
-			if(fread(&(*words)[j].w.b[i],sizeof(unsigned char),1,wFile)!=1){
-				fprintf(stderr, "loadWord:: Error reading sequence at num=%"PRIu64"\n", i);
-				return -1;
-			}
-		unread--;
-	}
-	return j;
+uint64_t loadWord(wentry *words,FILE* wFile, int64_t unread){
+	return fread(&words, sizeof(wentry), (unread<READ_BUFF_LENGTH)?unread:READ_BUFF_LENGTH, wFile);
 }
 
 
@@ -256,8 +230,7 @@ inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uin
 	if(!sameThanLastWord){ // Write new word
 		uint64_t aux;
 		fwrite(words,sizeof(uint32_t),1,w); // Write num of repetitions
-		for(aux=0;aux<BYTES_IN_WORD;++aux)
-			fwrite(&word->w.b[aux],sizeof(unsigned char),1,w); // Write new word
+		fwrite(&word->w.b,sizeof(unsigned char),BYTES_IN_WORD,w); // Write new word
 		aux = (uint64_t) ftell(p);
 		fwrite(&aux,sizeof(uint64_t),1,w); // Write new postions on positions dictionary
 		*words = 0; // Update value

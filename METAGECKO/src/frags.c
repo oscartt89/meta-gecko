@@ -58,7 +58,9 @@ int main(int ac, char** av){
 	
 	// Necessary variables
 	char *fname; // File names handler
-
+	int prefixSize; // Word size
+	
+	
 	// Memory for file names handler
 	if((fname = (char*) malloc(sizeof(char)*MAX_FILE_LENGTH))==NULL){
 		fprintf(stderr, "Error allocating memory for file names handler.\n");
@@ -124,15 +126,16 @@ int main(int ac, char** av){
 	Hit *buffer;
 	uint64_t hitsInBuffer = 0, genomeLength, nStructs, metagenomeLength;
 	uint16_t mWL,gWL;
-	uint16_t BytesGenoWord, BytesMetagWord;
-	buffersWritten = 0; // Init global variable (frags.h)1
-	S_Threshold = (float) atof(av[6]); // Similarity threshold
-	L_Threshold = (uint64_t) atoi(av[7]); // Length threshold
+	uint16_t BytesGenoWord = 8, BytesMetagWord;
+	uint64_t buffersWritten = 0; // Init global variable (frags.h)1
+	float S_Threshold = atof(av[6]); // Similarity threshold
+	int L_Threshold = atoi(av[7]); // Length threshold
 	prefixSize = atoi(av[8]); // Prefix array legnth
 	Sequence *genome; // Sequence for genome
 	Reads *metagenome; // Short sequence array for metagenome
 	bool removeIntermediataFiles = true; // Internal variable to delete intermediate files	
-	if(ac == 11) // Store index base
+	int startIndex;
+	if(ac == 10) // Store index base
 		startIndex = atoi(av[9]);
 	else
 		startIndex = -1;
@@ -199,7 +202,7 @@ int main(int ac, char** av){
 		}else
 			BytesGenoWord = gWL/4;
 
-	if(BytesMetagWord < prefixSize || BytesGenoWord < prefixSize){
+	if(BytesMetagWord*4 < prefixSize || BytesGenoWord*4 < prefixSize){
 		fprintf(stderr, "Error: prefix is too long.\n");
 		return -1;
 	}
@@ -248,10 +251,10 @@ int main(int ac, char** av){
 	/////////////////////////// CHECKPOINT ///////////////////////////
 
 	// Search
-	if(prefixSize == BytesMetagWord && prefixSize == BytesGenoWord){
+	if(prefixSize == BytesMetagWord*4 && prefixSize == BytesGenoWord*4){
 		while(!feof(mW) && !feof(gW)){
-			if((cmp = wordcmp(we[0].seq,we[1].seq,BytesGenoWord))==0) // Hit
-				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,BytesGenoWord) < 0) return -1;
+			if((cmp = wordcmp(we[0].seq,we[1].seq,prefixSize))==0) // Hit
+				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize,startIndex,&buffersWritten) < 0) return -1;
 			// Load next word
 			if(cmp >= 0) // New genome word is necessary
 				if(readWordEntrance(&we[1],gW,BytesGenoWord)<0)return -1;
@@ -262,7 +265,7 @@ int main(int ac, char** av){
 		while(!feof(mW)){
 			// Check hit
 			if((cmp = wordcmp(we[0].seq,we[1].seq,prefixSize))==0){ // Hit
-				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize) < 0) return -1;
+				if(generateHits(buffer,we[0],we[1],mP,gP,hIndx,hts,&hitsInBuffer,prefixSize,startIndex,&buffersWritten) < 0) return -1;
 				if(firstmatch){
 					lastFirstHit = (uint64_t)(ftell(gW) - sizeof(hashentry));
 					firstmatch = false;
@@ -315,7 +318,7 @@ int main(int ac, char** av){
 	// Write buffered hits
 	if(hitsInBuffer > 0){
 		if(buffersWritten > 0)
-			writeHitsBuff(buffer,hIndx,hts,hitsInBuffer);
+			writeHitsBuff(buffer,hIndx,hts,hitsInBuffer,prefixSize,&buffersWritten);
 		else{ // Only one buffer
 			// Sort buffer
 			quicksort_H(buffer,0,hitsInBuffer-1);
@@ -367,7 +370,7 @@ int main(int ac, char** av){
 			/////////////////////////// CHECKPOINT ///////////////////////////
 
 			// Generate first fragment
-			FragFromHit(&frag,&buffer[0],currRead,genome,genomeLength,nStructs,fr);
+			FragFromHit(&frag,&buffer[0],currRead,genome,genomeLength,nStructs,fr,prefixSize,L_Threshold,S_Threshold);
 			
 			// Generate fragments
 			for(index=1; index < hitsInBuffer; ++index){
@@ -379,7 +382,7 @@ int main(int ac, char** av){
 					distY = (int64_t)(buffer[index].posY - frag.yEnd);
 					if(distX > 0 || distY > 0){ // Not collapsable by extension
 						// Generate fragment 
-						FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr);
+						FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr,prefixSize,L_Threshold,S_Threshold);
 					}
 				}else{ // New fragment
 					// Check correct read index
@@ -392,7 +395,7 @@ int main(int ac, char** av){
 						currRead = currRead->next;
 					}
 					// Generate new fragment
-					FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr);
+					FragFromHit(&frag, &buffer[index],currRead,genome,genomeLength,nStructs,fr,prefixSize,L_Threshold,S_Threshold);
 				}
 			}
 
@@ -526,7 +529,7 @@ int main(int ac, char** av){
 		currNode->hits = &HitsBlock[blockIndex];
 		currNode->buff = i;
 		fseek(hts,positions[i],SEEK_SET);
-		read = loadHit(&currNode->hits,hts,hitsUnread[i]);
+		read = loadHit(currNode->hits,hts,hitsUnread[i]);
 		currNode->index = 0;
 		currNode->hits_loaded = read;
 		// Update info
@@ -564,7 +567,7 @@ int main(int ac, char** av){
 		}
 
 	// Generate first fragment
-	FragFromHit(&frag,&hitsList->hits[0],currRead,genome,genomeLength,nStructs,fr);
+	FragFromHit(&frag,&hitsList->hits[0],currRead,genome,genomeLength,nStructs,fr,prefixSize,L_Threshold,S_Threshold);
 
 	// Move to next
 	hitsList->index +=1;
@@ -575,7 +578,7 @@ int main(int ac, char** av){
 				fseek(hts,positions[hitsList->buff],SEEK_SET);
 				lastLoaded = hitsList->buff;
 			}
-			read = loadHit(&hitsList->hits,hts,hitsUnread[hitsList->buff]);
+			read = loadHit(hitsList->hits,hts,hitsUnread[hitsList->buff]);
 			hitsList->index = 0;
 			hitsList->hits_loaded = read;
 			positions[hitsList->buff] = (uint64_t) ftell(hts);
@@ -602,7 +605,7 @@ int main(int ac, char** av){
 			distY = (int64_t)(hitsList->hits[hitsList->index].posY - frag.yEnd);
 			if(distX > 0 || distY > 0){ // Not collapsable by xtension
 				// Generate fragment 
-				FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr);
+				FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr,prefixSize,L_Threshold,S_Threshold);
 			}
 		}else{ // Different diag or seq
 			// Check correct read index
@@ -615,7 +618,7 @@ int main(int ac, char** av){
 				currRead = currRead->next;
 			}
 			// Generate new fragment
-			FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr);
+			FragFromHit(&frag, &hitsList->hits[hitsList->index],currRead,genome,genomeLength,nStructs,fr,prefixSize,L_Threshold,S_Threshold);
 		}
 
 		// Move to next
@@ -627,7 +630,7 @@ int main(int ac, char** av){
 					fseek(hts,positions[hitsList->buff],SEEK_SET);
 					lastLoaded = hitsList->buff;
 				}
-				read = loadHit(&hitsList->hits,hts,hitsUnread[hitsList->buff]);
+				read = loadHit(hitsList->hits,hts,hitsUnread[hitsList->buff]);
 				hitsList->index = 0;
 				hitsList->hits_loaded = read;
 				positions[hitsList->buff] = (uint64_t) ftell(hts);

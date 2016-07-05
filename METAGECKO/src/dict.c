@@ -193,26 +193,26 @@ int main(int ac, char** av){
 			c=fgetc(metag); // First char of next sequence
 			continue;
 		}
-		if(strandF) shift_word_right(&temp.w); // Shift bits sequence
-		if(strandR) shift_word_left(&rev_temp.w); // Shift bits sequence
+		if(strandF) shift_word_left(&temp.w); // Shift bits sequence
+		if(strandR) shift_word_right(&rev_temp.w); // Shift bits sequence
 		// Add new nucleotid
 		switch (c) {
 			case 'A': // A = 00 
 				crrSeqL++;
+				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=192;
 				break;
 			case 'C': // C = 01
 				if(strandF) temp.w.b[BYTES_IN_WORD-1]|=1;
-				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=64;
+				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=128;
 				crrSeqL++;
 				break;
 			case 'G': // G = 10
 				if(strandF) temp.w.b[BYTES_IN_WORD-1]|=2;
-				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=128;
+				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=64;
 				crrSeqL++;
 				break;
 			case 'T': // T = 11
 				if(strandF) temp.w.b[BYTES_IN_WORD-1]|=3;
-				if(strandR) rev_temp.w.b[BYTES_IN_WORD-1]|=192;
 				crrSeqL++;
 				break;
 			default : // Bad formed sequence
@@ -467,7 +467,7 @@ int main(int ac, char** av){
 			currNode->word[j].w.b = &BuffWordsBlock[blockIndex];
 		currNode->next = words;
 		fseek(wrds,arrPos[i],SEEK_SET);
-		read = loadWord(&currNode->word,wrds,wordsUnread[i]);
+		read = loadWord(currNode->word,wrds,wordsUnread[i]);
 		currNode->buff = i;
 		currNode->index = 0;
 		currNode->words_loaded = read;
@@ -495,7 +495,7 @@ int main(int ac, char** av){
 	if(words->index >= words->words_loaded){
 		if(wordsUnread[words->buff] > 0){
 			fseek(wrds,arrPos[words->buff],SEEK_SET);
-			read = loadWord(&words->word,wrds,wordsUnread[words->buff]);
+			read = loadWord(words->word,wrds,wordsUnread[words->buff]);
 			words->index = 0;
 			words->words_loaded = read;
 			lastLoaded = words->buff;
@@ -540,7 +540,7 @@ int main(int ac, char** av){
 					fseek(wrds,arrPos[words->buff],SEEK_SET);
 					lastLoaded = words->buff;
 				}
-				read = loadWord(&words->word,wrds,wordsUnread[words->buff]);
+				read = loadWord(words->word,wrds,wordsUnread[words->buff]);
 				words->index = 0;
 				words->words_loaded = read;
 				arrPos[words->buff] = (uint64_t) ftell(wrds);

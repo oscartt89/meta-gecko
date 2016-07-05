@@ -18,28 +18,19 @@
 // LINE FUNCTIONS
 #define SWAP(a,b,t) t=a; a=b; b=t;
 
-// GLOBAL VARAIBLES
-uint64_t buffersWritten;
-float S_Threshold; // Similarity threshold
-uint64_t L_Threshold; // Length threshold
-uint64_t hitLength;
-int prefixSize; // Word size
-int startIndex; // Base index
-
-
 // FUNCTIONS
 int wordcmp(unsigned char*,unsigned char*,int);
 int HComparer(Hit w1, Hit w2);
 //void readHashEntry(WordEntry*,FILE*);
 int readWordEntrance(WordEntry*,FILE*,uint16_t);
-int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*,int);
-void loadLocationEntrance(LocationEntry*,FILE*,uint32_t); 
-inline void storeHit(Hit*,LocationEntry,LocationEntry,uint64_t);
-void writeHitsBuff(Hit*,FILE*,FILE*,uint64_t);
+int generateHits(Hit*,WordEntry,WordEntry,FILE*,FILE*,FILE*,FILE*,uint64_t*,int,int,uint64_t*);
+inline void loadLocationEntrance(LocationEntry*,FILE*,uint32_t); 
+inline void storeHit(Hit*,LocationEntry,LocationEntry);
+void writeHitsBuff(Hit*,FILE*,FILE*,uint64_t,int,uint64_t*);
 int GT(Hit,Hit);
 int partition(Hit*,int,int);
 void quicksort_H(Hit*,int,int);
-uint64_t loadHit(Hit**,FILE*,int64_t);
+inline uint64_t loadHit(Hit*,FILE*,int64_t);
 uint64_t lowestHit(Hit*,uint64_t,int64_t*);
 bool finished(int64_t*,uint64_t);
 void writeFragment(FragFile,FILE*);
@@ -49,7 +40,7 @@ void push(node_H**,node_H**);
 void move(node_H**,node_H**);
 void sortList(node_H**);
 void checkOrder(node_H**,bool);
-void FragFromHit(FragFile*,Hit*,Reads*,Sequence*,uint64_t,uint64_t,FILE*);
+void FragFromHit(FragFile*,Hit*,Reads*,Sequence*,uint64_t,uint64_t,FILE*,int,int,float);
 char getValue(Sequence*,uint64_t,int);
 Sequence* LeeSeqDB(char*,uint64_t*,uint64_t*);
 Reads* LoadMetagenome(char*,uint64_t*);
@@ -57,5 +48,8 @@ inline void freeReads(Reads**);
 void writeSequenceLength(uint64_t*,FILE*);
 void endianessConversion(char*,char*,int);
 int exists(char*);
+int is_float(char const *str);
 int is_int(char const*);
-int is_float(char const*);
+void printWe(WordEntry we);
+
+

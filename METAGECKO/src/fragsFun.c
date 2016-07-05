@@ -11,15 +11,26 @@
  *  @param n: length of BOTH arrays.
  *  @retun a positive number if w1>w2, a negative number if w1>w2 and zero if they are equal.
  */
-int wordcmp(unsigned char *w1, unsigned char *w2, int n){
-	int i;
-	for(i=0;i<n;i++)
-		if(w1[i] < w2[i]) return -1;
-		else if(w1[i] > w2[i]) return +1;
+int wordcmp(unsigned char *w1, unsigned char *w2, int n) {
 
+	int i = 0, limit;
+
+	if(n%4 != 0){
+		w1[n/4] = w1[n/4] >> (2*(3-((n-1)%4)));
+		w1[n/4] = w1[n/4] << (2*(3-((n-1)%4)));
+		w2[n/4] = w2[n/4] >> (2*(3-((n-1)%4)));
+		w2[n/4] = w2[n/4] << (2*(3-((n-1)%4)));
+		limit=(n/4)+1;
+	} else {
+		limit = n/4;
+	}
+
+	for (i=0;i<limit;i++) {
+		if (w1[i]<w2[i]) return -1;
+		if (w1[i]>w2[i]) return +1;
+	}
 	return 0;
 }
-
 
 /* Function used to compare two Hit variables. It function sort with this
  * criterion:
@@ -45,9 +56,6 @@ int HComparer(Hit h1, Hit h2){
 
 	if(h1.posX > h2.posX) return 1;
 	else if(h1.posX < h2.posX) return -1;
-
-	if(h1.length > h2.length) return 1;
-	else if(h1.length < h2.length) return -1;
 
 	return 0;
 }
@@ -88,15 +96,10 @@ int HComparer(Hit h1, Hit h2){
 int readWordEntrance(WordEntry *we,FILE *wD,uint16_t SeqBytes){
 	we->metag = true;
 	// Read sequence
-	uint16_t i;
-	for(i=0;i<SeqBytes;++i)
-			if(fread(&we->seq[i],sizeof(unsigned char),1,wD)!=1){
-				if(feof(wD)){
-					return 1;
-				}
-				fprintf(stderr, "readWordEntrance:: Error loading sequence\n");
-				return -1;
-			}
+	if(fread(&we->seq,sizeof(unsigned char),SeqBytes,wD)!=SeqBytes){
+		fprintf(stderr, "readWordEntrance:: Error loading sequence\n");
+		return -1;
+	}
 	// Read position
 	if(fread(&we->pos,sizeof(uint64_t),1,wD)!=1){
 		fprintf(stderr, "readWordEntrance:: Error loading position.\n");
@@ -126,7 +129,7 @@ int readWordEntrance(WordEntry *we,FILE *wD,uint16_t SeqBytes){
  *  @note only seqY reverse is used to generate hits because use X.reverse and Y.reverse
  *        is the same than use X.forward and Y.forward.
  */
-int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FILE* outIndx, FILE* outBuff, uint64_t* hitsInBuff, int prefix){
+int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FILE* outIndx, FILE* outBuff, uint64_t* hitsInBuff, int prefixSize, int startIndex, uint64_t *buffersWritten){
 	// Positionate on locations files
 	if(fseek(XPFile,X.pos,SEEK_SET)!=0){
 		fprintf(stderr, "generateHits:: Error positioning on X file.\n");
@@ -138,17 +141,18 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
 	}
 
 	// Prepare necessary variables
-	hitLength = (uint64_t)(prefix*4);
 	LocationEntry X_Arr[X.reps];
 	LocationEntry Y_Arr[Y.reps];
 
 	// Load entrances
 	loadLocationEntrance(&X_Arr[0],XPFile,X.reps);
-	loadLocationEntrance(&Y_Arr[0],YPFile,Y.reps);
+    loadLocationEntrance(&Y_Arr[0],YPFile,Y.reps);
+
+	
 
 	// Check buffer space
 	if(*hitsInBuff == MAX_BUFF){
-		writeHitsBuff(buff,outIndx,outBuff,*hitsInBuff);
+		writeHitsBuff(buff,outIndx,outBuff,*hitsInBuff,prefixSize,buffersWritten);
 		*hitsInBuff=0;
 	}
 
@@ -157,11 +161,11 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
 	for(i=0; i<X.reps; ++i)
 		if(X_Arr[i].strand == 'f') // Discard X reverse
 			for(j=0; j<Y.reps; ++j){
-				storeHit(&buff[*hitsInBuff],X_Arr[i],Y_Arr[j],hitLength);
+				storeHit(&buff[*hitsInBuff],X_Arr[i],Y_Arr[j]);
 				*hitsInBuff+=1;
 				// Check buffer space
 				if(*hitsInBuff == MAX_BUFF){
-					writeHitsBuff(buff,outIndx,outBuff,*hitsInBuff);
+					writeHitsBuff(buff,outIndx,outBuff,*hitsInBuff,prefixSize,buffersWritten);
 					*hitsInBuff=0;
 				}			
 			}
@@ -174,21 +178,10 @@ int generateHits(Hit* buff,WordEntry X,WordEntry Y,FILE* XPFile,FILE* YPFile,FIL
  *  @param PFile from load the locations.
  *  @param reps number of locations to be loaded.
  */
-void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps){
-	uint32_t i;
-	for(i=0; i<reps;++i){
-		if(fread(&arr[i].seq,sizeof(uint32_t),1,PFile)!=1){
-			fprintf(stderr, "loadLocationEntrance:: Error reading sequence index.[%"PRIu32"]\n",i);
-			return;
-		}
-		if(fread(&arr[i].pos,sizeof(uint64_t),1,PFile)!=1){
-			fprintf(stderr, "loadLocationEntrance:: Error reading position.[%"PRIu32"]\n",i);
-			return;
-		}
-		if(fread(&arr[i].strand,sizeof(char),1,PFile)!=1){
-			fprintf(stderr, "loadLocationEntrance:: Error reading strand.[%"PRIu32"]\n",i);
-			return;
-		}
+inline void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps){
+	if(fread(&arr, sizeof(LocationEntry), reps, PFile) != reps){
+		fprintf(stderr, "loadLocationEntrance:: Error reading location entry");
+		exit(-1);
 	}
 }
 
@@ -199,13 +192,12 @@ void loadLocationEntrance(LocationEntry* arr, FILE* PFile, uint32_t reps){
  *  @param Y location of hit.
  *  @param HitLength matched sequence legnth.
  */
-inline void storeHit(Hit* hit,LocationEntry X,LocationEntry Y,uint64_t HitLength){
+inline void storeHit(Hit* hit,LocationEntry X,LocationEntry Y){
 	hit->diag = X.pos - Y.pos;
 	hit->posX = X.pos;
 	hit->seqX = X.seq;
 	hit->posY = Y.pos;
 	hit->seqY = Y.seq;
-	hit->length = HitLength;
 	hit->strandX = X.strand;
 	hit->strandY = Y.strand;
 }
@@ -220,7 +212,7 @@ inline void storeHit(Hit* hit,LocationEntry X,LocationEntry Y,uint64_t HitLength
  *  @param hits intermediate file.
  *  @param hitsInBuff number of words stored on buffer.
  */
-void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
+void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff,int prefix, uint64_t *buffersWritten){
 	// Sort buffer
 	quicksort_H(buff,0,hitsInBuff-1);
 
@@ -233,31 +225,18 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 	}
 	
 	// Write first hit
-	fwrite(&buff[0].seqX,sizeof(uint32_t),1,hits);
-	fwrite(&buff[0].seqY,sizeof(uint32_t),1,hits);
-	fwrite(&buff[0].diag,sizeof(int64_t),1,hits);
-	fwrite(&buff[0].posX,sizeof(uint64_t),1,hits);
-	fwrite(&buff[0].posY,sizeof(uint64_t),1,hits);
-	fwrite(&buff[0].length,sizeof(uint64_t),1,hits);
-	fwrite(&buff[0].strandX,sizeof(char),1,hits);
-	fwrite(&buff[0].strandY,sizeof(char),1,hits);
+	fwrite(&buff[0], sizeof(Hit),1,hits);
+	
 	numHits++;
 	lastHit = buff[0];
 		
 	// Write hits in hits file
 	for(pos=1; pos<hitsInBuff; ++pos){
-		if(buff[pos].diag == lastHit.diag && buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY && buff[pos].posX < lastHit.posX + lastHit.length){
+		if(buff[pos].diag == lastHit.diag && buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY && buff[pos].posX < lastHit.posX + prefix){
 			lastHit = buff[pos];
 			continue; // Collapsable
 		}
-		fwrite(&buff[pos].seqX,sizeof(uint32_t),1,hits);
-		fwrite(&buff[pos].seqY,sizeof(uint32_t),1,hits);
-		fwrite(&buff[pos].diag,sizeof(int64_t),1,hits);
-		fwrite(&buff[pos].posX,sizeof(uint64_t),1,hits);
-		fwrite(&buff[pos].posY,sizeof(uint64_t),1,hits);
-		fwrite(&buff[pos].length,sizeof(uint64_t),1,hits);
-		fwrite(&buff[pos].strandX,sizeof(char),1,hits);
-		fwrite(&buff[pos].strandY,sizeof(char),1,hits);
+		fwrite(&buff[pos], sizeof(Hit),1,hits);
 		lastHit = buff[pos];
 		numHits++;
 	}
@@ -265,7 +244,7 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
 	if(fwrite(&numHits,sizeof(uint64_t),1,index)!=1){
 		fprintf(stderr, "writeHitsBuff:: Error writting num hits on index file.\n");
 	}
-	buffersWritten++;
+	(*buffersWritten)++;
 }
 
 
@@ -276,7 +255,7 @@ void writeHitsBuff(Hit* buff,FILE* index,FILE* hits,uint64_t hitsInBuff){
  *    3 - Diagonal
  *    4 - Position on X
  *    5 - Strand on X
- *    6 - Strando on Y
+ *    6 - Strand on Y
  *    7 - Length 
  *  @param h1 word to be compared.
  *  @param h2 word to be compared
@@ -302,8 +281,7 @@ int GT(Hit h1, Hit h2){
 	if(h1.strandY=='f' && h2.strandY=='r') return 1;
 	else if(h1.strandY=='r' && h2.strandY=='f') return 0;
 
-	if(h1.length > h2.length) return 1;
-	else return 0;
+	return 0;
 }
 
 
@@ -373,44 +351,8 @@ void quicksort_H(Hit* arr, int left,int right){
  *  @param unread rest of hits on intermediate file.
  *  @return Number of hits read from intermediate file or negative number if any error happens.
  */
-uint64_t loadHit(Hit **hit,FILE* hFile, int64_t unread){
-	uint64_t j;
-	for(j=0; j<READ_BUFF_LENGTH && unread > 0; ++j){
-		if(fread(&(*hit)[j].seqX,sizeof(uint32_t),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading X index.\n");
-			return -1;
-		}
-		if(fread(&(*hit)[j].seqY,sizeof(uint32_t),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading Y index.\n");
-			return -1;
-		}
-		if(fread(&(*hit)[j].diag,sizeof(int64_t),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading diagonal.\n");
-			return -1;
-		}
-		if(fread(&(*hit)[j].posX,sizeof(uint64_t),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading X position.\n");
-			return -1;
-		}
-		if(fread(&(*hit)[j].posY,sizeof(uint64_t),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading Y position.\n");
-			return -1;
-		}
-		if(fread(&(*hit)[j].length,sizeof(uint64_t),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading length.\n");
-			return -1;
-		}
-		if(fread(&(*hit)[j].strandX,sizeof(char),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading strand X.\n");
-			return -1;
-		}
-		if(fread(&(*hit)[j].strandY,sizeof(char),1,hFile)!=1){
-			fprintf(stderr, "loadHit:: Error reading strand Y.\n");
-			return -1;
-		}
-		unread--;
-	}
-	return j;
+inline uint64_t loadHit(Hit *hit,FILE* hFile, int64_t unread){
+	return fread(&hit, sizeof(Hit), (unread<READ_BUFF_LENGTH)?unread:READ_BUFF_LENGTH, hFile);
 }
 
 
@@ -492,7 +434,6 @@ void copyHit(Hit* toCopy, Hit copy){
 	toCopy->posY = copy.posY;
 	toCopy->seqX = copy.seqX;
 	toCopy->seqY = copy.seqY;
-	toCopy->length = copy.length;
 	toCopy->strandX = copy.strandX;
 	toCopy->strandY = copy.strandY;
 }
@@ -595,13 +536,13 @@ void checkOrder(node_H** list,bool discardFirst){
  *  @param nsy is the seqY number (index).
  *  @param fr is the fragment output file. 
  */
-void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t YLength, uint64_t nsy, FILE *fr){
+void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t YLength, uint64_t nsy, FILE *fr, int prefixSize, int L_Threshold, float S_Threshold){
 	// Declare variables
 	int64_t forwardDiagLength, backwardDiagLength;
 	int64_t XIndex, YIndex;
 	/* for version with backward search */
 	int64_t XIndx_B, YIndx_B;
-	int fragmentLength = hit->length;
+	int fragmentLength = prefixSize;
 	/* for version Maximum global---*/
 	int64_t XMaxIndex, YMaxIndex;
 	/* for version with backward search */
@@ -616,20 +557,20 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 		forwardDiagLength = (seqX->length - hit->posX) > (YLength - hit->posY)? (YLength - hit->posY) : (seqX->length - hit->posX);
 		backwardDiagLength = hit->posX > hit->posY? hit->posY : hit->posX;
 	}else{
-		forwardDiagLength = (seqX->length - hit->posX) > hit->posY? hit->posY : (seqX->length - hit->posX);
+		forwardDiagLength = ((seqX->length - hit->posX) > hit->posY) ? hit->posY : (seqX->length - hit->posX);
 		backwardDiagLength = hit->posX > (YLength - hit->posY)? (YLength - hit->posY) : hit->posX;
 	}
 	
 	// Positions values
-	XIndex = hit->posX + hit->length; // End of the seed X
+	XIndex = hit->posX + prefixSize; // End of the seed X
 	XIndx_B = hit->posX - 1; // Init of the seed X
 	
 	if(hit->strandY=='f'){ // Forward strand
-		YIndex = hit->posY + hit->length; // End of seed Y
+		YIndex = hit->posY + prefixSize; // End of seed Y
 		YIndx_B = hit->posY - 1; // Init of seed Y
 	}else{ // Reverse strand
 		YIndex = hit->posY -1; // End of seed (init in forward direction)
-		YIndx_B = hit->posY + hit->length; // Init of seed Y
+		YIndx_B = hit->posY + prefixSize; // Init of seed Y
 	}
 	
 	XMaxIndex = XIndex; // Maximum coordiantes on X
@@ -637,8 +578,8 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 	YMaxIndex = YIndex; // Maximum coordiantes on Y
 	YMinIndex = YIndx_B; // Minimum coordiantes on Y
 	// Scoring values
-	identitites = maxIdentities = hit->length; 
-	score = Eq_Value * hit->length; // Init score
+	identitites = maxIdentities = prefixSize; 
+	score = Eq_Value * prefixSize; // Init score
 	scoreMax = score;
 	// Seek forward
 	while (fragmentLength < forwardDiagLength) {
@@ -684,7 +625,7 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 	if(hit->strandY == 'f')
 		YMinIndex = hit->posY;
 	else
-		YMinIndex = hit->posY + hit->length;
+		YMinIndex = hit->posY + prefixSize;
 
 	if(XIndx_B >= 0 && YIndx_B >= 0) // Any coordinate are the init
 		while(fragmentLength < backwardDiagLength){
@@ -1051,3 +992,10 @@ int is_float(char const *str){
     int isFloat = strcmp(str2, str) == 0; // Check if there are equals => String==Float
     return isFloat;
 }
+
+void printWe(WordEntry we){
+	fprintf(stdout, "%s %"PRIu64" %"PRIu32"\n", we.metag ? "True" : "False", we.pos, we.reps);
+}
+
+
+

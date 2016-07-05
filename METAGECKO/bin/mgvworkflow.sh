@@ -49,33 +49,16 @@ BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 mkdir -p dictionaries
 mkdir -p fragments
 
-# Check if dictionary exists
-if [[ ! -f dictionaries/${genome}.d2hP || ! -f dictionaries/${genome}.d2hW ]];	then
-	echo " Writting genome dict: ${genome}.${genoExt}"
-	# Find words and order
-	${BINDIR}/words ${genome}.${genoExt} dictionaries/${genome}.words.unsort
-	${BINDIR}/sortWords 10000000 32 dictionaries/${genome}.words.unsort dictionaries/${genome}.words.sort
-
-	# Create hash table in disk
-	${BINDIR}/w2hd dictionaries/${genome}.words.sort dictionaries/${genome}
+# Create database dictionarie
+if [[ ! -f dictionaries/${genome}.d2hP || ! -f dictionaries/${genome}.d2hP ]];    then
+        echo " Writing genome dict: ${genome}.${genoExt}"
+        #New dict genome
+        ${BINDIR}/dict ${genome}.${genoExt} dictionaries/${genome} 32
 fi
 
-# Now with reverse seq
-if [[ ! -f dictionaries/${genome}-revercomp.d2hP || ! -f dictionaries/${genome}-revercomp.d2hW ]];	then
-	# Generate reverse
-	${BINDIR}/reverseComplement ${genome}.${genoExt} ${genome}-revercomp.${genoExt}
-	echo " Writting genome dict: ${genome}-revercomp.${genoExt}"
-	
-	# Find words and order
-	${BINDIR}/words ${genome}-revercomp.${genoExt} dictionaries/${genome}-revercomp.words.unsort
-	${BINDIR}/sortWords 10000000 32 dictionaries/${genome}-revercomp.words.unsort dictionaries/${genome}-revercomp.words.sort
-
-	# Create hash table in disk
-	${BINDIR}/w2hd dictionaries/${genome}-revercomp.words.sort dictionaries/${genome}-revercomp
-fi
 
 # Create metagenome dictionarie
-if [[ ! -f dictionaries/${metgenome}.d2hP || ! -f dictionaries/${metgenome}.d2hP ]];	then
+if [[ ! -f dictionaries/${metagenome}.d2hP || ! -f dictionaries/${metagenome}.d2hP ]];	then
 	echo " Writting metagenome dict: ${metagenome}.${metagExt}"
 	#New dict metagenome
 	${BINDIR}/dict ${metagenome}.${metagExt} dictionaries/${metagenome} 32
@@ -84,7 +67,7 @@ fi
 # Generate fragments
 if [[ ! -f fragments/${metagenome}-${genome}-f.frags ]];	then
 	echo "Writting fragments for: ${metagenome} - ${genome}"
-	${BINDIR}/frag dictionaries/${metagenome} ${metagenome}.${metagExt} dictionaries/${genome} ${genome}.${genoExt} fragments/${metagenome}-${genome}-f $S $L f $5
+	${BINDIR}/frag dictionaries/${metagenome} ${metagenome}.${metagExt} dictionaries/${genome} ${genome}.${genoExt} fragments/${metagenome}-${genome}-f $S $L $5
 fi
 
 # Reverse fragments
