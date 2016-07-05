@@ -61,25 +61,11 @@ fi
 if [[ ! -f dictionaries/${metagenome}.d2hP || ! -f dictionaries/${metagenome}.d2hP ]];	then
 	echo " Writting metagenome dict: ${metagenome}.${metagExt}"
 	#New dict metagenome
-	${BINDIR}/dict ${metagenome}.${metagExt} dictionaries/${metagenome} 32
+	${BINDIR}/dict ${metagenome}.${metagExt} dictionaries/${metagenome} 32 f
 fi
 
 # Generate fragments
 if [[ ! -f fragments/${metagenome}-${genome}-f.frags ]];	then
 	echo "Writting fragments for: ${metagenome} - ${genome}"
 	${BINDIR}/frag dictionaries/${metagenome} ${metagenome}.${metagExt} dictionaries/${genome} ${genome}.${genoExt} fragments/${metagenome}-${genome}-f $S $L $5
-fi
-
-# Reverse fragments
-if [[ ! -f fragments/${metagenome}-${genome}-revercomp.frags ]];	then
-	echo "Writting new fragments for: ${metagenome} - ${genome}-revercomp"
-	${BINDIR}/frag dictionaries/${metagenome} ${metagenome}.${metagExt} dictionaries/${genome}-revercomp ${genome}-revercomp.${genoExt} fragments/${metagenome}-${genome}-revercomp $S $L r $5
-	# Fixe coordinates
-	${BINDIR}/fixeReverseFrags ${genome}.${genoExt} ${genome}-revercomp.${genoExt} fragments/${metagenome}-${genome}-revercomp
-fi
-
-# Combine fragment
-if [[ -f fragments/${metagenome}-${genome}-revercomp.frags && -f fragments/${metagenome}-${genome}-f.frags ]];	then
-	echo "Combining forward and reverse: ${metagenome}-${genome}"
-	${BINDIR}/combineFragments fragments/${metagenome}-${genome}-f.frags fragments/${metagenome}-${genome}-revercomp.frags fragments/${metagenome}-${genome}.frags 1
 fi

@@ -36,8 +36,8 @@ void shift_word_right(Word *w) {
  *  @param container variable where word will be stored.
  *  @param word taht will be stored.
  */
-inline void storeWord(wentry* container,wentry word){
-	memcpy(container, &word, sizeof(wentry));
+inline void storeWord(wentry *container, wentry word) {
+    memcpy(container, &word, sizeof(wentry));
 }
 
 
@@ -49,28 +49,28 @@ inline void storeWord(wentry* container,wentry word){
  *  @return a negative number if any error happens or a non negative number if
  *     the process finished correctly.
  */
-int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
-	// Sort buffer
-	quicksort_W(buff,0,numWords-1);
-	
-	// Write buffer info on buffer index file
-	uint64_t pos = (uint64_t) ftell(words); // Buffer start position
-	fwrite(&pos,sizeof(uint64_t),1,index);
-	fwrite(&numWords,sizeof(uint64_t),1,index); // Number of words
-	// Write words on words file
-	
-	
-	for(pos=0;pos<numWords;++pos){
-		fwrite(&buff[pos].pos,sizeof(uint64_t),1,words); 
-		fwrite(&buff[pos].seq,sizeof(uint32_t),1,words);
-		fwrite(&buff[pos].strand,sizeof(char),1,words);
-		//fwrite(&buff[pos].w.WL,sizeof(uint16_t),1,words);
-		
-		fwrite(&buff[pos].w.b, sizeof(unsigned char), BYTES_IN_WORD, words);
+int writeBuffer(wentry *buff, FILE *index, FILE *words, uint64_t numWords) {
+    // Sort buffer
+    quicksort_W(buff, 0, numWords - 1);
 
-	}
-	// Buffer correctly written on intermediate files
-	return 0;
+    // Write buffer info on buffer index file
+    uint64_t pos = (uint64_t) ftell(words); // Buffer start position
+    fwrite(&pos, sizeof(uint64_t), 1, index);
+    fwrite(&numWords, sizeof(uint64_t), 1, index); // Number of words
+    // Write words on words file
+
+
+    for (pos = 0; pos < numWords; ++pos) {
+        fwrite(&buff[pos].pos, sizeof(uint64_t), 1, words);
+        fwrite(&buff[pos].seq, sizeof(uint32_t), 1, words);
+        fwrite(&buff[pos].strand, sizeof(char), 1, words);
+        //fwrite(&buff[pos].w.WL,sizeof(uint16_t),1,words);
+
+        fwrite(&buff[pos].w.b, sizeof(unsigned char), BYTES_IN_WORD, words);
+
+    }
+    // Buffer correctly written on intermediate files
+    return 0;
 }
 
 
@@ -80,42 +80,26 @@ int writeBuffer(wentry* buff,FILE* index,FILE* words,uint64_t numWords){
  *  @param n: length of BOTH arrays.
  *  @retun a positive number if w1>w2, a negative number if w1>w2 and zero if they are equal.
  */
-int wordcmp(Word w1, Word w2, int n){
-	int i;
-	for(i=0;i<n;i++)
-		if(w1.b[i] < w2.b[i]) return -1;
-		else if(w1.b[i] > w2.b[i]) return +1;
+int wordcmp(unsigned char *w1, unsigned char *w2, int n) {
 
-	return 0;
+    int i = 0, limit;
+
+    if(n%4 != 0){
+        w1[n/4] = w1[n/4] >> (2*(3-((n-1)%4)));
+        w1[n/4] = w1[n/4] << (2*(3-((n-1)%4)));
+        w2[n/4] = w2[n/4] >> (2*(3-((n-1)%4)));
+        w2[n/4] = w2[n/4] << (2*(3-((n-1)%4)));
+        limit=(n/4)+1;
+    } else {
+        limit = n/4;
+    }
+
+    for (i=0;i<limit;i++) {
+        if (w1[i]<w2[i]) return -1;
+        if (w1[i]>w2[i]) return +1;
+    }
+    return 0;
 }
-
-
-/* This function is used to compare two wentry instances. The criterion
- * used is:
- * 		1 - Compare sequences (alphabetically).
- *      2 - Compare Read index.
- *		3 - Compare position on sequence.
- * @param w1 word to be compared.
- * @param w2 word to be compared.
- * @return a positive number if w1 is greater than w2, a negative number
- * 		if w2 is greater than w1 and zero if both are equal.
- */
-int wordComparator(wentry* w1,wentry* w2){
-	int wComp;
-	if((wComp = wordcmp(w1->w,w2->w,BYTES_IN_WORD)) != 0) return wComp;
-
-	if(w1->seq > w2->seq) return 1;
-	else if(w1->seq < w2->seq) return -1;
-
-	if(w1->pos > w2->pos) return 1;
-	else if(w1->pos < w2->pos) return -1;
-
-	if(w1->strand == 'f' && w2->strand == 'r') return 1;
-	else if(w1->strand == 'r' && w2->strand == 'f') return -1;
-	
-	return 0;
-}
-
 
 /* Function used to compare two wentry variables
  *  @param w1 word to be compared.
@@ -123,20 +107,20 @@ int wordComparator(wentry* w1,wentry* w2){
  *  @return zero if w2 are greater or equal and a positive number if
  *     w1 is greater.
  */
-int GT(wentry w1, wentry w2){
-	int i;
-	for(i=0;i<BYTES_IN_WORD;i++)
-		if(w1.w.b[i] < w2.w.b[i]) return 0;
-		else if(w1.w.b[i] > w2.w.b[i]) return 1;
+int GT(wentry w1, wentry w2) {
+    int i;
+    for (i = 0; i < BYTES_IN_WORD; i++)
+        if (w1.w.b[i] < w2.w.b[i]) return 0;
+        else if (w1.w.b[i] > w2.w.b[i]) return 1;
 
-	if(w1.seq > w2.seq) return 1;
-	else if(w1.seq < w2.seq) return 0;
+    if (w1.seq > w2.seq) return 1;
+    else if (w1.seq < w2.seq) return 0;
 
-	if(w1.pos > w2.pos) return 1;
-	else if(w1.pos < w2.pos) return 0;
+    if (w1.pos > w2.pos) return 1;
+    else if (w1.pos < w2.pos) return 0;
 
-	if(w1.strand == 'f' && w2.strand == 'r') return 1;
-	else return 0;
+    if (w1.strand == 'f' && w2.strand == 'r') return 1;
+    else return 0;
 }
 
 
@@ -145,44 +129,44 @@ int GT(wentry w1, wentry w2){
  *  @param left inde of the sub-array.
  *  @param right index of the sub-array.
  */
-int partition(wentry* arr, int left, int right) {
-  int i = left;
-  int j = right+1;
-  wentry t;
+int partition(wentry *arr, int left, int right) {
+    int i = left;
+    int j = right + 1;
+    wentry t;
 
-  // left sera el pivote
-  // y contendra la mediana de left, r y (l+r)/2
-  int mid = (left+right)/2;
+    // left sera el pivote
+    // y contendra la mediana de left, r y (l+r)/2
+    int mid = (left + right) / 2;
 
-  if(GT(arr[mid],arr[right])){
-		SWAP_W(arr[mid],arr[right],t);
-  }
+    if (GT(arr[mid], arr[right])) {
+        SWAP_W(arr[mid], arr[right], t);
+    }
 
-  if(GT(arr[mid],arr[left])){
-		SWAP_W(arr[mid],arr[left],t);
-  }
+    if (GT(arr[mid], arr[left])) {
+        SWAP_W(arr[mid], arr[left], t);
+    }
 
-  if(GT(arr[left],arr[right])){
-		SWAP_W(arr[left],arr[right],t);
-	}
+    if (GT(arr[left], arr[right])) {
+        SWAP_W(arr[left], arr[right], t);
+    }
 
-	while(1){
-		do{
-			++i;
-		}while(!GT(arr[i],arr[left]) && i <= right);
+    while (1) {
+        do {
+            ++i;
+        } while (!GT(arr[i], arr[left]) && i <= right);
 
-		do{
-			--j;
-		}while(GT(arr[j],arr[left]) && j >= left);
+        do {
+            --j;
+        } while (GT(arr[j], arr[left]) && j >= left);
 
-		if(i >= j) break;
+        if (i >= j) break;
 
-		SWAP_W(arr[i],arr[j],t)
-	}
+        SWAP_W(arr[i], arr[j], t)
+    }
 
-	SWAP_W(arr[left],arr[j],t)
+    SWAP_W(arr[left], arr[j], t)
 
-	return j;
+    return j;
 }
 
 
@@ -191,17 +175,17 @@ int partition(wentry* arr, int left, int right) {
  *  @param left index where start to sort.
  *  @param right index where end sorting action.
  */
-int quicksort_W(wentry* arr, int left,int right) {
-   int j;
+int quicksort_W(wentry *arr, int left, int right) {
+    int j;
 
-	if( left < right ) {
- 	// divide and conquer
-       j = partition( arr, left, right);
-       //  j=(left+r)/2;
-       quicksort_W( arr, left, j-1);
-       quicksort_W( arr, j+1, right);
-   }
-   return 0;
+    if (left < right) {
+        // divide and conquer
+        j = partition(arr, left, right);
+        //  j=(left+r)/2;
+        quicksort_W(arr, left, j - 1);
+        quicksort_W(arr, j + 1, right);
+    }
+    return 0;
 }
 
 
@@ -211,8 +195,8 @@ int quicksort_W(wentry* arr, int left,int right) {
  *  @param unread rest of words on intermediate file.
  *  @return Number of words read from intermediate file. Or a negative number if any error hapens.
  */
-uint64_t loadWord(wentry *words,FILE* wFile, int64_t unread){
-	return fread(&words, sizeof(wentry), (unread<READ_BUFF_LENGTH)?unread:READ_BUFF_LENGTH, wFile);
+uint64_t loadWord(wentry *words, FILE *wFile, int64_t unread) {
+    return fread(&words, sizeof(wentry), (unread < READ_BUFF_LENGTH) ? unread : READ_BUFF_LENGTH, wFile);
 }
 
 
@@ -226,19 +210,19 @@ uint64_t loadWord(wentry *words,FILE* wFile, int64_t unread){
  *  @param sameThanLastWord boolean value that indicate if the current word is the same than the last written.
  *  @param words equal than last written.
  */
-inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uint32_t *words){
-	if(!sameThanLastWord){ // Write new word
-		uint64_t aux;
-		fwrite(words,sizeof(uint32_t),1,w); // Write num of repetitions
-		fwrite(&word->w.b,sizeof(unsigned char),BYTES_IN_WORD,w); // Write new word
-		aux = (uint64_t) ftell(p);
-		fwrite(&aux,sizeof(uint64_t),1,w); // Write new postions on positions dictionary
-		*words = 0; // Update value
-	}
-	fwrite(&word->seq,sizeof(uint32_t),1,p); // Read index
-	fwrite(&word->pos,sizeof(uint64_t),1,p); // Position on read
-	fwrite(&word->strand,sizeof(char),1,p); // Strand on read
-	*words+=1; // Increment number of repetitions
+inline void writeWord(wentry *word, FILE *w, FILE *p, bool sameThanLastWord, uint32_t *words) {
+    if (!sameThanLastWord) { // Write new word
+        uint64_t aux;
+        fwrite(words, sizeof(uint32_t), 1, w); // Write num of repetitions
+        fwrite(&word->w.b, sizeof(unsigned char), BYTES_IN_WORD, w); // Write new word
+        aux = (uint64_t) ftell(p);
+        fwrite(&aux, sizeof(uint64_t), 1, w); // Write new positions on positions dictionary
+        *words = 0; // Update value
+    }
+    fwrite(&word->seq, sizeof(uint32_t), 1, p); // Read index
+    fwrite(&word->pos, sizeof(uint64_t), 1, p); // Position on read
+    fwrite(&word->strand, sizeof(char), 1, p); // Strand on read
+    *words += 1; // Increment number of repetitions
 }
 
 
@@ -247,27 +231,28 @@ inline void writeWord(wentry *word, FILE* w, FILE* p, bool sameThanLastWord, uin
  *  @param list linked list to be checked.
  *  @param discardFirst a boolean value that indicate if first node should be deleted.
  */
-void checkOrder(node_W** list,bool discardFirst){
-	node_W *aux;
-	if(discardFirst){
-		aux = *list;
-		*list = (*list)->next;
-		free(aux);
-	}else if((*list)->next != NULL){ // Check new position
-		// Search new position
-		if(GT((*list)->word[(*list)->index],(*list)->next->word[(*list)->next->index])==1){
-			node_W *curr = (*list)->next;
-			while(1){
-				if(curr->next == NULL) break; // End of list
-				else if(GT((*list)->word[(*list)->index],curr->next->word[curr->next->index])==0) break; // position found
-				else curr = curr->next;
-			}
-			aux = (*list)->next;
-			(*list)->next = curr->next;
-			curr->next = *list;
-			*list = aux;
-		}
-	}
+void checkOrder(node_W **list, bool discardFirst) {
+    node_W *aux;
+    if (discardFirst) {
+        aux = *list;
+        *list = (*list)->next;
+        free(aux);
+    } else if ((*list)->next != NULL) { // Check new position
+        // Search new position
+        if (GT((*list)->word[(*list)->index], (*list)->next->word[(*list)->next->index]) == 1) {
+            node_W *curr = (*list)->next;
+            while (1) {
+                if (curr->next == NULL) break; // End of list
+                else if (GT((*list)->word[(*list)->index], curr->next->word[curr->next->index]) == 0)
+                    break; // position found
+                else curr = curr->next;
+            }
+            aux = (*list)->next;
+            (*list)->next = curr->next;
+            curr->next = *list;
+            *list = aux;
+        }
+    }
 }
 
 
@@ -275,9 +260,9 @@ void checkOrder(node_W** list,bool discardFirst){
  *  @param A node after B will be pushed.
  *  @param B node to be pushed.
  */
-void push(node_W **A,node_W **B){
-	(*B)->next = (*A)->next;
-	(*A)->next = *B;
+void push(node_W **A, node_W **B) {
+    (*B)->next = (*A)->next;
+    (*A)->next = *B;
 }
 
 
@@ -285,49 +270,50 @@ void push(node_W **A,node_W **B){
  *  @param A reference node.
  *  @param B node after it will be moved.
  */
-void move(node_W **A,node_W **B){
-	node_W *temp = (*B)->next->next;
-	push(A,&(*B)->next);
-	(*B)->next = temp;
+void move(node_W **A, node_W **B) {
+    node_W *temp = (*B)->next->next;
+    push(A, &(*B)->next);
+    (*B)->next = temp;
 }
 
 
 /* This emthod sort a wentry linked list
  *  @param first node of the linked list.
  */
-void sortList(node_W **first){
-	if((*first)->next == NULL) return; // Linked list with only one element
+void sortList(node_W **first) {
+    if ((*first)->next == NULL) return; // Linked list with only one element
 
-	node_W *current = *first;
-	node_W *aux;
-	bool sorted = false;
-	// Do until end
-	while(!sorted){
-		if(current->next == NULL) sorted = true;
-		else if(GT(current->next->word[current->index],current->word[current->next->index])==0){ // Next is smaller
-			// Search position
-			if(GT(current->next->word[current->next->index],(*first)->word[(*first)->index])==0){ // New first node
-				aux = current->next->next;
-				current->next->next = *first;
-				*first = current->next;
-				current->next = aux;
-			}else{ // Search position
-				aux = *first;			
-				while(1){
-					if(GT(aux->next->word[aux->next->index],current->next->word[current->next->index])==1) break; // Position found
-					else aux = aux->next;
-				}
-				move(&aux,&current);
-				// Chekc if it's the last node
-				if(current->next == NULL) sorted = true;
-			}
-		}else{ // Next is bigger, go next
-			current = current->next;
-			if(current->next == NULL){ // End of the list
-				sorted = true;
-			}
-		}
-	}
+    node_W *current = *first;
+    node_W *aux;
+    bool sorted = false;
+    // Do until end
+    while (!sorted) {
+        if (current->next == NULL) sorted = true;
+        else if (GT(current->next->word[current->index], current->word[current->next->index]) == 0) { // Next is smaller
+            // Search position
+            if (GT(current->next->word[current->next->index], (*first)->word[(*first)->index]) == 0) { // New first node
+                aux = current->next->next;
+                current->next->next = *first;
+                *first = current->next;
+                current->next = aux;
+            } else { // Search position
+                aux = *first;
+                while (1) {
+                    if (GT(aux->next->word[aux->next->index], current->next->word[current->next->index]) == 1)
+                        break; // Position found
+                    else aux = aux->next;
+                }
+                move(&aux, &current);
+                // Chekc if it's the last node
+                if (current->next == NULL) sorted = true;
+            }
+        } else { // Next is bigger, go next
+            current = current->next;
+            if (current->next == NULL) { // End of the list
+                sorted = true;
+            }
+        }
+    }
 }
 
 
@@ -336,8 +322,8 @@ void sortList(node_W **first){
  *  @return a positive number if the file exists and the program have access
  *          or zero in other cases.
  */
-int exists(char *file){
-    if(access(file,F_OK) != (-1)) return 1;
+int exists(char *file) {
+    if (access(file, F_OK) != (-1)) return 1;
     else return 0;
 }
 
@@ -346,10 +332,10 @@ int exists(char *file){
  *  @param str is the string to be checked.
  *  @return a positive number if it's an integer or zero in other cases. 
  */
-int is_int(char const *str){
+int is_int(char const *str) {
     int integer = atoi(str); // Return the first integer found on the string
     char str2[1024];
-    sprintf((char*)&str2,"%d",integer); // int -> string
+    sprintf((char *) &str2, "%d", integer); // int -> string
     int isInteger = strcmp(str2, str) == 0; // Check if there are equals => String==Integer
     return isInteger;
 }

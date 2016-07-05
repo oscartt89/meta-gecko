@@ -74,7 +74,6 @@ typedef struct item_W node_W;
  *  @program META-GECKO fragments. Loading dictionaries.
  */
 typedef struct{
-    bool metag; // True -> Metagenome entrance; False -> Genome entrance
     uint16_t WB; // Word bytes
     unsigned char *seq; // Must be an unsigned char [WB]
     uint64_t pos; // Position on locations file
