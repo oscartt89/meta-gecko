@@ -1,0 +1,11 @@
+*
+
+!.gitignore
+!bin/*.sh
+!bin/*.mat
+
+!src/*.c
+!src/*.h
+!src/Makefile
+
+!*/
