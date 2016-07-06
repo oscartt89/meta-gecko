@@ -5,30 +5,6 @@
  */
 #include "frags.h"
 
-//FOR DEBUG
-void showWord(unsigned char* b, char *ws) {
-    char Alf[] = { 'A', 'C', 'G', 'T' };
-    int i;
-    int wsize = 8;
-    unsigned char c;
-    for (i = 0; i < wsize; i++) {
-        c = b[i];
-        c = c >> 6;
-        ws[4*i] = Alf[(int) c];
-        c = b[i];
-        c = c << 2;
-        c = c >> 6;
-        ws[4*i+1] = Alf[(int) c];
-        c = b[i];
-        c = c << 4;
-        c = c >> 6;
-        ws[4*i+2] = Alf[(int) c];
-        c = b[i];
-        c = c << 6;
-        c = c >> 6;
-        ws[4*i+3] = Alf[(int) c];
-    }
-}
 
 /* This function compare two arrays of unsigned chars with the same length.
  *  @param w1: first array to be compared.

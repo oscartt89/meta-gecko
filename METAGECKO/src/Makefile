@@ -4,12 +4,12 @@ BIN=../bin
 
 all: meta_gecko stats write
 
-stats: dictStats metagStats fragStats
+stats: dictStats metagStats fragStats hdStat
 
 meta_gecko: dict frags
 
 dict: dict.c
-	$(CC) $(CFLAGS) dict.c dict.h dictFun.c -o $(BIN)/dict
+	$(CC) $(CFLAGS) dict.c dict.h dictFun.c common_functions.c -o $(BIN)/dict
 
 frags: frags.c
 	$(CC) $(CFLAGS) frags.c frags.h fragsFun.c -o $(BIN)/frag
@@ -28,3 +28,6 @@ metagStats: metagfilestats.c
 
 fragStats: metagfragstats.c
 	$(CC) $(CFLAGS) metagfragstats.c fragsFun.c -o $(BIN)/metagfragstats
+	
+hdStat: hdStat.c
+	$(CC) $(CFLAGS) hdStat.c common_functions.c -o $(BIN)/hdStat

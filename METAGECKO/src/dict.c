@@ -164,6 +164,9 @@ int main(int ac, char **av) {
         fprintf(stderr, "Error allocating memory for rev_temp.\n");
         return -1;
     }
+    
+    memset(temp.w.b, 0, BYTES_IN_WORD);
+    memset(rev_temp.w.b, 0, BYTES_IN_WORD);
 
     temp.seq = 0;
     temp.w.WL = WL;
@@ -177,6 +180,10 @@ int main(int ac, char **av) {
         buffer[i].w.b = &WordsBlock[blockIndex];
 
 
+	printf("BTYES IN WORD: %d\n", BYTES_IN_WORD);
+	
+	char accum[33]=""; int iAccum=0;
+	fprintf(stdout, "\n");
     // Start to read
     c = fgetc(metag);
     while (!feof(metag)) {
@@ -186,6 +193,7 @@ int main(int ac, char **av) {
                 c = fgetc(metag);
                 while (c != '\n') // Avoid comment line
                     c = fgetc(metag);
+                
                 temp.seq++; // New sequence
                 crrSeqL = 0; // Reset buffered sequence length
                 seqPos = 0; // Reset index
@@ -195,33 +203,70 @@ int main(int ac, char **av) {
         }
         if (strandF) shift_word_left(&temp.w); // Shift bits sequence
         if (strandR) shift_word_right(&rev_temp.w); // Shift bits sequence
+        
+
+        
+		int isBad=0;
+        
         // Add new nucleotid
         switch (c) {
             case 'A': // A = 00
                 crrSeqL++;
-                if (strandR) rev_temp.w.b[BYTES_IN_WORD - 1] |= 192;
+                if (strandR) rev_temp.w.b[0] |= 192;
                 break;
             case 'C': // C = 01
                 if (strandF) temp.w.b[BYTES_IN_WORD - 1] |= 1;
-                if (strandR) rev_temp.w.b[BYTES_IN_WORD - 1] |= 128;
+                if (strandR) rev_temp.w.b[0] |= 128;
                 crrSeqL++;
                 break;
             case 'G': // G = 10
                 if (strandF) temp.w.b[BYTES_IN_WORD - 1] |= 2;
-                if (strandR) rev_temp.w.b[BYTES_IN_WORD - 1] |= 64;
+                if (strandR) rev_temp.w.b[0] |= 64;
                 crrSeqL++;
                 break;
             case 'T': // T = 11
-                if (strandF) temp.w.b[BYTES_IN_WORD - 1] |= 3;
+                if (strandF) temp.w.b[0] |= 3;
                 crrSeqL++;
                 break;
             default : // Bad formed sequence
                 crrSeqL = 0;
+                isBad=1;
                 break;
         }
+        if(isBad==0){
+		    if(iAccum < 32){
+			    accum[iAccum] = c;
+			    iAccum++;
+			}else{
+				int k;
+				for(k=0;k<31;k++){
+					accum[k] = accum[k+1];
+				}
+				accum[31] = '\0';
+				fprintf(stdout, "\nF:%s", accum);
+			
+				accum[31] = c;
+			
+			}
+		    fprintf(stdout, "%c", c);
+        }
+        isBad=0;
         seqPos++;
         if (crrSeqL >= (uint64_t) WL) { // Full well formed sequence
+        	
+        	
+        	
             if (strandF) {
+            
+            	
+            	char toShowW[33]="";
+		    	word myw;
+		    	memcpy(myw.b,temp.w.b, 8);
+		    	showWord(&myw, toShowW);
+		    	
+		    	fprintf(stdout, "\nF:%.32s", toShowW);
+		    	getchar();
+            
                 temp.pos = seqPos - WL; // Take position on read
                 // Store the new word
                 storeWord(&buffer[wordsInBuffer], temp);
@@ -239,6 +284,14 @@ int main(int ac, char **av) {
                 }
             }
             if (strandR) {
+            	char toShowW[33]="";
+		    	word myw;
+		    	memcpy(myw.b,rev_temp.w.b, 8);
+		    	showWord(&myw, toShowW);
+		    	
+		    	fprintf(stdout, "\nR:%.32s", toShowW);
+		    	getchar();
+            
                 rev_temp.pos = seqPos - 1; // Take position on read
                 rev_temp.seq = temp.seq;
                 // Store the new word

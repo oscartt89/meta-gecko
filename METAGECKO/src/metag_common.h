@@ -20,6 +20,7 @@
 #define MAXLID 200
 #define MAX_READ_LENGTH 5000
 #define MAXLS 100000000
+#define READBUF 10000
 
 // STRUCTS
 /* Structure used to store a sequence (k-mer) and its length.
@@ -285,3 +286,24 @@ struct fitem{
  *  @program META-GECKO fixeReverseFragments.
  */
 typedef struct fitem fnode;
+
+
+/// Functions
+
+
+/*
+	Print the error message 's' and exit(-1)
+*/
+void terror(char *s);
+
+/*
+	Manually-controlled buffering to avoid getc's
+*/
+
+char buffered_fgetc(char *buffer, uint64_t *pos, uint64_t *read, FILE *f);
+
+/*
+	Print a 32 bits word encoded in 8 bytes
+*/
+
+void showWord(word *w, char *ws);

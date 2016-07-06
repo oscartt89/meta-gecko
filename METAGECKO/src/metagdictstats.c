@@ -60,11 +60,12 @@ int main(int ac, char** av){
 		fprintf(stats_file, "Metagenome\tWSize\tPSize\tWordLength\tNumWords\tMaxRep\tMinRep\tMeanRep\n");
 	}
 
-	char kmer[wl/4];
+	fprintf(stdout, "Working with kmer length: %"PRIu16"\n", wl);
+	unsigned char kmer[wl];
 
 	// Start to read
 		// Read first kmer
-		if(fread(&kmer[0],sizeof(unsigned char),wl/4,dict)!=wl/4){
+		if(fread(&kmer[0],sizeof(unsigned char),wl,dict)!=wl){
 			fprintf(stderr, "Error reading first kmer sequence.\n");
 			return -1;
 		}
@@ -88,7 +89,7 @@ int main(int ac, char** av){
 		if(aux32 < minReps) minReps = aux32;
 		if(aux32 > maxReps) maxReps = aux32;
 
-		if(fread(&kmer[0],sizeof(unsigned char),wl/4,dict)!=wl/4){
+		if(fread(&kmer[0],sizeof(unsigned char),wl,dict)!=wl){
 			fprintf(stderr, "Error reading kmer sequence\n");
 			return -1;
 		}

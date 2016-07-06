@@ -80,6 +80,3 @@ int is_float(char const *str);
 
 int is_int(char const *);
 
-//FOR DEBUG
-void showWord(unsigned char* b, char *ws);
-

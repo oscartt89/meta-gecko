@@ -251,18 +251,12 @@ int main(int ac, char **av) {
     fflush(stdout);
     /////////////////////////// CHECKPOINT ///////////////////////////
 
-    char w1[33];
-    w1[32] = '\0';
-    char w2[33];
-    w2[32] = '\0';
-    showWord(we[0].seq, w1);
-    showWord(we[1].seq, w2);
 
     // Search
     if (prefixSize == BytesMetagWord * 4 && prefixSize == BytesGenoWord * 4) {
-        fprintf(stdout, "es 32\n");
+        
         while (!feof(mW) && !feof(gW)) {
-            fprintf(stdout, "(%s, %" PRIu32 ") -- (%s %" PRIu32 ")\n", w1, we[0].reps, w2, we[1].reps);
+            
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
                 if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize, startIndex,
                                  &buffersWritten) < 0)
@@ -270,13 +264,12 @@ int main(int ac, char **av) {
             }
             // Load next word
             if (cmp >= 0) { // New genome word is necessary
-                if (readWordEntrance(&we[1], gW, BytesGenoWord) < 0)return -1;
+                if (readWordEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
             }
             if (cmp <= 0) { // New metagenome word is necessary
                 if (readWordEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
             }
-            showWord(we[0].seq, w1);
-            showWord(we[1].seq, w2);
+            
         }
     } else {
         while (!feof(mW)) {
