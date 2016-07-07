@@ -16,10 +16,10 @@ char buffered_fgetc(char *buffer, uint64_t *pos, uint64_t *read, FILE *f) {
     *pos = *pos + 1;
     return buffer[*pos-1];
 }
-void showWord(word *w, char *ws) {
+void showWord(Word *w, char *ws, uint16_t WORD_LENGTH) {
 	char Alf[] = { 'A', 'C', 'G', 'T' };
 	int i;
-	int wsize = 8;
+	int wsize = WORD_LENGTH/4;
 	unsigned char c;
 	for (i = 0; i < wsize; i++) {
 		c = w->b[i];
@@ -40,3 +40,4 @@ void showWord(word *w, char *ws) {
 	}
 	ws[32]='\0';
 }
+

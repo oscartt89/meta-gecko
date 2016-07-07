@@ -300,7 +300,8 @@ void terror(char *s);
 char buffered_fgetc(char *buffer, uint64_t *pos, uint64_t *read, FILE *f);
 
 /*
-	Print a 32 bits word encoded in 8 bytes
+	Print an n-bits word encoded using 2 bits per letter
 */
 
-void showWord(word *w, char *ws);
+void showWord(Word *w, char *ws, uint16_t WORD_LENGTH);
+

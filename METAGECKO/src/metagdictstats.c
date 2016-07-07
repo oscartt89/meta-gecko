@@ -97,7 +97,10 @@ int main(int ac, char **av) {
     char W[33];
     word ww;
     memcpy(ww.b,kmer,BYTES_IN_WORD);
-    showWord(&ww, W);
+    Word w;
+    w.b = (unsigned char *) malloc(BYTES_IN_WORD*sizeof(unsigned char));
+    memcpy(w.b, ww.b, BYTES_IN_WORD);
+    showWord(&w, W, BYTES_IN_WORD*4);
     fprintf(stdout, "%s ", W);
 
     fprintf(stdout, "OFFSET: %" PRIu64 " REPETITIONS: %" PRIu32 "\n", aux64, aux32);
@@ -116,7 +119,11 @@ int main(int ac, char **av) {
         char W[33];
         word ww;
         memcpy(ww.b,&kmer,BYTES_IN_WORD);
-        showWord(&ww, W);
+
+	w.b = (unsigned char *) malloc(BYTES_IN_WORD*sizeof(unsigned char));
+	memcpy(w.b, ww.b, BYTES_IN_WORD);
+
+        showWord(&w, W, BYTES_IN_WORD*4);
         fprintf(stdout, "%s ", W);
 
         if (fread(&aux64, sizeof(uint64_t), 1, dict) != 1) {
