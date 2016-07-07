@@ -16,6 +16,11 @@
 #include <string.h> // String functions
 #include <stdbool.h> // Boolean varaibles
 
+//To disable padding and therefore reducing the size of the binary files
+//Check if this affects execution time, probably a bit
+#pragma pack(push, 1)
+
+
 // Constants
 #define MAXLID 200
 #define MAX_READ_LENGTH 5000
@@ -27,7 +32,6 @@
  *  @program META-GECKO dictionaries.
  */
 typedef struct {
-    uint16_t WL; // Word length; b[length] <= length = WL/4
 	/* b is the sequence codified.
 	 * Each aminoacid is stored using 2 bits
 	 * We have 4 letters per byte and 
@@ -36,6 +40,14 @@ typedef struct {
     unsigned char *b;
 } Word;
 
+/* This structure is used to handle metagenome locations dictionaries.
+ *  @program META-GECKO fragments. Loading metagenome dictionaries.
+ */
+typedef struct{
+    uint32_t seq; // Sequence index
+    uint64_t pos; // Position on sequence
+    char strand; // Strand on the sequence
+} LocationEntry;
 
 /* This structure is used to handle k-mers in a sequence.
  *  @program META-GECKO dictionaries.
@@ -43,12 +55,8 @@ typedef struct {
 typedef struct {
 	// Word compressed in binary format
     Word w;
-    // Ocurrence position in the sequence (Read)
-    uint64_t pos;
-    // Read index
-    uint32_t seq;
-    // Strand on the sequence (f or r)
-    char strand;
+    //Location
+    LocationEntry loc;
 } wentry;
 
 
@@ -80,17 +88,6 @@ typedef struct{
     uint64_t pos; // Position on locations file
     uint32_t reps; // Number of instances of this word
 } WordEntry;
-
-
-/* This structure is used to handle metagenome locations dictionaries.
- *  @program META-GECKO fragments. Loading metagenome dictionaries.
- */
-typedef struct{
-    uint32_t seq; // Sequence index
-    uint64_t pos; // Position on sequence
-    char strand; // Strand on the sequence
-} LocationEntry;
-
 
 /* This structure is used to handle hits (seeds).
  *  @program META-GECKO fragments. Generating seeds.

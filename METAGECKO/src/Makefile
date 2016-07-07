@@ -12,7 +12,7 @@ dict: dict.c
 	$(CC) $(CFLAGS) dict.c dict.h dictFun.c common_functions.c -o $(BIN)/dict
 
 frags: frags.c
-	$(CC) $(CFLAGS) frags.c frags.h fragsFun.c -o $(BIN)/frag
+	$(CC) $(CFLAGS) frags.c frags.h fragsFun.c common_functions.c -o $(BIN)/frag
 
 combineFragments: combineFragments.c
 	$(CC) $(CFLAGS) combineFragments.c -o $(BIN)/combineFragments
@@ -21,7 +21,7 @@ write: write.c
 	$(CC) $(CFLAGS) write.c -o $(BIN)/write
 
 dictStats: metagdictstats.c
-	$(CC) $(CFLAGS) metagdictstats.c -o $(BIN)/metagdictstats
+	$(CC) $(CFLAGS) metagdictstats.c common_functions.c -o $(BIN)/metagdictstats
 
 metagStats: metagfilestats.c
 	$(CC) $(CFLAGS) metagfilestats.c -o $(BIN)/metagfilestats

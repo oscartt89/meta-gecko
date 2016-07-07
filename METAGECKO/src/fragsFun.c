@@ -96,6 +96,9 @@ int HComparer(Hit h1, Hit h2) {
 int readWordEntrance(WordEntry *we, FILE *wD, uint16_t SeqBytes) {
     // Read sequence
     if (fread(we->seq, sizeof(unsigned char), SeqBytes, wD) != SeqBytes) {
+        if(feof(wD)){
+            return 1;
+        }
         fprintf(stderr, "readWordEntrance:: Error loading sequence\n");
         exit(-1);
     }
@@ -148,8 +151,6 @@ int generateHits(Hit *buff, WordEntry X, WordEntry Y, FILE *XPFile, FILE *YPFile
     loadLocationEntrance(&X_Arr[0], XPFile, X.reps);
     loadLocationEntrance(&Y_Arr[0], YPFile, Y.reps);
 
-
-
     // Check buffer space
     if (*hitsInBuff == MAX_BUFF) {
         writeHitsBuff(buff, outIndx, outBuff, *hitsInBuff, prefixSize, buffersWritten);
@@ -179,8 +180,11 @@ int generateHits(Hit *buff, WordEntry X, WordEntry Y, FILE *XPFile, FILE *YPFile
  *  @param reps number of locations to be loaded.
  */
 inline void loadLocationEntrance(LocationEntry *arr, FILE *PFile, uint32_t reps) {
-    if (fread(&arr, sizeof(LocationEntry), reps, PFile) != reps) {
-        fprintf(stderr, "loadLocationEntrance:: Error reading location entry");
+    long read;
+    if ((read = fread(arr, sizeof(LocationEntry), reps, PFile) != reps)) {
+        fprintf(stderr, "loadLocationEntrance:: Error reading location entry. To read: %"
+        PRIu32
+        " Actually read: %ld, feof(PFile)?:%d\n", reps, read, feof(PFile));
         exit(-1);
     }
 }

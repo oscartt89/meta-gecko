@@ -243,7 +243,7 @@ int main(int ac, char **av) {
     // Read first entrances
     if (readWordEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
 
-    readWordEntrance(&we[1], gW, BytesGenoWord);
+    if (readWordEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
 
     /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, " (Done)\n");
@@ -254,22 +254,24 @@ int main(int ac, char **av) {
 
     // Search
     if (prefixSize == BytesMetagWord * 4 && prefixSize == BytesGenoWord * 4) {
-        
+
         while (!feof(mW) && !feof(gW)) {
-            
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
                 if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize, startIndex,
                                  &buffersWritten) < 0)
                     return -1;
+                fflush(stdout);
             }
+
+            //getchar();
+
             // Load next word
-            if (cmp >= 0) { // New genome word is necessary
-                if (readWordEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
-            }
             if (cmp <= 0) { // New metagenome word is necessary
-                if (readWordEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
+                if(!feof(mW))if (readWordEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
             }
-            
+            if (cmp >= 0) { // New genome word is necessary
+                if(!feof(gW))if (readWordEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
+            }
         }
     } else {
         while (!feof(mW)) {
