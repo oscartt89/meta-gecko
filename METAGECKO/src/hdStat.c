@@ -20,74 +20,76 @@
 
 #define PEQ 1001
 
+int quickReadWord(FILE * f, uint32_t * nRep, Word * w, uint64_t * position, uint16_t WORD_LENGTH){
+	//int tot;
+	//if(tot = fread(w->b, 1, WORD_LENGTH/4, f) != 1) { printf("went bad counting %d\n", tot);} //terror("Error reading word");
+
+	if(!feof(f)){
+		fread(w->b, 1, WORD_LENGTH/4, f);
+		if(fread(position, sizeof(uint64_t), 1, f) != 1) terror("Error reading position");
+		if(fread(nRep, sizeof(uint32_t), 1, f) != 1) terror("Error reading repetitions");
+	}
+	return 0;
+}
+
 int main(int ac, char** av){
 
 	char fname[1024], *W;
 	W=(char *)malloc(33*sizeof(char));
-	FILE *f1, *f2, *f3;
-	hashentry he;
-	uint64_t i=0;
-        location spos;
-	uint64_t nW=0,maxF=0, aveF=0;
-	int flagV=0;
-	int64_t freq[PEQ];
+	FILE *f1, *f2;
 
-	if(ac<2)terror("USE: leehd  prefixNameOUT [v=verbose]\n");
+	uint16_t WORD_LENGTH;	
+	uint32_t nRep;
+	uint64_t position;
+	Word w;
+	LocationEntry lc;
+
+	uint64_t i=0;
+	uint64_t totalWords = 1;
+	int flagV=0, flagGetchar = 0;
+
+	if(ac<2)terror("USE: leehd  prefixNameOUT [v={1 for quick, 2 for paused}]\n");
 	if (ac==3) flagV=1;
-	for (i=0;i<PEQ;i++) freq[i]=0;
+	if(atoi(av[2]) == 2) flagGetchar = 1;
 	sprintf(fname,"%s.d2hW",av[1]); // Words file (first level of hash table)
 	if ((f1 = fopen(fname,"rb"))==NULL) terror("opening prefix.h2dW file");
 	sprintf(fname,"%s.d2hP",av[1]); // Positions file
 	if ((f2 = fopen(fname,"rb"))==NULL) terror("opening prefix.h2dP file");
 
-	sprintf(fname,"%s.freq",av[1]); // output
-	if ((f3 = fopen(fname,"wt"))==NULL) terror("opening prefix.freq OUT file");
+
+	//Read word length
+	if(fread(&WORD_LENGTH, sizeof(uint16_t), 1, f1) != 1) terror("Could not read word length");
+	fprintf(stdout, "Word length is %"PRIu16"\n", WORD_LENGTH);
+
+        w.b = (unsigned char*) malloc(WORD_LENGTH/4 * sizeof(unsigned char));
+
 
 	// kick-off
-	if(fread(&he,sizeof(hashentry),1,f1)!=1)
-		terror("Empty dictionary");
+	quickReadWord(f1, &nRep, &w, &position, WORD_LENGTH);
        
         while(!feof(f1)){
 
-             if (flagV) {showWord(&he.w, W);fprintf(stdout, "%.32s", W);}
-             if (flagV) fprintf(stdout,"  : pos=%-7" PRIu64 " num=%-7" PRIu64 ":",he.pos,he.num);
-		if (he.num>=PEQ) {
-			fprintf(f3, "%" PRIu64 "\t", he.num);
-			showWord(&he.w, W);
-			fprintf(f3, "%.32s", W);
-			fprintf(f3, "%" PRIu64 "\n", he.num);
+             if (flagV) {showWord(&w, W, WORD_LENGTH);fprintf(stdout, "%.32s", W);}
+             if (flagV) fprintf(stdout,"  : pos=%-7" PRIu64 " num=%-7" PRIu32 ":",position, nRep);
+
+
+	     for(i=0;i<nRep;i++){
+		if(fread(&lc,sizeof(LocationEntry),1,f2)!=1){
+                        terror("Error reading the word occurrences");
 		}
-		else freq[he.num]++;
-	     	nW++; 
-		if (he.num>maxF) maxF=he.num;
-		aveF+=he.num;
+               	fprintf(stdout,"(%c, %" PRIu32 ",%" PRIu64 ") ",lc.strand, lc.seq, lc.pos);
+                if (i>10) {fprintf(stdout,"...cont"); break;}
 
-             fseek(f2,0, he.pos);
-	     if (flagV) {
-
-             for (i=0;i<he.num;i++){
-	       if(fread(&spos,sizeof(location),1,f2)!=1)
-			terror("Error reading the word occurrences");
-               fprintf(stdout,"(%" PRIu64 ",%" PRIu64 ") ",spos.pos,spos.seq);
-		//if (i>10) {fprintf(stdout,"...cont"); break;} 
-             }
-             fprintf(stdout,"\n");
-	    }
-	     if(fread(&he,sizeof(hashentry),1,f1)!=1)
-		if(ferror(f1))
-			terror("Error reading a dictionary entry");
+	     }
+		fprintf(stdout, "\n");
+		if(flagGetchar) getchar();
+		
+	    	if(!feof(f1) && quickReadWord(f1, &nRep, &w, &position, WORD_LENGTH) == 0) totalWords++;
         }
 	free(W);
 
 	fclose(f1);
 	fclose(f2);
-	// store PEQ freqs--------
-	fprintf(f3,"freqs of words that appear\nTimes\tnWords\n");
-	for (i=0;i<PEQ;i++)
-		if (freq[i]) fprintf(f3,"%" PRId64 "\t%" PRId64 "\n",i,freq[i]);
-
-	fclose(f3);
-	fprintf(stdout,"Num.Words=%" PRIu64 " MaxFreq=%" PRIu64 " TotRepeat=%" PRIu64 " AveragFreq=%f\n",nW,maxF,aveF, (float)aveF/(float)nW);
-
+	fprintf(stdout, "Total words read: %"PRIu64"\n", totalWords);
 	exit(0);
 }
