@@ -9,10 +9,10 @@ stats: dictStats metagStats fragStats hdStat
 meta_gecko: dict frags
 
 dict: dict.c
-	$(CC) $(CFLAGS) dict.c dict.h dictFun.c common_functions.c -o $(BIN)/dict
+	$(CC) $(CFLAGS) dict.c dictFun.c common_functions.c -o $(BIN)/dict
 
 frags: frags.c
-	$(CC) $(CFLAGS) frags.c frags.h fragsFun.c common_functions.c -o $(BIN)/frag
+	$(CC) $(CFLAGS) frags.c fragsFun.c common_functions.c -o $(BIN)/frag
 
 combineFragments: combineFragments.c
 	$(CC) $(CFLAGS) combineFragments.c -o $(BIN)/combineFragments
@@ -27,7 +27,7 @@ metagStats: metagfilestats.c
 	$(CC) $(CFLAGS) metagfilestats.c -o $(BIN)/metagfilestats
 
 fragStats: metagfragstats.c
-	$(CC) $(CFLAGS) metagfragstats.c fragsFun.c -o $(BIN)/metagfragstats
+	$(CC) $(CFLAGS) metagfragstats.c fragsFun.c common_functions.c -o $(BIN)/metagfragstats
 	
 hdStat: hdStat.c
 	$(CC) $(CFLAGS) hdStat.c common_functions.c -o $(BIN)/hdStat

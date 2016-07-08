@@ -93,7 +93,7 @@ int HComparer(Hit h1, Hit h2) {
  *  @param wD dictionary file.
  *  @return zero if everything finished well or a negative number in other cases.
  */
-int readWordEntrance(WordEntry *we, FILE *wD, uint16_t SeqBytes) {
+int readWordEntrance(WordEntry *we, FILE *wD, uint16_t SeqBytes) { //RENOMBRAR readHashEntry
     // Read sequence
     if (fread(we->seq, sizeof(unsigned char), SeqBytes, wD) != SeqBytes) {
         if(feof(wD)){
@@ -729,6 +729,11 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
     uint64_t finalLength = 0;
     Sequence *sX, *sX2; //sX will be the first elem. sX2 will generate all the structure
 
+	// Memory and variables for reading buffer
+	uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
+	char * readBuffer = (char *) malloc(READBUF*sizeof(char));
+	if(readBuffer == NULL) terror("Could not allocate memory for reading buffer");
+
     // Open genome file
     FILE *f;
 
@@ -750,14 +755,14 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
         return 0;
     }
 
-    while ((c = getc(f)) != '>' && !feof(f)); //start seq
+    while ((c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f)) != '>' && !feof(f)); //start seq
     if (feof(f)) {
         // Close genome file
         fclose(f);
         return 0;
     }
 
-    while ((c = getc(f)) == ' ');
+    while ((c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f)) == ' ');
 
     while (k < MAXLID && c != '\n' && c != ' ') {
         if (feof(f)) {
@@ -767,13 +772,13 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
         }
 
         sX->ident[k++] = c;
-        c = getc(f);
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
     }
 
     sX->ident[k] = 0; //end of data.
     while (c != '\n')
-        c = getc(f);
-    c = getc(f);
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
+    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
 
     //start list with sX2
     sX2 = sX;
@@ -787,7 +792,7 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
                     fclose(f);
                     return 0;
                 }
-                c = getc(f);
+                c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
             }
             //break;
         }
@@ -796,7 +801,7 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
         if (c == '*') {
             sX2->datos[length++] = c;
         }
-        c = getc(f);
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
 
         //Check if the length is the end of this struct
         if (length >= MAXLS) {
@@ -822,7 +827,7 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
 
     // Close genome file
     fclose(f);
-
+	free(readBuffer);
     return sX;
 }
 
@@ -838,6 +843,11 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     uint32_t seqIndex = 0, seqLen = 0;
     char c;
     uint64_t absoluteLength = 0;
+    
+    // Memory and variables for reading buffer
+	uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
+	char * readBuffer = (char *) malloc(READBUF*sizeof(char));
+	if(readBuffer == NULL) terror("Could not allocate memory for reading buffer");
 
     // Open metagenome file
     if ((metag = fopen(metagFile, "rt")) == NULL) {
@@ -846,14 +856,14 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     }
 
     // Start to read
-    c = fgetc(metag);
+    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
     while (!feof(metag)) {
         // Check if it's a special line
         if (!isupper(toupper(c))) { // Comment, empty or quality (+) line
             if (c == '>') { // Comment line
-                c = fgetc(metag);
+                c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
                 while (c != '\n') // Avoid comment line
-                    c = fgetc(metag);
+                    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
 
                 // Check if it's first instance
                 if (currRead != NULL) {
@@ -892,13 +902,13 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                 seqIndex++; // New sequence
                 seqLen = 0; // Reset sequence length
             }
-            c = fgetc(metag); // First char of next sequence
+            c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag); // First char of next sequence
             continue;
         }
         currRead->sequence[seqLen] = c;
         seqLen++;
         // Next char
-        c = fgetc(metag);
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
     }
 
     // Link last node
@@ -912,7 +922,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     *totalLength = absoluteLength;
 
     fclose(metag);
-
+	free(readBuffer);
     // Return head
     return head;
 }

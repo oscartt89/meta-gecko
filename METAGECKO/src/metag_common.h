@@ -25,7 +25,7 @@
 #define MAXLID 200
 #define MAX_READ_LENGTH 5000
 #define MAXLS 100000000
-#define READBUF 10000
+#define READBUF 100000
 
 // STRUCTS
 /* Structure used to store a sequence (k-mer) and its length.

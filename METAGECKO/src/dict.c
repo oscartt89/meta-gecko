@@ -176,24 +176,29 @@ int main(int ac, char **av) {
     uint64_t blockIndex = 0;
     for (i = 0; i < BUFFER_LENGTH; i++, blockIndex += BYTES_IN_WORD)
         buffer[i].w.b = &WordsBlock[blockIndex];
+	
+	
+	// Memory and variables for reading buffer
+	uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
+	char * readBuffer = (char *) malloc(READBUF*sizeof(char));
+	if(readBuffer == NULL) terror("Could not allocate memory for reading buffer");
 
-
-
+	
     // Start to read
-    c = fgetc(metag);
+    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag); 
     while (!feof(metag)) {
         // Check if it's a special line
         if (!isupper(toupper(c))) { // Comment, empty or quality (+) line
             if (c == '>') { // Comment line
-                c = fgetc(metag);
+                c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
                 while (c != '\n') // Avoid comment line
-                    c = fgetc(metag);
+                    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
 
                 temp.loc.seq++; // New sequence
                 crrSeqL = 0; // Reset buffered sequence length
                 seqPos = 0; // Reset index
             }
-            c = fgetc(metag); // First char of next sequence
+            c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag); // First char of next sequence
             continue;
         }
         if (strandF) shift_word_left(&temp.w); // Shift bits sequence
@@ -267,11 +272,12 @@ int main(int ac, char **av) {
                 }
             }
         }
-        c = fgetc(metag);
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
     }
 
 
     // Free&Close unnecessary variables
+    free(readBuffer);
     fclose(metag);
     // Write buffered words
     if (wordsInBuffer != 0) {
