@@ -236,7 +236,7 @@ typedef struct{
  *  @program META-GECKO fragments. Load metagenome.
  */
 struct ShortSequence{
-    char sequence[MAX_READ_LENGTH]; // Sequence
+    char * sequence; // Sequence
     uint32_t seqIndex; // Index of the sequence
     uint32_t length; // Sequence length
     struct ShortSequence *next; // Used to create a linked list

@@ -817,6 +817,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     char c;
     uint64_t absoluteLength = 0;
     
+
     // Memory and variables for reading buffer
 	uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
 	char * readBuffer = (char *) malloc(READBUF*sizeof(char));
@@ -853,6 +854,12 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                     }
                     // Update last node
                     lastRead = currRead;
+		    if(lastRead == NULL) fprintf(stderr, "lastRead is null\n");
+		    if(lastRead->sequence == NULL) fprintf(stderr, "Lr. seq is null\n");
+		    if((lastRead->sequence = (char *) realloc(lastRead->sequence, seqLen * sizeof(char))) == NULL){
+                        fprintf(stderr, "Error reallocating sequences\n");
+                    }
+
                 }
 
                 // Check posible errors
@@ -870,7 +877,9 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                     fprintf(stderr, "\n\tMemory pointer returned is NULL. Memory corrupted.\n");
                     exit(-1);
                 }
-
+		if ((currRead->sequence = (char *) malloc(MAX_READ_LENGTH*sizeof(char))) == NULL){
+			fprintf(stderr, "\n\t Could not allocate memory for read sequences at sequence %"PRIu32"\n", seqIndex);
+		}
                 // Update info
                 seqIndex++; // New sequence
                 seqLen = 0; // Reset sequence length
