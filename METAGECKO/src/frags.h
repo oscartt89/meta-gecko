@@ -22,10 +22,10 @@
 
 int HComparer(Hit w1, Hit w2);
 
-//void readHashEntry(WordEntry*,FILE*);
-int readWordEntrance(WordEntry *, FILE *, uint16_t);
 
-int generateHits(Hit *, WordEntry, WordEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, int, uint64_t *);
+int readHashEntrance(HashEntry *, FILE *, uint16_t);
+
+int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, int, uint64_t *);
 
 inline void loadLocationEntrance(LocationEntry *, FILE *, uint32_t);
 

@@ -66,30 +66,30 @@ int HComparer(Hit h1, Hit h2) {
  *  @param wD dictionary file.
  *  @return zero if everything finished well or a negative number in other cases.
  */
-int readWordEntrance(WordEntry *we, FILE *wD, uint16_t SeqBytes) { //RENOMBRAR readHashEntry
+int readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes) {
     // Read sequence
     if (fread(we->seq, sizeof(unsigned char), SeqBytes, wD) != SeqBytes) {
         if(feof(wD)){
             return 1;
         }
-        fprintf(stderr, "readWordEntrance:: Error loading sequence\n");
+        fprintf(stderr, "readHashEntrance:: Error loading sequence\n");
         exit(-1);
     }
     // Read position
     if (fread(&we->pos, sizeof(uint64_t), 1, wD) != 1) {
-        fprintf(stderr, "readWordEntrance:: Error loading position.\n");
+        fprintf(stderr, "readHashEntrance:: Error loading position.\n");
         exit(-1);
     }
     // Read repetitions
     if (fread(&we->reps, sizeof(uint32_t), 1, wD) != 1) {
-        fprintf(stderr, "readWordEntrance:: Error loading repetitions.\n");
+        fprintf(stderr, "readHashEntrance:: Error loading repetitions.\n");
         exit(-1);
     }
     return 0;
 }
 
 
-/* This function is used to generate hits from two WordEntry coincidents.
+/* This function is used to generate hits from two HashEntry coincidents.
  *  @param buff buffer where store hits.
  *  @param X word entry coincident with Y.
  *  @param Y word entry coincident with X.
@@ -104,7 +104,7 @@ int readWordEntrance(WordEntry *we, FILE *wD, uint16_t SeqBytes) { //RENOMBRAR r
  *  @note only seqY reverse is used to generate hits because use X.reverse and Y.reverse
  *        is the same than use X.forward and Y.forward.
  */
-int generateHits(Hit *buff, WordEntry X, WordEntry Y, FILE *XPFile, FILE *YPFile, FILE *outIndx, FILE *outBuff,
+int generateHits(Hit *buff, HashEntry X, HashEntry Y, FILE *XPFile, FILE *YPFile, FILE *outIndx, FILE *outBuff,
                  uint64_t *hitsInBuff, int prefixSize, int startIndex, uint64_t *buffersWritten) {
     // Positionate on locations files
     if (fseek(XPFile, X.pos, SEEK_SET) != 0) {

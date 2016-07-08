@@ -125,3 +125,12 @@ int is_float(char const *str) {
     int isFloat = strcmp(str2, str) == 0; // Check if there are equals => String==Float
     return isFloat;
 }
+
+
+/* 
+	Compute size of HashEntry, since the size of the unsigned char is decided at runtime
+	@param BYTES_IN_WORD: Number of bytes per word
+ */
+uint16_t size_of_HashEntry(const uint16_t BYTES_IN_WORD){
+	return (uint16_t) (sizeof(unsigned char) * BYTES_IN_WORD + sizeof(uint64_t) + sizeof(uint32_t));
+}

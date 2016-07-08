@@ -87,7 +87,7 @@ typedef struct{
     unsigned char *seq; // Must be an unsigned char [WB]
     uint64_t pos; // Position on locations file
     uint32_t reps; // Number of instances of this word
-} WordEntry;
+} HashEntry;
 
 /* This structure is used to handle hits (seeds).
  *  @program META-GECKO fragments. Generating seeds.
@@ -326,3 +326,11 @@ int is_int(char const *str);
 	This function is used to check if a string given is a float.
  */
 int is_float(char const *str);
+
+/* 
+	Compute size of HashEntry
+ */
+uint16_t size_of_HashEntry(const uint16_t BYTES_IN_WORD);
+
+
+
