@@ -21,14 +21,16 @@
 #define PEQ 1001
 
 int quickReadWord(FILE * f, uint32_t * nRep, Word * w, uint64_t * position, uint16_t WORD_LENGTH){
-	//int tot;
-	//if(tot = fread(w->b, 1, WORD_LENGTH/4, f) != 1) { printf("went bad counting %d\n", tot);} //terror("Error reading word");
 
-	if(!feof(f)){
-		fread(w->b, 1, WORD_LENGTH/4, f);
-		if(fread(position, sizeof(uint64_t), 1, f) != 1) terror("Error reading position");
-		if(fread(nRep, sizeof(uint32_t), 1, f) != 1) terror("Error reading repetitions");
+	size_t tot = fread(w->b, 1, WORD_LENGTH/4, f);
+	if(tot != WORD_LENGTH/4){
+		if(feof(f)){
+			return 0;
+		}
+		terror("Error reading reading word");
 	}
+	if(fread(position, sizeof(uint64_t), 1, f) != 1) terror("Error reading position");
+	if(fread(nRep, sizeof(uint32_t), 1, f) != 1) terror("Error reading repetitions");
 	return 0;
 }
 

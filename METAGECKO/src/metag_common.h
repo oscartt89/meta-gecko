@@ -304,7 +304,3 @@ char buffered_fgetc(char *buffer, uint64_t *pos, uint64_t *read, FILE *f);
 */
 
 void showWord(Word *w, char *ws, uint16_t WORD_LENGTH);
-<<<<<<< HEAD
-
-=======
->>>>>>> FRInMetagecko
