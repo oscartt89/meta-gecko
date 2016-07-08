@@ -19,7 +19,6 @@
 #define SWAP(a, b, t) t=a; a=b; b=t;
 
 // FUNCTIONS
-int wordcmp(unsigned char *, unsigned char *, int);
 
 int HComparer(Hit w1, Hit w2);
 
@@ -74,9 +73,4 @@ void writeSequenceLength(uint64_t *, FILE *);
 
 void endianessConversion(char *, char *, int);
 
-int exists(char *);
-
-int is_float(char const *str);
-
-int is_int(char const *);
 

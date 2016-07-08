@@ -7,16 +7,6 @@
  */
 #include "metag_common.h"
 
-/* This function is used to check if a file exists or not.
- *  @param file is a string with the absolute/relative path to the file.
- *  @return a positive number if the file exists and the program have access
- *          or zero in other cases.
- */
-int exists(char *file) {
-    if (access(file, F_OK) != (-1)) return 1;
-    else return 0;
-}
-
 int main(int ac, char **av) {
     // Variables
     uint16_t wl;

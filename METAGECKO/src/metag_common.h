@@ -304,3 +304,25 @@ char buffered_fgetc(char *buffer, uint64_t *pos, uint64_t *read, FILE *f);
 */
 
 void showWord(Word *w, char *ws, uint16_t WORD_LENGTH);
+
+/* 
+	This function compares two arrays of unsigned chars with the same length.
+ */
+int wordcmp(unsigned char *w1, unsigned char *w2, int n);
+
+/* 
+	This function is used to check if a file exists or not.
+ */
+int exists(char *file);
+
+
+/* 
+	This function is used to check if a string given is an integer.
+ */
+int is_int(char const *str);
+
+
+/* 
+	This function is used to check if a string given is a float.
+ */
+int is_float(char const *str);

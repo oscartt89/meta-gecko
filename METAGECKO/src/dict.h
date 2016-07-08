@@ -21,11 +21,7 @@ int BYTES_IN_WORD;
 // FUNCTIONS
 void checkOrder(node_W **, bool);
 
-int exists(char *);
-
 int GT(wentry, wentry);
-
-int is_int(char const *);
 
 uint64_t loadWord(wentry *, FILE *, int64_t);
 
@@ -44,8 +40,6 @@ void shift_word_right(Word *);
 void sortList(node_W **);
 
 inline void storeWord(wentry *, wentry);
-
-int wordcmp(unsigned char*, unsigned char*, int);
 
 int writeBuffer(wentry *, FILE *, FILE *, uint64_t);
 
