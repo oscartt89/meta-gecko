@@ -26,28 +26,44 @@
 # file ({metagenome}-{genome}.frags) will not be generated.
 # NOTE: if any of this files exists check if the program didn't write any error message. If it
 #       didn't, means that there're 0% of equal parts between metagenome and genome.
+# Check arguments
+if [ $# != 5 ]; then
+        echo "***ERROR*** Use: $0 metagenome genome S L prefix "
+        exit -1
+fi
+
+
+MGDIR=$(pwd)
 
 metagenome=$(basename "$1")
-metagExt="${metagenome##*.}"
-metagenome="${metagenome%.*}"
 genome=$(basename "$2")
-genoExt="${genome##*.}"
+metagExt="${genome##*.}"
+genoExt="${metagenome##*.}"
+metagenome="${metagenome%.*}"
 genome="${genome%.*}"
+
+
+#Copy Metagenome and Database to current folder
+if [[ ! -e "$MGDIR/$(basename "$1")" ]]; then
+    ln $1 $MGDIR/$(basename "$1")
+fi 
+
+if [[ ! -e "$MGDIR/$(basename "$2")" ]]; then
+    ln $2 $MGDIR/$(basename "$2")
+fi 
+
+
+mkdir -p ${MGDIR}/dictionaries
+mkdir -p ${MGDIR}/fragments
+
+
 L=$4
 S=$3
 
-# Check arguments
-if [ $# != 5 ]; then
-	echo "***ERROR*** Use: $0 metagenome genome S L prefix"
-	exit -1
-fi
+
 
 # Take binaries folder
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-# Create necessary directories
-mkdir -p dictionaries
-mkdir -p fragments
 
 # Create database dictionarie
 if [[ ! -f dictionaries/${genome}.d2hP || ! -f dictionaries/${genome}.d2hP ]];    then
