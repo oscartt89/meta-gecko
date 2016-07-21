@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
 
-# This script is used to compare a metagenome with a genome using MetaGecko
-# Parameters to call it are:
-#  @param metagenome relative or absolute path to metagenome fasta file
-#  @param genome relative or absolute path to genome fasta file
-#  @param outFileName name of output file. Extension ".frags" will be added.
-#  @param S minimum similarity of fragments.
-#  @param L minimum length of fragments.
+# This script compares a metagenome against a database of genomes
+# Input parameters:
+#  @param metagenome 	relative or absolute path to metagenome file.
+#  @param database 		relative or absolute path to database file.
+#  @param S 			minimum similarity to report a fragment.
+#  @param L 			minimum length to report a fragment.
+#  @param prefix		size of mers to look for.
+#
 # This script will generate the following files and folders:
-#  @file {genome}-revercomp is the reverse complementary fasta file of genome file given.
-#  @folder dictionaries are the fodler where genome and metagenome dictionaries will be stored.
-#    @file {metagenome}.(d2hP/d2hW) are the files that conform the metagenome dictionary. 
-#    @file {genome}.(d2hP/d2hW) are the files that conform the genome dictionary.
-#    @file {genome}.words.sort it's a file that Gecko uses to generate the genome dictionary.
-#    @file {genome}-revercomp.(d2hP/d2hW) are the files that conform the reverse complementary genome dictionary.
-#    @file {genome}-revercomp.words.sort it's a file that Gecko uses to generate the reverse complementary genome dictionary.
-#  @folder fragments is the folder where fragments will be stored.
-#    @file {metagenome}-{genome}.frags is the fragments file generated.
-# In some cases this last file could not appear. If the program ends without print errors in
-# the screen look if exists one or any of the following files:
-#  @file {metagenome}-{genome}-f.frags is the forward genome-metagenome fragments.
-#  @file {metagenome}-{genome}-revercomp.frags is the reverse genome-metagenome fragments.
-# When there are not any hit (any equal segment) between genome (f/r) and metagenome files, the
-# FRAG file will not be generated. If any of this file doesn't exists, the combined fragment
-# file ({metagenome}-{genome}.frags) will not be generated.
-# NOTE: if any of this files exists check if the program didn't write any error message. If it
-#       didn't, means that there're 0% of equal parts between metagenome and genome.
+#  @file {genome}-revercomp 				The reverse complementary of the genome.
+#  @folder dictionaries 					Folder where the generated dictionaries will be stored.
+#    @file {metagenome}.(d2hP/d2hW) 		Dictionary of the metagenome.
+#    @file {genome}.(d2hP/d2hW) 			Dictionary of the database.
+#    @file {genome}-revercomp.(d2hP/d2hW) 	Dictionary of the reverse complement of the database.
+#    @file {genome}.words.sort 				File that contains all k-mers in the database.
+#    @file {genome}-revercomp.words.sort 	Sorted file of the above.
+#  @folder fragments 						The folder where fragments will be stored.
+#    @file {metagenome}-{genome}.frags 		The generated fragments file.
+#
+# If no fragments file is generated:
+# (1) There might be no hits between the metagenome and the database. Lower the similarity and length thresholds and try a lower prefix size.
+# (2) Check the terminal output to verify that there were no errors reported.
+#
+
+
+
 # Check arguments
 if [ $# != 5 ]; then
         echo "***ERROR*** Use: $0 metagenome genome S L prefix "
