@@ -192,7 +192,7 @@ inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y) {
 void writeHitsBuff(Hit *buff, FILE *index, FILE *hits, uint64_t hitsInBuff, int prefix, uint64_t *buffersWritten) {
     // Sort buffer
     quicksort_H(buff, 0, hitsInBuff - 1);
-
+	
     // Write info on index file
     uint64_t pos = (uint64_t) ftell(hits);
     uint64_t numHits = 0;
@@ -203,7 +203,7 @@ void writeHitsBuff(Hit *buff, FILE *index, FILE *hits, uint64_t hitsInBuff, int 
 
     // Write first hit
     fwrite(&buff[0], sizeof(Hit), 1, hits);
-
+	
     numHits++;
     lastHit = buff[0];
 
