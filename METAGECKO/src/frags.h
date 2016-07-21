@@ -25,7 +25,7 @@ int HComparer(Hit w1, Hit w2);
 
 int readHashEntrance(HashEntry *, FILE *, uint16_t);
 
-int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, int, uint64_t *);
+int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, uint64_t *);
 
 inline void loadLocationEntrance(LocationEntry *, FILE *, uint32_t);
 
@@ -59,7 +59,7 @@ void sortList(node_H **);
 
 void checkOrder(node_H **, bool);
 
-void FragFromHit(FragFile *, Hit *, Reads *, Sequence *, uint64_t, uint64_t, FILE *, int, int, float);
+void FragFromHit(FragFile *, Hit *, Reads *, Sequence *, uint64_t, uint64_t, FILE *, unsigned int, unsigned int, float);
 
 char getValue(Sequence *, uint64_t, int);
 

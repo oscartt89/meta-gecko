@@ -10,7 +10,7 @@
 int main(int ac, char **av) {
     // Variables
     uint16_t wl;
-    int BYTES_IN_WORD;
+    unsigned int BYTES_IN_WORD;
     long read;
     uint32_t aux32, minReps, maxReps;
     uint64_t numWords = 0, aux64;

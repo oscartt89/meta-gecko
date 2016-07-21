@@ -105,7 +105,7 @@ int readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes) {
  *        is the same than use X.forward and Y.forward.
  */
 int generateHits(Hit *buff, HashEntry X, HashEntry Y, FILE *XPFile, FILE *YPFile, FILE *outIndx, FILE *outBuff,
-                 uint64_t *hitsInBuff, int prefixSize, int startIndex, uint64_t *buffersWritten) {
+                 uint64_t *hitsInBuff, int prefixSize, uint64_t *buffersWritten) {
     // Positionate on locations files
     if (fseek(XPFile, X.pos, SEEK_SET) != 0) {
         fprintf(stderr, "generateHits:: Error positioning on X file.\n");
@@ -330,7 +330,7 @@ void quicksort_H(Hit *arr, int left, int right) {
  *  @return Number of hits read from intermediate file or negative number if any error happens.
  */
 inline uint64_t loadHit(Hit *hit, FILE *hFile, int64_t unread) {
-    return fread(&hit, sizeof(Hit), (unread < READ_BUFF_LENGTH) ? unread : READ_BUFF_LENGTH, hFile);
+    return fread(hit, sizeof(Hit), (unread < READ_BUFF_LENGTH) ? unread : READ_BUFF_LENGTH, hFile);
 }
 
 
@@ -516,7 +516,7 @@ void checkOrder(node_H **list, bool discardFirst) {
  *  @param fr is the fragment output file. 
  */
 void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t YLength, uint64_t nsy, FILE *fr,
-                 int prefixSize, int L_Threshold, float S_Threshold) {
+                 unsigned int prefixSize, unsigned int L_Threshold, float S_Threshold) {
     // Declare variables
     int64_t forwardDiagLength, backwardDiagLength;
     int64_t XIndex, YIndex;

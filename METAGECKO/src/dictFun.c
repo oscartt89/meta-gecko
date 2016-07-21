@@ -9,7 +9,7 @@
  *	@param w: word structure where char array to be shifted is stored.
  */
 void shift_word_left(Word *w) {
-    int i;
+    unsigned int i;
     for (i = 0; i < BYTES_IN_WORD - 1; i++) {
         w->b[i] <<= 2;
         w->b[i] |= (w->b[i + 1] >> 6);
@@ -78,7 +78,7 @@ int writeBuffer(wentry *buff, FILE *index, FILE *words, uint64_t numWords) {
  *     w1 is greater.
  */
 int GT(wentry w1, wentry w2) {
-    int i;
+    unsigned int i;
     for (i = 0; i < BYTES_IN_WORD; i++)
         if (w1.w.b[i] < w2.w.b[i]) return 0;
         else if (w1.w.b[i] > w2.w.b[i]) return 1;

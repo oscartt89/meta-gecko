@@ -16,7 +16,7 @@
 #define SWAP_W(a, b, t) t=a; a=b; b=t;
 
 // GLOBAL VARIABLES
-int BYTES_IN_WORD;
+unsigned int BYTES_IN_WORD;
 
 // FUNCTIONS
 void checkOrder(node_W **, bool);

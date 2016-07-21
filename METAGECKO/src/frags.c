@@ -31,8 +31,6 @@
  *   @param prefix is the subsequence length that will be used of the dictionaries words.
  *          Note: length = prefix * 4. If length is bigger than dictionary words length an
  *          error will be launched.
- *   @param startIndex is a base value used to adjust the genomes indexes. This value will 
- *          be directly included to all genomes values.
  * The result of the program will be the following:
  *   @file <out>.frags file with all fragments generated that satisfies the similarity and
  *         length thresholds.
@@ -109,15 +107,6 @@ int main(int ac, char **av) {
         fprintf(stderr, "Error:: Prefix must be >1.\n");
         return -1;
     }
-    if (ac == 10) {
-        if (!is_int(av[9])) { // Check prefix
-            fprintf(stderr, "Error:: Base index specified isn't a number.\n");
-            return -1;
-        } else if (atoi(av[9]) < 0) {
-            fprintf(stderr, "Error:: Base index must be positive.\n");
-            return -1;
-        }
-    }
 
 
     // Variables
@@ -135,11 +124,6 @@ int main(int ac, char **av) {
     Sequence *genome; // Sequence for genome
     Reads *metagenome; // Short sequence array for metagenome
     bool removeIntermediataFiles = true; // Internal variable to delete intermediate files
-    int startIndex;
-    if (ac == 10) // Store index base
-        startIndex = atoi(av[9]);
-    else
-        startIndex = -1;
 
     // Allocate necessary memory
     // Memory for buffer
@@ -257,7 +241,7 @@ int main(int ac, char **av) {
 
         while (!feof(mW) && !feof(gW)) {
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
-                if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize, startIndex,
+                if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize,
                                  &buffersWritten) < 0)
                     return -1;
                 fflush(stdout);
@@ -277,7 +261,7 @@ int main(int ac, char **av) {
         while (!feof(mW)) {
             // Check hit
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
-                if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize, startIndex,
+                if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize,
                                  &buffersWritten) < 0)
                     return -1;
                 if (firstmatch) {
@@ -374,7 +358,6 @@ int main(int ac, char **av) {
     // Write hits if there is only one buffer
     
     if(hitsInBuffer > 0 && buffersWritten <= 0) { // Only one buffer
-        fprintf(stdout, "Only one buffer\n");
         // Sort buffer
         quicksort_H(buffer, 0, hitsInBuffer - 1);
 
@@ -482,7 +465,6 @@ int main(int ac, char **av) {
         // End program
         return 0;
     }
-    fprintf(stdout, "More than one buffer of hits...\n");
 
     // Free auxiliar buffers
     free(we[0].seq);
@@ -538,7 +520,6 @@ int main(int ac, char **av) {
         return -1;
     }
 
-    fprintf(stdout, "Reading buffers info...");
     // Read buffers info
     uint64_t i = 0;
     do {
@@ -552,9 +533,7 @@ int main(int ac, char **av) {
         }
         ++i;
     } while (i < activeBuffers);
-    fprintf(stdout, "OK\n");
 
-    fprintf(stdout, "Loading first hits...");
     // Load first hits
     node_H *currNode = NULL;
     uint64_t read, blockIndex = 0;
@@ -573,14 +552,11 @@ int main(int ac, char **av) {
         lastLoaded = i;
         hitsList = currNode;
     }
-    fprintf(stdout, "OK\n");
     // Assign head
     hitsList = currNode;
 
-    fprintf(stdout, "Sorting first hits...");
     // Sort hits
     sortList(&hitsList);
-    fprintf(stdout, "OK\n");
 
     /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, "\tFrags: Extending seeds. [%"
