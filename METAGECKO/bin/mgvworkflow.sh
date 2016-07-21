@@ -85,3 +85,7 @@ if [[ ! -f fragments/${metagenome}-${genome}-f.frags ]];	then
 	echo "Writting fragments for: ${metagenome} - ${genome}"
 	${BINDIR}/frag dictionaries/${metagenome} ${metagenome}.${metagExt} dictionaries/${genome} ${genome}.${genoExt} fragments/${metagenome}-${genome}-f $S $L $5
 fi
+
+rm -rf ${metagenome}.${metagExt}
+rm -rf ${genome}.${genoExt}
+
