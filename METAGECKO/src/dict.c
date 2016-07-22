@@ -176,16 +176,16 @@ int main(int ac, char **av) {
     uint64_t blockIndex = 0;
     for (i = 0; i < BUFFER_LENGTH; i++, blockIndex += BYTES_IN_WORD)
         buffer[i].w.b = &WordsBlock[blockIndex];
-	
-	
-	// Memory and variables for reading buffer
-	uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
-	char * readBuffer = (char *) malloc(READBUF*sizeof(char));
-	if(readBuffer == NULL) terror("Could not allocate memory for reading buffer");
 
-	
+
+    // Memory and variables for reading buffer
+    uint64_t posBuffer = READBUF + 1, tReadBuffer = 0;
+    char *readBuffer = (char *) malloc(READBUF * sizeof(char));
+    if (readBuffer == NULL) terror("Could not allocate memory for reading buffer");
+
+
     // Start to read
-    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag); 
+    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
     while (!feof(metag)) {
         // Check if it's a special line
         if (!isupper(toupper(c))) { // Comment, empty or quality (+) line
@@ -288,7 +288,6 @@ int main(int ac, char **av) {
             fflush(stdout);
             /////////////////////////// CHECKPOINT ///////////////////////////
 
-            // Sort buffer
             quicksort_W(buffer, 0, wordsInBuffer - 1);
 
             // Close unnecessary files
@@ -326,10 +325,11 @@ int main(int ac, char **av) {
             // Write final dictionary file
             uint64_t index;
             for (index = 1; index < wordsInBuffer; ++index) {
+                int cmp = wordcmp(buffer[index].w.b, temp.w.b, BYTES_IN_WORD * 4);
                 // Store word in buffer
                 writeWord(&buffer[index], wDic, pDic,
-                          wordcmp(buffer[index].w.b, temp.w.b, BYTES_IN_WORD * 4) == 0 ? true : false, &reps);
-                if (wordcmp(buffer[index].w.b, temp.w.b, BYTES_IN_WORD * 4) != 0)
+                          cmp == 0 ? true : false, &reps);
+                if (cmp != 0)
                     storeWord(&temp, buffer[index]); // Update last word written
             }
 
@@ -349,7 +349,6 @@ int main(int ac, char **av) {
             // Free memory
             free(WordsBlock);
             free(buffer);
-            free(fname);
             free(temp.w.b);
             free(rev_temp.w.b);
 
@@ -360,6 +359,9 @@ int main(int ac, char **av) {
                 strcpy(fname, av[2]);
                 remove(strcat(fname, ".wrds"));
             }
+
+            free(fname);
+
             // End program
             return 0;
         } else if (writeBuffer(buffer, bIndx, wrds, wordsInBuffer) < 0) {
@@ -373,7 +375,6 @@ int main(int ac, char **av) {
 
         free(WordsBlock);
         free(buffer);
-        free(fname);
         free(temp.w.b);
         free(rev_temp.w.b);
 
@@ -387,6 +388,8 @@ int main(int ac, char **av) {
             strcpy(fname, av[2]);
             remove(strcat(fname, ".wrds"));
         }
+
+        free(fname);
 
         return 0;
     }
@@ -553,10 +556,11 @@ int main(int ac, char **av) {
 
     // Write final dictionary file
     while (activeBuffers > 0) {
+        int cmp = wordcmp(words->word[words->index].w.b, temp.w.b, BYTES_IN_WORD * 4);
         // Store word in buffer
         writeWord(&words->word[words->index], wDic, pDic,
-                  wordcmp(words->word[words->index].w.b, temp.w.b, BYTES_IN_WORD * 4) == 0 ? true : false, &reps);
-        if (wordcmp(words->word[words->index].w.b, temp.w.b, BYTES_IN_WORD * 4) != 0)
+                  cmp == 0 ? true : false, &reps);
+        if (cmp != 0)
             storeWord(&temp, words->word[words->index]); // Update last word written
         words->index += 1;
         if (words->index >= words->words_loaded) {

@@ -9,7 +9,7 @@ stats: dictStats metagStats fragStats hdStat
 meta_gecko: dict frags
 
 dict: dict.c
-	$(CC) $(CFLAGS) dict.c dictFun.c common_functions.c -o $(BIN)/dict
+	$(CC) $(CFLAGS) -fopenmp dict.c dictFun.c common_functions.c -o $(BIN)/dict
 
 frags: frags.c
 	$(CC) $(CFLAGS) frags.c fragsFun.c common_functions.c -o $(BIN)/frag

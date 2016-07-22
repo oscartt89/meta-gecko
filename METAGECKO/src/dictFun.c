@@ -4,6 +4,9 @@
  *    of Malaga).
  */
 #include "dict.h"
+#include <omp.h>
+
+#define PAR_THRESHOLD   40000
 
 /* This function is used to shift left bits in a unsigned char array
  *	@param w: word structure where char array to be shifted is stored.
@@ -63,7 +66,7 @@ int writeBuffer(wentry *buff, FILE *index, FILE *words, uint64_t numWords) {
         if (fwrite(&buff[pos].loc, sizeof(LocationEntry), 1, words) != 1)
             terror("writeBuffer:: Error writing word Location");
 
-        if(fwrite(buff[pos].w.b, sizeof(unsigned char), BYTES_IN_WORD, words)!=BYTES_IN_WORD)
+        if (fwrite(buff[pos].w.b, sizeof(unsigned char), BYTES_IN_WORD, words) != BYTES_IN_WORD)
             terror("writeBuffer:: Error writing word array");
 
     }
@@ -124,7 +127,6 @@ int partition(wentry *arr, int left, int right) {
         do {
             ++i;
         } while (!GT(arr[i], arr[left]) && i <= right);
-
         do {
             --j;
         } while (GT(arr[j], arr[left]) && j >= left);
@@ -151,9 +153,22 @@ int quicksort_W(wentry *arr, int left, int right) {
     if (left < right) {
         // divide and conquer
         j = partition(arr, left, right);
-        //  j=(left+r)/2;
-        quicksort_W(arr, left, j - 1);
-        quicksort_W(arr, j + 1, right);
+
+/*        if (right - left > PAR_THRESHOLD) {
+#pragma omp parallel num_threads(2)
+            {
+#pragma omp sections
+                {
+#pragma omp section
+                    quicksort_W(arr, left, j - 1);
+#pragma omp section
+                    quicksort_W(arr, j + 1, right);
+                }
+            }
+        } else {*/
+            quicksort_W(arr, left, j - 1);
+            quicksort_W(arr, j + 1, right);
+//        }
     }
     return 0;
 }
