@@ -449,7 +449,7 @@ int main(int ac, char **av) {
 
         // Close output file
         fclose(fr);
-//			freeReads(&metagenome);
+	freeReads(&metagenome);
         // Free unnecesary memory
         free(buffer);
         // Remove intermediate files
@@ -691,7 +691,7 @@ int main(int ac, char **av) {
     free(fname);
 
     // Free linked list
-//	freeReads(&metagenome);
+    freeReads(&metagenome);
 
     // Everything finished OK
     return 0;

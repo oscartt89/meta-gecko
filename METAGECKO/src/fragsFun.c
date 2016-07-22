@@ -728,8 +728,8 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
         return 0;
     }
 
-    while ((c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f)) != '>' && !feof(f)); //start seq
-    if (feof(f)) {
+    while ((c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f)) != '>' && (!feof(f) || (feof(f) &&  posBuffer < tReadBuffer ) )); //start seq
+    if (feof(f) && posBuffer >= tReadBuffer) {
         // Close genome file
         fclose(f);
         return 0;
@@ -738,7 +738,7 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
     while ((c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f)) == ' ');
 
     while (k < MAXLID && c != '\n' && c != ' ') {
-        if (feof(f)) {
+        if (feof(f) && posBuffer >= tReadBuffer) {
             // Close genome file
             fclose(f);
             return 0;
@@ -755,12 +755,12 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
 
     //start list with sX2
     sX2 = sX;
-    while (/*c!='*'&&*/!feof(f)) {
+    while (/*c!='*'&&*/!feof(f) || (feof(f) && posBuffer < tReadBuffer)) {
         c = toupper(c);
         if (c == '>') {
             sX2->datos[length++] = '*';
             while (c != '\n') {
-                if (feof(f)) {
+                if (feof(f) && posBuffer >= tReadBuffer) {
                     // Close genome file
                     fclose(f);
                     return 0;
@@ -831,13 +831,16 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
 
     // Start to read
     c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
-    while (!feof(metag)) {
+    //c=getc(metag);
+    while (!feof(metag) || (feof(metag) && posBuffer < tReadBuffer)) {
         // Check if it's a special line
         if (!isupper(toupper(c))) { // Comment, empty or quality (+) line
             if (c == '>') { // Comment line
                 c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+                //c=getc(metag);
                 while (c != '\n') // Avoid comment line
                     c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+                    //c=getc(metag);
 
                 // Check if it's first instance
                 if (currRead != NULL) {
@@ -872,8 +875,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                 }
 
                 // Generate new node
-                if ((currRead = (Reads *) malloc(sizeof(Reads))) ==
-                    NULL) { // ## El error salta en esta linea tras muchas iteraciones. El caracter que entra cuando ocurre el error es "\n"
+                if ((currRead = (Reads *) malloc(sizeof(Reads))) == NULL) { // ## El error salta en esta linea tras muchas iteraciones. El caracter que entra cuando ocurre el error es "\n"
                     fprintf(stderr, "\n\tMemory pointer returned is NULL. Memory corrupted.\n");
                     exit(-1);
                 }
@@ -885,12 +887,14 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                 seqLen = 0; // Reset sequence length
             }
             c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag); // First char of next sequence
+            //c=getc(metag);
             continue;
         }
         currRead->sequence[seqLen] = c;
         seqLen++;
         // Next char
-        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+       	c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+       	//c=getc(metag);
     }
 
     // Link last node
@@ -898,7 +902,8 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     currRead->length = seqLen;
     currRead->next = NULL;
     lastRead->next = currRead;
-
+    fprintf(stdout, "Last read is seq number: %"PRIu32" and seq %s\n", lastRead->seqIndex, lastRead->sequence);
+    getchar();
     absoluteLength += seqLen;
 
     *totalLength = absoluteLength;
@@ -915,15 +920,18 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
  */
 inline void freeReads(Reads **metagenome) {
     // Check
+    fprintf(stdout, "going to remove reads\n");
     if (*metagenome == NULL) return;
 
     Reads *aux;
     while ((*metagenome)->next != NULL) {
+    	fprintf(stdout, "Freeing %"PRIu32"\n", (*metagenome)->seqIndex);
         aux = *metagenome;
         *metagenome = (*metagenome)->next;
         free(aux);
     }
 
+    fprintf(stdout, "Freeing %"PRIu32"\n", (*metagenome)->seqIndex);
     free(*metagenome);
 }
 

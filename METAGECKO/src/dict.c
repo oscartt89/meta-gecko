@@ -186,7 +186,7 @@ int main(int ac, char **av) {
 
     // Start to read
     c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
-    while (!feof(metag)) {
+    while (!feof(metag) || (!feof(metag) && posBuffer < tReadBuffer)) {
         // Check if it's a special line
         if (!isupper(toupper(c))) { // Comment, empty or quality (+) line
             if (c == '>') { // Comment line
