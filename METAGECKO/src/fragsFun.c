@@ -838,7 +838,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
             if (c == '>') { // Comment line
                 c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
                 //c=getc(metag);
-                while (c != '\n') // Avoid comment line
+                while (c != '\n' ) // Avoid comment line
                     c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
                     //c=getc(metag);
 
@@ -901,9 +901,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     currRead->seqIndex = seqIndex;
     currRead->length = seqLen;
     currRead->next = NULL;
-    lastRead->next = currRead;
-    fprintf(stdout, "Last read is seq number: %"PRIu32" and seq %s\n", lastRead->seqIndex, lastRead->sequence);
-    getchar();
+    lastRead = currRead;
     absoluteLength += seqLen;
 
     *totalLength = absoluteLength;
