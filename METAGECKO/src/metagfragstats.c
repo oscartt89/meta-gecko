@@ -78,8 +78,8 @@ int main(int ac, char** av){
 	    readFragment(&fragment,fragF);
     }
 
-    fseek(fragF,0L,SEEK_END);
-    size = ftell(fragF);
+    fseeko(fragF,0L,SEEK_END);
+    size = ftello(fragF);
 
     fclose(fragF);
 

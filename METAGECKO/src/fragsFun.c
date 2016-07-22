@@ -107,11 +107,11 @@ int readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes) {
 int generateHits(Hit *buff, HashEntry X, HashEntry Y, FILE *XPFile, FILE *YPFile, FILE *outIndx, FILE *outBuff,
                  uint64_t *hitsInBuff, int prefixSize, uint64_t *buffersWritten) {
     // Positionate on locations files
-    if (fseek(XPFile, X.pos, SEEK_SET) != 0) {
+    if (fseeko(XPFile, X.pos, SEEK_SET) != 0) {
         fprintf(stderr, "generateHits:: Error positioning on X file.\n");
         return -1;
     }
-    if (fseek(YPFile, Y.pos, SEEK_SET) != 0) {
+    if (fseeko(YPFile, Y.pos, SEEK_SET) != 0) {
         fprintf(stderr, "generateHits:: Error positioning on Y file.\n");
         return -1;
     }
@@ -194,7 +194,7 @@ void writeHitsBuff(Hit *buff, FILE *index, FILE *hits, uint64_t hitsInBuff, int 
     quicksort_H(buff, 0, hitsInBuff - 1);
 	
     // Write info on index file
-    uint64_t pos = (uint64_t) ftell(hits);
+    uint64_t pos = (uint64_t) ftello(hits);
     uint64_t numHits = 0;
     Hit lastHit;
     if (fwrite(&pos, sizeof(uint64_t), 1, index) != 1) {

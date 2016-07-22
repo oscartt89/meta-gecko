@@ -129,8 +129,8 @@ int main(int ac, char **av) {
     }
 
     // Take W size
-    fseek(dict, 0L, SEEK_END); // go to end
-    WSize = ftell(dict) / 1000000; // MB
+    fseeko(dict, 0L, SEEK_END); // go to end
+    WSize = ftello(dict) / (uint64_t)1000000; // MB
 
     // Close unnecessary varaibles
     fclose(dict);
@@ -143,8 +143,8 @@ int main(int ac, char **av) {
     }
 
     // Take P size
-    fseek(dict, 0L, SEEK_END); // go to end
-    PSize = ftell(dict) / 1000000; // MB
+    fseeko(dict, 0L, SEEK_END); // go to end
+    PSize = ftello(dict) / (uint64_t) 1000000; // MB
 
     // Close unnecessary varaibles
     fclose(dict);

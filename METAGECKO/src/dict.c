@@ -316,7 +316,7 @@ int main(int ac, char **av) {
 
             // First entrance
             fwrite(buffer[0].w.b, sizeof(unsigned char), BYTES_IN_WORD, wDic); // write first word
-            uint64_t pos = (uint64_t) ftell(pDic);
+            uint64_t pos = (uint64_t) ftello(pDic);
             fwrite(&pos, sizeof(uint64_t), 1, wDic); // position on pDic
             fwrite(&buffer[0].loc, sizeof(LocationEntry), 1, pDic); // Location
 
@@ -488,14 +488,14 @@ int main(int ac, char **av) {
         for (j = 0; j < READ_BUFF_LENGTH; ++j, blockIndex += BYTES_IN_WORD) // Words memory
             currNode->word[j].w.b = &BuffWordsBlock[blockIndex];
         currNode->next = words;
-        fseek(wrds, arrPos[i], SEEK_SET);
+        fseeko(wrds, arrPos[i], SEEK_SET);
         read = loadWord(currNode->word, wrds, wordsUnread[i]);
         currNode->buff = i;
         currNode->index = 0;
         currNode->words_loaded = read;
         words = currNode;
         // Update info
-        arrPos[i] = (uint64_t) ftell(wrds);
+        arrPos[i] = (uint64_t) ftello(wrds);
         wordsUnread[i] -= read;
     }
     words = currNode;
@@ -505,7 +505,7 @@ int main(int ac, char **av) {
 
     // First entrance
     fwrite(words->word[words->index].w.b, sizeof(unsigned char), BYTES_IN_WORD, wDic); // write first word
-    uint64_t pos = (uint64_t) ftell(pDic);
+    uint64_t pos = (uint64_t) ftello(pDic);
     fwrite(&pos, sizeof(uint64_t), 1, wDic); // position on pDic
     fwrite(&words->word[words->index].loc, sizeof(LocationEntry), 1, pDic); // Location
 
@@ -517,7 +517,7 @@ int main(int ac, char **av) {
 //    if (words->index >= words->words_loaded) {
 //        fprintf(stderr, "Entro\n");
 //        if (wordsUnread[words->buff] > 0) {
-//            fseek(wrds, arrPos[words->buff], SEEK_SET);
+//            fseeko(wrds, arrPos[words->buff], SEEK_SET);
 //            read = loadWord(words->word, wrds, wordsUnread[words->buff]);
 //            words->index = 0;
 //            words->words_loaded = read;
@@ -563,13 +563,13 @@ int main(int ac, char **av) {
             // Load next word if it's possible
             if (wordsUnread[words->buff] > 0) {
                 if (words->buff != lastLoaded) {
-                    fseek(wrds, arrPos[words->buff], SEEK_SET);
+                    fseeko(wrds, arrPos[words->buff], SEEK_SET);
                     lastLoaded = words->buff;
                 }
                 read = loadWord(words->word, wrds, wordsUnread[words->buff]);
                 words->index = 0;
                 words->words_loaded = read;
-                arrPos[words->buff] = (uint64_t) ftell(wrds);
+                arrPos[words->buff] = (uint64_t) ftello(wrds);
                 wordsUnread[words->buff] -= read;
                 checkOrder(&words, false);
             } else {

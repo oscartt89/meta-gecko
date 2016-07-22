@@ -83,7 +83,7 @@ int main(int ac, char** av){
 	}
 
 	// Take size
-	size = ftell(metag)/1000000; // MB
+	size = ftello(metag)/(uint64_t)1000000; // MB
 
 	// Free&Close unnecessary varaibles
 	fclose(metag);

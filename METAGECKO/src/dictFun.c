@@ -53,7 +53,7 @@ int writeBuffer(wentry *buff, FILE *index, FILE *words, uint64_t numWords) {
     quicksort_W(buff, 0, numWords - 1);
 
     // Write buffer info on buffer index file
-    uint64_t pos = (uint64_t) ftell(words); // Buffer start position
+    uint64_t pos = (uint64_t) ftello(words); // Buffer start position
     fwrite(&pos, sizeof(uint64_t), 1, index);
     fwrite(&numWords, sizeof(uint64_t), 1, index); // Number of words
     // Write words on words file
@@ -197,7 +197,7 @@ inline void writeWord(wentry *word, FILE *w, FILE *p, bool sameThanLastWord, uin
         uint64_t aux;
         fwrite(words, sizeof(uint32_t), 1, w); // Write num of repetitions
         fwrite(word->w.b, sizeof(unsigned char), BYTES_IN_WORD, w); // Write new word
-        aux = (uint64_t) ftell(p);
+        aux = (uint64_t) ftello(p);
         fwrite(&aux, sizeof(uint64_t), 1, w); // Write new positions on positions dictionary
         *words = 0; // Update value
     }

@@ -209,7 +209,7 @@ int main(int ac, char **av) {
     // Search hits
     // Prepare necessary variables
     HashEntry we[2]; // [0]-> Metagenome [1]-> Genome
-    uint64_t lastFirstHit = (uint64_t) ftell(gW);
+    uint64_t lastFirstHit = (uint64_t) ftello(gW);
     bool firstmatch = true;
     int cmp;
 
@@ -265,7 +265,7 @@ int main(int ac, char **av) {
                                  &buffersWritten) < 0)
                     return -1;
                 if (firstmatch) {
-                    lastFirstHit = (uint64_t)(ftell(gW) - size_of_HashEntry(BytesGenoWord));
+                    lastFirstHit = ((uint64_t) ftello(gW) - size_of_HashEntry(BytesGenoWord));
                     firstmatch = false;
                 }
             }
@@ -278,7 +278,7 @@ int main(int ac, char **av) {
                     if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
                     // Reset values and come back at dict
                     firstmatch = true;
-                    fseek(gW, lastFirstHit, SEEK_SET); // Reset geno dict
+                    fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
                     readHashEntrance(&we[1], gW, BytesGenoWord);
                 }
             } else if (cmp < 0) { // No more matches, take next metag word
@@ -286,7 +286,7 @@ int main(int ac, char **av) {
                 if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
                 // Reset values and come back at dict
                 firstmatch = true;
-                fseek(gW, lastFirstHit, SEEK_SET); // Reset geno dict
+                fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
                 readHashEntrance(&we[1], gW, BytesGenoWord);
             }
         }
@@ -542,12 +542,12 @@ int main(int ac, char **av) {
         currNode->next = hitsList;
         currNode->hits = &HitsBlock[blockIndex];
         currNode->buff = i;
-        fseek(hts, positions[i], SEEK_SET);
+        fseeko(hts, positions[i], SEEK_SET);
         read = loadHit(currNode->hits, hts, hitsUnread[i]);
         currNode->index = 0;
         currNode->hits_loaded = read;
         // Update info
-        positions[i] = (uint64_t) ftell(hts);
+        positions[i] = (uint64_t) ftello(hts);
         hitsUnread[i] -= read;
         lastLoaded = i;
         hitsList = currNode;
@@ -593,13 +593,13 @@ int main(int ac, char **av) {
     if (hitsList->index >= hitsList->hits_loaded) {
         if (hitsUnread[hitsList->buff] > 0) {
             if (hitsList->buff != lastLoaded) {
-                fseek(hts, positions[hitsList->buff], SEEK_SET);
+                fseeko(hts, positions[hitsList->buff], SEEK_SET);
                 lastLoaded = hitsList->buff;
             }
             read = loadHit(hitsList->hits, hts, hitsUnread[hitsList->buff]);
             hitsList->index = 0;
             hitsList->hits_loaded = read;
-            positions[hitsList->buff] = (uint64_t) ftell(hts);
+            positions[hitsList->buff] = (uint64_t) ftello(hts);
             hitsUnread[hitsList->buff] -= read;
             checkOrder(&hitsList, false);
         } else {
@@ -647,13 +647,13 @@ int main(int ac, char **av) {
         if (hitsList->index >= hitsList->hits_loaded) {
             if (hitsUnread[hitsList->buff] > 0) {
                 if (hitsList->buff != lastLoaded) {
-                    fseek(hts, positions[hitsList->buff], SEEK_SET);
+                    fseeko(hts, positions[hitsList->buff], SEEK_SET);
                     lastLoaded = hitsList->buff;
                 }
                 read = loadHit(hitsList->hits, hts, hitsUnread[hitsList->buff]);
                 hitsList->index = 0;
                 hitsList->hits_loaded = read;
-                positions[hitsList->buff] = (uint64_t) ftell(hts);
+                positions[hitsList->buff] = (uint64_t) ftello(hts);
                 hitsUnread[hitsList->buff] -= read;
                 checkOrder(&hitsList, false);
             } else {
