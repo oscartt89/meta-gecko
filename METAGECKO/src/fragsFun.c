@@ -928,9 +928,11 @@ inline void freeReads(Reads *metagenome) {
 
         aux = metagenome;
         metagenome = metagenome->next;
+        free(aux->sequence);
         free(aux);
     }
 
+    free(metagenome->sequence);
     free(metagenome);
 }
 
