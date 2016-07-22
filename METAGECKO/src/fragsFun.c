@@ -918,18 +918,16 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
  */
 inline void freeReads(Reads **metagenome) {
     // Check
-    fprintf(stdout, "going to remove reads\n");
     if (*metagenome == NULL) return;
 
     Reads *aux;
     while ((*metagenome)->next != NULL) {
-    	fprintf(stdout, "Freeing %"PRIu32"\n", (*metagenome)->seqIndex);
+
         aux = *metagenome;
         *metagenome = (*metagenome)->next;
         free(aux);
     }
 
-    fprintf(stdout, "Freeing %"PRIu32"\n", (*metagenome)->seqIndex);
     free(*metagenome);
 }
 
