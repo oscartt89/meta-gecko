@@ -67,7 +67,7 @@ Sequence *LeeSeqDB(char *, uint64_t *, uint64_t *);
 
 Reads *LoadMetagenome(char *, uint64_t *);
 
-inline void freeReads(Reads **);
+inline void freeReads(Reads *);
 
 void writeSequenceLength(uint64_t *, FILE *);
 

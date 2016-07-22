@@ -859,6 +859,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                     lastRead = currRead;
 		    if(lastRead == NULL) fprintf(stderr, "lastRead is null\n");
 		    if(lastRead->sequence == NULL) fprintf(stderr, "Lr. seq is null\n");
+		    
 		    if((lastRead->sequence = (char *) realloc(lastRead->sequence, seqLen * sizeof(char))) == NULL){
                         fprintf(stderr, "Error reallocating sequences\n");
                     }
@@ -879,9 +880,11 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                     fprintf(stderr, "\n\tMemory pointer returned is NULL. Memory corrupted.\n");
                     exit(-1);
                 }
+                currRead->next = NULL;
 		if ((currRead->sequence = (char *) malloc(MAX_READ_LENGTH*sizeof(char))) == NULL){
 			fprintf(stderr, "\n\t Could not allocate memory for read sequences at sequence %"PRIu32"\n", seqIndex);
 		}
+		memset(currRead->sequence, 0, MAX_READ_LENGTH);
                 // Update info
                 seqIndex++; // New sequence
                 seqLen = 0; // Reset sequence length
@@ -916,19 +919,19 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
 /* This function free a read linked list allocated space.
  *  @param metagenome linked list to be deallocated.
  */
-inline void freeReads(Reads **metagenome) {
-    // Check
-    if (*metagenome == NULL) return;
+inline void freeReads(Reads *metagenome) {
+
+    if (metagenome == NULL) return;
 
     Reads *aux;
-    while ((*metagenome)->next != NULL) {
+    while (metagenome->next != NULL) {
 
-        aux = *metagenome;
-        *metagenome = (*metagenome)->next;
+        aux = metagenome;
+        metagenome = metagenome->next;
         free(aux);
     }
 
-    free(*metagenome);
+    free(metagenome);
 }
 
 
