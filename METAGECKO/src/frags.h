@@ -47,9 +47,7 @@ bool finished(int64_t *, uint64_t);
 
 void writeFragment(FragFile, FILE *);
 
-void SWAP_H(Hit *, Hit *, Hit);
-
-void copyHit(Hit *, Hit);
+void SWAP_H(Hit *, Hit *, Hit *);
 
 void push(node_H **, node_H **);
 

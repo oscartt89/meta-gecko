@@ -278,13 +278,13 @@ int partition(Hit *arr, int left, int right) {
     int pivot = (left + right) / 2;
 
     if (GT(arr[pivot], arr[right]))
-        SWAP_H(&arr[pivot], &arr[right], t);
+        SWAP_H(&arr[pivot], &arr[right], &t);
 
     if (GT(arr[pivot], arr[left]))
-        SWAP_H(&arr[pivot], &arr[left], t);
+        SWAP_H(&arr[pivot], &arr[left], &t);
 
     if (GT(arr[left], arr[right]))
-        SWAP_H(&arr[left], &arr[right], t);
+        SWAP_H(&arr[left], &arr[right], &t);
 
     while (1) {
         do {
@@ -297,10 +297,10 @@ int partition(Hit *arr, int left, int right) {
 
         if (i >= j) break;
 
-        SWAP_H(&arr[i], &arr[j], t);
+        SWAP_H(&arr[i], &arr[j], &t);
     }
 
-    SWAP_H(&arr[left], &arr[j], t);
+    SWAP_H(&arr[left], &arr[j], &t);
 
     return j;
 }
@@ -410,27 +410,11 @@ void writeFragment(FragFile frag, FILE *f) {
  *  @param h2 hit to be swapped.
  *  @param t auxiliar hit.
  */
-void SWAP_H(Hit *h1, Hit *h2, Hit t) {
-    copyHit(&t, *h1);
-    copyHit(h1, *h2);
-    copyHit(h2, t);
+void SWAP_H(Hit *h1, Hit *h2, Hit *t) {
+    memcpy(t, h1, sizeof(Hit));
+    memcpy(h1, h2, sizeof(Hit));
+    memcpy(h2, t, sizeof(Hit));
 }
-
-
-/* This function is used to copy a hit variable in another hit variable.
- *  @param toCopy where hit will be copied.
- *  @param copy hit to be copied.
- */
-void copyHit(Hit *toCopy, Hit copy) {
-    toCopy->diag = copy.diag;
-    toCopy->posX = copy.posX;
-    toCopy->posY = copy.posY;
-    toCopy->seqX = copy.seqX;
-    toCopy->seqY = copy.seqY;
-    toCopy->strandX = copy.strandX;
-    toCopy->strandY = copy.strandY;
-}
-
 
 /* This method push node B after A (A->C ==PUSH==> A->B->C)
  *  @param A node after B will be pushed.
