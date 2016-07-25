@@ -4,6 +4,7 @@
  *    of Malaga).
  */
 #include "frags.h"
+#include <omp.h>
 
 /* Function used to compare two Hit variables. It function sort with this
  * criterion:
@@ -317,8 +318,22 @@ void quicksort_H(Hit *arr, int left, int right) {
     if (left < right) {
         // divide and conquer
         j = partition(arr, left, right);
-        quicksort_H(arr, left, j - 1);
-        quicksort_H(arr, j + 1, right);
+        if (right - left > PAR_THRESHOLD) {
+            omp_set_nested(1);
+#pragma omp parallel num_threads(2)
+            {
+#pragma omp sections
+                {
+#pragma omp section
+                    quicksort_H(arr, left, j - 1);
+#pragma omp section
+                    quicksort_H(arr, j + 1, right);
+                }
+            }
+        } else {
+            quicksort_H(arr, left, j - 1);
+            quicksort_H(arr, j + 1, right);
+        }
     }
 }
 

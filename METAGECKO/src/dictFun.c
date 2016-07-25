@@ -6,8 +6,6 @@
 #include "dict.h"
 #include <omp.h>
 
-#define PAR_THRESHOLD   40000
-
 /* This function is used to shift left bits in a unsigned char array
  *	@param w: word structure where char array to be shifted is stored.
  */
@@ -126,10 +124,10 @@ int partition(wentry *arr, int left, int right) {
     while (1) {
         do {
             ++i;
-        } while (!GT(arr[i], arr[left]) && i <= right);
+        } while (i <= right && !GT(arr[i], arr[left]));
         do {
             --j;
-        } while (GT(arr[j], arr[left]) && j >= left);
+        } while (j >= left && GT(arr[j], arr[left]));
 
         if (i >= j) break;
 
@@ -154,7 +152,8 @@ int quicksort_W(wentry *arr, int left, int right) {
         // divide and conquer
         j = partition(arr, left, right);
 
-/*        if (right - left > PAR_THRESHOLD) {
+        if (right - left > PAR_THRESHOLD) {
+            omp_set_nested(1);
 #pragma omp parallel num_threads(2)
             {
 #pragma omp sections
@@ -165,10 +164,10 @@ int quicksort_W(wentry *arr, int left, int right) {
                     quicksort_W(arr, j + 1, right);
                 }
             }
-        } else {*/
+        } else {
             quicksort_W(arr, left, j - 1);
             quicksort_W(arr, j + 1, right);
-//        }
+        }
     }
     return 0;
 }

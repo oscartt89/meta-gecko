@@ -12,7 +12,7 @@ dict: dict.c
 	$(CC) $(CFLAGS) -fopenmp dict.c dictFun.c common_functions.c -o $(BIN)/dict
 
 frags: frags.c
-	$(CC) $(CFLAGS) frags.c fragsFun.c common_functions.c -o $(BIN)/frag
+	$(CC) $(CFLAGS) -fopenmp frags.c fragsFun.c common_functions.c -o $(BIN)/frag
 
 combineFragments: combineFragments.c
 	$(CC) $(CFLAGS) combineFragments.c -o $(BIN)/combineFragments
