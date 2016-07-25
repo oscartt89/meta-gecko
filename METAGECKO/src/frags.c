@@ -6,6 +6,7 @@
  *    of Malaga).
  */
 #include "frags.h"
+#include <omp.h>
 
 /* This main contains the workflow to find hits, filter and extend it to generate
  * fragments over a length and similarity wanted. There are two ways to invoke the
@@ -331,28 +332,43 @@ int main(int ac, char **av) {
         writeHitsBuff(buffer, hIndx, hts, hitsInBuffer, prefixSize, &buffersWritten);
     }
 
-
-
     /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, " (Generated)\n");
-    fprintf(stdout, "\tFrags: Loading sequences of genome.");
-    fflush(stdout);
     /////////////////////////// CHECKPOINT ///////////////////////////
 
-    // Load sequences
-    genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
+#pragma omp parallel num_threads(2)
+    {
+#pragma omp sections
+        {
+#pragma omp section
+            {
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, "\tFrags: Loading sequences of genome.\n");
+                fflush(stdout);
+                /////////////////////////// CHECKPOINT ///////////////////////////
 
-    /////////////////////////// CHECKPOINT ///////////////////////////
-    fprintf(stdout, " (Loaded)\n");
-    fprintf(stdout, "\tFrags: Loading sequences of metagenome.");
-    fflush(stdout);
-    /////////////////////////// CHECKPOINT ///////////////////////////
+                // Load sequences
+                genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
 
-    metagenome = LoadMetagenome(av[2], &metagenomeLength);
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, " (Loaded) sequences of genome\n");
+                /////////////////////////// CHECKPOINT ///////////////////////////
+            }
+#pragma omp section
+            {
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, "\tFrags: Loading sequences of metagenome.\n");
+                fflush(stdout);
+                /////////////////////////// CHECKPOINT ///////////////////////////
 
-    /////////////////////////// CHECKPOINT ///////////////////////////
-    fprintf(stdout, " (Loaded)\n");
-    /////////////////////////// CHECKPOINT ///////////////////////////
+                metagenome = LoadMetagenome(av[2], &metagenomeLength);
+
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, " (Loaded) sequences of metagenome\n");
+                /////////////////////////// CHECKPOINT ///////////////////////////
+            }
+        }
+    }
 
     // Write hits if there is only one buffer
     
