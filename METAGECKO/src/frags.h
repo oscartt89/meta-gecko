@@ -69,6 +69,8 @@ Reads *LoadMetagenome(char *, uint64_t *);
 
 inline void freeReads(Reads *);
 
+void freeGenomes(Sequence * genomes);
+
 void writeSequenceLength(uint64_t *, FILE *);
 
 void endianessConversion(char *, char *, int);

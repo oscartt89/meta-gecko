@@ -952,6 +952,11 @@ inline void freeReads(Reads *metagenome) {
 }
 
 
+void freeGenomes(Sequence * genomes){
+	free(genomes->ident);
+	free(genomes->datos);
+}
+
 /**
  * Function to write the sequence length
  *  @param length is the length to be written.
