@@ -448,8 +448,11 @@ int main(int ac, char **av) {
 
         // Close output file
         fclose(fr);
+
 		freeReads(metagenome);
+
 		freeGenomes(genome);
+
         // Free unnecesary memory
         free(buffer);
         // Remove intermediate files

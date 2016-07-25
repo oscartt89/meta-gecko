@@ -953,8 +953,7 @@ inline void freeReads(Reads *metagenome) {
 
 
 void freeGenomes(Sequence * genomes){
-	free(genomes->ident);
-	free(genomes->datos);
+	free(genomes);
 }
 
 /**
