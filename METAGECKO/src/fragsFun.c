@@ -831,7 +831,6 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     uint32_t seqIndex = 0, seqLen = 0;
     char c;
     uint64_t absoluteLength = 0;
-    
 
     // Memory and variables for reading buffer
 	uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
@@ -919,6 +918,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     currRead->seqIndex = seqIndex;
     currRead->length = seqLen;
     currRead->next = NULL;
+    lastRead->next = currRead;
     lastRead = currRead;
     absoluteLength += seqLen;
 
