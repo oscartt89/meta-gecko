@@ -234,7 +234,7 @@ int main(int ac, char **av) {
         seqPos++;
         if (crrSeqL >= (uint64_t) WL) { // Full well formed sequence
             if (strandF) {
-                temp.loc.pos = seqPos - WL; // Take position on read
+                temp.loc.pos = seqPos - WL - 1; // Take position on read
                 // Store the new word
                 storeWord(&buffer[wordsInBuffer], temp);
 
