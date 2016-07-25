@@ -168,7 +168,7 @@ int main(int ac, char **av) {
     memset(temp.w.b, 0, BYTES_IN_WORD);
     memset(rev_temp.w.b, 0, BYTES_IN_WORD);
 
-    temp.loc.seq = 0;
+    temp.loc.seq = -1;
     temp.loc.strand = 'f';
     rev_temp.loc.strand = 'r';
 
@@ -196,7 +196,8 @@ int main(int ac, char **av) {
 
                 temp.loc.seq++; // New sequence
                 crrSeqL = 0; // Reset buffered sequence length
-                seqPos = 0; // Reset index
+
+                seqPos++; // Absolute coordinates: add one for the "*"
             }
             c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag); // First char of next sequence
             continue;
@@ -234,7 +235,6 @@ int main(int ac, char **av) {
         if (crrSeqL >= (uint64_t) WL) { // Full well formed sequence
             if (strandF) {
                 temp.loc.pos = seqPos - WL; // Take position on read
-
                 // Store the new word
                 storeWord(&buffer[wordsInBuffer], temp);
 
