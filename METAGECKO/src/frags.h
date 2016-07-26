@@ -75,4 +75,4 @@ void writeSequenceLength(uint64_t *, FILE *);
 
 void endianessConversion(char *, char *, int);
 
-
+inline int filteredHit(Hit h1, Hit h2, int prefixSize);

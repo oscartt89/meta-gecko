@@ -391,7 +391,6 @@ int main(int ac, char **av) {
         // Declare necessary variables
         FragFile frag;
         uint64_t index;
-        int64_t distX, distY;
 
         // Init first fragment
         frag.block = 0;
@@ -430,16 +429,18 @@ int main(int ac, char **av) {
 
         // Generate fragments
         for (index = 1; index < hitsInBuffer; ++index) {
+            fprintf(stdout, "H=[%" PRId64 ", %" PRIu32 ", %" PRIu32 "\n", buffer[index].diag, buffer[index].seqX, buffer[index].seqY);
+            fprintf(stdout, "F=[%" PRId64 ", %" PRIu64 ", %" PRIu64 "\n", frag.diag, frag.seqX, frag.seqY);
             if (buffer[index].diag == frag.diag &&
                 buffer[index].seqX == frag.seqX &&
                 buffer[index].seqY == frag.seqY) { // Possible fragment
                 // Check if are collapsable
-                distX = (int64_t)(buffer[index].posX - frag.xEnd);
-                distY = (int64_t)(buffer[index].posY - frag.yEnd);
-                if (distX > 0 || distY > 0) { // Not collapsable by extension
+                if (!filteredHit(buffer[index-1],buffer[index],prefixSize) && (buffer[index].posX - currRead->Lac) > frag.xEnd) { // Not collapsable by extension
                     // Generate fragment
                     FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize,
                                 L_Threshold, S_Threshold);
+                } else {
+                    fprintf(stdout, "Collapsed\n");
                 }
             } else { // New fragment
                 // Check correct read index
@@ -630,17 +631,13 @@ int main(int ac, char **av) {
     }
 
     // Search hits and generate fragmetents
-    int64_t distX, distY;
-
     // Read hits & generate fragments
     while (activeBuffers > 0 && hitsList != NULL) {
         if (hitsList->hits[hitsList->index].diag == frag.diag &&
             hitsList->hits[hitsList->index].seqX == frag.seqX &&
             hitsList->hits[hitsList->index].seqY == frag.seqY) { // Possible fragment
             // Check if are collapsable
-            distX = (int64_t)(hitsList->hits[hitsList->index].posX - frag.xEnd);
-            distY = (int64_t)(hitsList->hits[hitsList->index].posY - frag.yEnd);
-            if (distX > 0 || distY > 0) { // Not collapsable by xtension
+            if ((hitsList->hits[hitsList->index].posX - currRead->Lac) > frag.xEnd) { // Not collapsable by xtension
                 // Generate fragment
                 FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
                             prefixSize, L_Threshold, S_Threshold);

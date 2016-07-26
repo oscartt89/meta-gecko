@@ -168,7 +168,6 @@ inline void loadLocationEntrance(LocationEntry *arr, FILE *PFile, uint32_t reps)
  *  @param hit where info will be stored.
  *  @param X location of hit.
  *  @param Y location of hit.
- *  @param HitLength matched sequence legnth.
  */
 inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y) {
     hit->diag = X.pos - Y.pos;
@@ -178,6 +177,19 @@ inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y) {
     hit->seqY = Y.seq;
     hit->strandX = X.strand;
     hit->strandY = Y.strand;
+}
+
+/**
+ * Function to determine if a hit should be filtered because of proximity
+ * @param h1 the previous hit
+ * @param h2 the current hit
+ * @param prefixSize the word size
+ * @return if it should be filtered
+ */
+inline int filteredHit(Hit h1, Hit h2, int prefixSize){
+    fprintf(stdout, "H=[%" PRId64 ", %" PRIu32 ", %" PRIu32 ", %" PRIu64 "\n", h1.diag, h1.seqX, h1.seqY, h1.posX);
+    fprintf(stdout, "H=[%" PRId64 ", %" PRIu32 ", %" PRIu32 ", %" PRIu64 "\n", h1.diag, h1.seqX, h1.seqY, h1.posX);
+    return h2.diag == h1.diag && h2.seqX == h1.seqX && h2.seqY == h1.seqY && (h2.posX < (h1.posX + prefixSize));
 }
 
 
@@ -677,9 +689,8 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
     frag->strand = hit->strandY;
 
     uint64_t tmp;
-
-    fprintf(stdout, "[X] Start: %" PRIu64 " End: %" PRIu64 "\n", frag->xStart, frag->xEnd);
-    fprintf(stdout, "[Y] Start: %" PRIu64 " End: %" PRIu64 "\n", frag->yStart, frag->yEnd);
+    fprintf(stdout, "[X] Start: %" PRIu64 " End: %" PRIu64 " Seq: %" PRIu64 "\n", frag->xStart, frag->xEnd, frag->seqX);
+    fprintf(stdout, "[Y] Start: %" PRIu64 " End: %" PRIu64 " Seq: %" PRIu64 "\n", frag->yStart, frag->yEnd, frag->seqY);
     fprintf(stdout, "strand: %c\n", hit->strandY);
 
     for(tmp=frag->xStart;tmp<frag->xEnd;tmp++){
