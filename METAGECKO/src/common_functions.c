@@ -134,3 +134,22 @@ int is_float(char const *str) {
 uint16_t size_of_HashEntry(const uint16_t BYTES_IN_WORD){
 	return (uint16_t) (sizeof(unsigned char) * BYTES_IN_WORD + sizeof(uint64_t) + sizeof(uint32_t));
 }
+
+/*
+    Complement a nucleotide
+    @param c: Nucleotide to complement
+*/
+inline char complement(char c){
+    switch (c) {
+        case 'A':
+            return 'T';
+        case 'C':
+            return 'G';
+        case 'G':
+            return 'C';
+        case 'T':
+            return 'A';
+        default:
+            return c;
+    }
+}

@@ -211,7 +211,7 @@ void writeHitsBuff(Hit *buff, FILE *index, FILE *hits, uint64_t hitsInBuff, int 
     // Write hits in hits file
     for (pos = 1; pos < hitsInBuff; ++pos) {
         if (buff[pos].diag == lastHit.diag && buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY &&
-            buff[pos].posX < lastHit.posX + prefix) {
+            buff[pos].posX >= lastHit.posX + prefix) {
             lastHit = buff[pos];
             continue; // Collapsable
         }
@@ -565,6 +565,7 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
     while (fragmentLength < forwardDiagLength) {
         valueX = getValueOnRead(seqX, XIndex);
         valueY = getValue(seqY, YIndex, nsy);
+        if(hit->strandY == 'r') valueY = complement(valueY);
 
         // Check end of sequence
         if (valueX == '*' || valueY == '*') {
@@ -611,6 +612,9 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
         while (XIndx_B >= 0 && fragmentLength < backwardDiagLength) {
             valueX = getValueOnRead(seqX, XIndx_B);
             valueY = getValue(seqY, YIndx_B, nsy);
+
+            if(hit->strandY == 'r') valueY = complement(valueY);
+            
             // Check end of sequence
             if (valueX == '*' || valueY == '*')
                 break;

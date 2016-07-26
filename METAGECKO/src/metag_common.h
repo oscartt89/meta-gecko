@@ -334,5 +334,8 @@ int is_float(char const *str);
  */
 uint16_t size_of_HashEntry(const uint16_t BYTES_IN_WORD);
 
+/*
+    Complement a nucleotide
+*/
 
-
+inline char complement(char c);
