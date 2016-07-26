@@ -543,7 +543,7 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
 
     // Positions values
     XIndex = hit->posX + prefixSize; // End of the seed X
-    XIndx_B = hit->posX - 1; // Init of the seed X
+    XIndx_B = hit->posX - seqX->Lac - 1; // Init of the seed X
 
     if (hit->strandY == 'f') { // Forward strand
         YIndex = hit->posY + prefixSize; // End of seed Y
@@ -563,7 +563,7 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
     scoreMax = score;
     // Seek forward
     while (fragmentLength < forwardDiagLength) {
-        valueX = seqX->sequence[XIndex];
+        valueX = getValueOnRead(seqX, XIndex);
         valueY = getValue(seqY, YIndex, nsy);
 
         // Check end of sequence
@@ -608,8 +608,8 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
         YMinIndex = hit->posY + prefixSize;
 
     if (XIndx_B >= 0 && YIndx_B >= 0) // Any coordinate are the init
-        while (fragmentLength < backwardDiagLength) {
-            valueX = seqX->sequence[XIndx_B];
+        while (XIndx_B >= 0 && fragmentLength < backwardDiagLength) {
+            valueX = getValueOnRead(seqX, XIndx_B);
             valueY = getValue(seqY, YIndx_B, nsy);
             // Check end of sequence
             if (valueX == '*' || valueY == '*')
@@ -662,6 +662,16 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
         writeFragment(*frag, fr);
         return;
     }//else -> Not good enough
+}
+
+
+/* This function return the nucleotide that correspond to the position given.
+ *  @param r A pointer to the current read
+ *  @param pos the absolute position of the hit
+ *  @return The corresponding character to that position
+ */
+inline char getValueOnRead(Reads *r, uint64_t pos) {
+    return r->sequence[pos-(r->Lac)];
 }
 
 
@@ -811,8 +821,9 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
 Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     // Variables
     Reads *head = NULL, *currRead = NULL, *lastRead = NULL;
+
     FILE *metag;
-    uint32_t seqIndex = 0, seqLen = 0;
+    uint32_t seqIndex = -1, seqLen = 0;
     char c;
     uint64_t absoluteLength = 0;
 
@@ -845,6 +856,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                     // Store info
                     currRead->seqIndex = seqIndex;
                     currRead->length = seqLen;
+                    currRead->Lac = absoluteLength;
                     absoluteLength += seqLen;
                     if (head == NULL) {
                         // First element
@@ -866,11 +878,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
 
                 // Check posible errors
                 if (seqLen > MAX_READ_LENGTH) {
-                    fprintf(stderr, "\n\tError, current read length is higher than maximum allowed.\n\t\tRead:%"
-                    PRIu32
-                    ",Len:%"
-                    PRIu32
-                    "\n", seqIndex, seqLen);
+                    fprintf(stderr, "\n\tError, current read length is higher than maximum allowed.\n\t\tRead:%"PRIu32",Len:%"PRIu32"\n", seqIndex, seqLen);
                 }
 
                 // Generate new node
@@ -879,10 +887,10 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                     exit(-1);
                 }
                 currRead->next = NULL;
-		if ((currRead->sequence = (char *) malloc(MAX_READ_LENGTH*sizeof(char))) == NULL){
-			fprintf(stderr, "\n\t Could not allocate memory for read sequences at sequence %"PRIu32"\n", seqIndex);
-		}
-		memset(currRead->sequence, 0, MAX_READ_LENGTH);
+        		if ((currRead->sequence = (char *) malloc(MAX_READ_LENGTH*sizeof(char))) == NULL){
+        			fprintf(stderr, "\n\t Could not allocate memory for read sequences at sequence %"PRIu32"\n", seqIndex);
+        		}
+        		memset(currRead->sequence, 0, MAX_READ_LENGTH);
                 // Update info
                 seqIndex++; // New sequence
                 seqLen = 0; // Reset sequence length
@@ -901,6 +909,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     // Link last node
     currRead->seqIndex = seqIndex;
     currRead->length = seqLen;
+    currRead->Lac = absoluteLength;
     currRead->next = NULL;
     lastRead->next = currRead;
     lastRead = currRead;

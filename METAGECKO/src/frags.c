@@ -402,7 +402,7 @@ int main(int ac, char **av) {
         currRead = metagenome;
         while (currRead->seqIndex != buffer[0].seqX) {
             if (currRead->next == NULL) {
-                fprintf(stderr, "Error searching first read.\n");
+                fprintf(stderr, "Error searching first read %"PRIu32".\n", buffer[0].seqX);
                 return -1;
             }
             currRead = currRead->next;

@@ -240,6 +240,7 @@ struct ShortSequence{
     char * sequence; // Sequence
     uint32_t seqIndex; // Index of the sequence
     uint32_t length; // Sequence length
+    uint64_t Lac;   //Accumulated length
     struct ShortSequence *next; // Used to create a linked list
 };
 
