@@ -106,7 +106,7 @@ int readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes) {
  *        is the same than use X.forward and Y.forward.
  */
 int generateHits(Hit *buff, HashEntry X, HashEntry Y, FILE *XPFile, FILE *YPFile, FILE *outIndx, FILE *outBuff,
-                 uint64_t *hitsInBuff, int prefixSize, uint64_t *buffersWritten) {
+                 uint64_t *hitsInBuff, int prefixSize, uint64_t *buffersWritten, uint64_t genomeLength, uint64_t metagenomeLength) {
     // Positionate on locations files
     if (fseeko(XPFile, X.pos, SEEK_SET) != 0) {
         fprintf(stderr, "generateHits:: Error positioning on X file.\n");
@@ -136,7 +136,7 @@ int generateHits(Hit *buff, HashEntry X, HashEntry Y, FILE *XPFile, FILE *YPFile
     for (i = 0; i < X.reps; ++i)
         if (X_Arr[i].strand == 'f') // Discard X reverse
             for (j = 0; j < Y.reps; ++j) {
-                storeHit(&buff[*hitsInBuff], X_Arr[i], Y_Arr[j]);
+                storeHit(&buff[*hitsInBuff], X_Arr[i], Y_Arr[j], genomeLength, metagenomeLength);
                 *hitsInBuff += 1;
                 // Check buffer space
                 if (*hitsInBuff == MAX_BUFF) {
@@ -164,13 +164,13 @@ inline void loadLocationEntrance(LocationEntry *arr, FILE *PFile, uint32_t reps)
 }
 
 
-/* This function is used to load necessary info in a Hit variable.
+/** This function is used to load necessary info in a Hit variable.
  *  @param hit where info will be stored.
  *  @param X location of hit.
  *  @param Y location of hit.
  */
-inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y) {
-    hit->diag = X.pos - Y.pos;
+inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y, uint64_t genomeLength, uint64_t metagenomeLength) {
+    hit->diag = (Y.strand=='f')?X.pos - Y.pos:(X.pos + Y.pos - (genomeLength < metagenomeLength)?genomeLength:metagenomeLength);
     hit->posX = X.pos;
     hit->seqX = X.seq;
     hit->posY = Y.pos;
@@ -187,9 +187,7 @@ inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y) {
  * @return if it should be filtered
  */
 inline int filteredHit(Hit h1, Hit h2, int prefixSize){
-    fprintf(stdout, "H=[%" PRId64 ", %" PRIu32 ", %" PRIu32 ", %" PRIu64 "\n", h1.diag, h1.seqX, h1.seqY, h1.posX);
-    fprintf(stdout, "H=[%" PRId64 ", %" PRIu32 ", %" PRIu32 ", %" PRIu64 "\n", h1.diag, h1.seqX, h1.seqY, h1.posX);
-    return h2.diag == h1.diag && h2.seqX == h1.seqX && h2.seqY == h1.seqY && (h2.posX < (h1.posX + prefixSize));
+    return h2.strandY == h1.strandY && h2.diag == h1.diag && h2.seqX == h1.seqX && h2.seqY == h1.seqY && (h2.posX < (h1.posX + prefixSize));
 }
 
 
@@ -222,8 +220,7 @@ void writeHitsBuff(Hit *buff, FILE *index, FILE *hits, uint64_t hitsInBuff, int 
 
     // Write hits in hits file
     for (pos = 1; pos < hitsInBuff; ++pos) {
-        if (buff[pos].diag == lastHit.diag && buff[pos].seqX == lastHit.seqX && buff[pos].seqY == lastHit.seqY &&
-            buff[pos].posX >= lastHit.posX + prefix) {
+        if (filteredHit(lastHit,buff[pos],prefix)) {
             lastHit = buff[pos];
             continue; // Collapsable
         }
@@ -560,15 +557,16 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
     if (hit->strandY == 'f') { // Forward strand
         YIndex = hit->posY + prefixSize; // End of seed Y
         YIndx_B = hit->posY - 1; // Init of seed Y
+        YMinIndex = YIndx_B + 1; // Minimum coordiantes on Y
     } else { // Reverse strand
         YIndex = hit->posY - prefixSize - 1; // End of seed (init in forward direction)
-        YIndx_B = hit->posY + 1; // Init of seed Y
+        YIndx_B = hit->posY; // Init of seed Y
+        YMinIndex = YIndx_B - 1; // Minimum coordiantes on Y
     }
 
     XMaxIndex = XIndex; // Maximum coordiantes on X
-    XMinIndex = XIndx_B; // Minimum coordiantes on X
+    XMinIndex = XIndx_B + 1; // Minimum coordiantes on X
     YMaxIndex = YIndex; // Maximum coordiantes on Y
-    YMinIndex = YIndx_B; // Minimum coordiantes on Y
     // Scoring values
     identitites = maxIdentities = prefixSize;
     score = Eq_Value * prefixSize; // Init score
@@ -657,59 +655,19 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
             stillInSeqX = XIndx_B-seqX->Lac;
         }
 
-    /*// Set the values of the FragFile
-    myF->diag = H->posX + H->posY - min(n0, n1);
-    myF->xStart = (uint64_t) xfilmax2 - H->seqX;
-    myF->yStart = (uint64_t) ycolmax2 - H->seqY;
-    myF->xEnd = (uint64_t) xfilmax - H->seqX;
-    myF->yEnd = (uint64_t) ycolmax - H->seqY;;
-    myF->length = myF->xEnd - myF->xStart + 1;
-    myF->score = fscoreMax;
-    myF->ident = maxIdentities;
-    myF->similarity = myF->score * 100.0
-                      / scoreMax(&sX->datos[myF->xStart], &sY->datos[myF->yStart],
-                                 myF->length, POINT);
-    myF->seqX = H->seqX;
-    myF->seqY = H->seqY;
-    myF->block = 0;
-    myF->strand = 'r';*/
-
     // Calc length and similarity
     frag->diag = hit->diag;
-    frag->similarity = scoreMax / (frag->length * Eq_Value);
+    frag->similarity = 100.0 * scoreMax / (frag->length * Eq_Value);
     frag->xStart = (XMinIndex < 0)?0:XMinIndex;
-    frag->yStart = YMinIndex;// - hit->seqY;
+    frag->yStart = (YMinIndex < 0)?0:YMinIndex;
     frag->xEnd = XMaxIndex;
-    frag->yEnd = YMaxIndex;// - hit->seqY;
+    frag->yEnd = YMaxIndex;
     frag->length = frag->xEnd - frag->xStart + 1;
     frag->score = scoreMax;
     frag->ident = maxIdentities;
     frag->seqX = (uint64_t) hit->seqX;
     frag->seqY = (uint64_t) hit->seqY;
     frag->strand = hit->strandY;
-
-    uint64_t tmp;
-    fprintf(stdout, "[X] Start: %" PRIu64 " End: %" PRIu64 " Seq: %" PRIu64 "\n", frag->xStart, frag->xEnd, frag->seqX);
-    fprintf(stdout, "[Y] Start: %" PRIu64 " End: %" PRIu64 " Seq: %" PRIu64 "\n", frag->yStart, frag->yEnd, frag->seqY);
-    fprintf(stdout, "strand: %c\n", hit->strandY);
-
-    for(tmp=frag->xStart;tmp<frag->xEnd;tmp++){
-        fprintf(stdout, "%c", getValueOnRead(seqX, tmp + seqX->Lac));
-    }
-    fprintf(stdout, "\n");
-
-    if(hit->strandY=='f'){
-        for(tmp=frag->yStart;tmp<frag->yEnd;tmp++){
-            fprintf(stdout, "%c", getValue(seqY, tmp, nsy));
-        }
-    } else {
-        for(tmp=frag->yStart-1;tmp>frag->yEnd+1;tmp--){
-            fprintf(stdout, "%c", complement(getValue(seqY, tmp, nsy)));
-        }
-    }
-    fprintf(stdout, "\n");
-
-    getchar();
 
     if (frag->length >= L_Threshold && frag->similarity >= S_Threshold) { // Correct fragment
         // Set the values of the FragFile
@@ -910,7 +868,7 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
                     // Store info
                     currRead->seqIndex = seqIndex;
                     currRead->length = seqLen;
-                    currRead->Lac = absoluteLength;
+                    currRead->Lac = absoluteLength + seqIndex;
                     absoluteLength += seqLen;
                     if (head == NULL) {
                         // First element

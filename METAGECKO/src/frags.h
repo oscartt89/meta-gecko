@@ -25,11 +25,11 @@ int HComparer(Hit w1, Hit w2);
 
 int readHashEntrance(HashEntry *, FILE *, uint16_t);
 
-int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, uint64_t *);
+int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, uint64_t *, uint64_t, uint64_t);
 
 inline void loadLocationEntrance(LocationEntry *, FILE *, uint32_t);
 
-inline void storeHit(Hit *, LocationEntry, LocationEntry);
+inline void storeHit(Hit *, LocationEntry, LocationEntry, uint64_t, uint64_t);
 
 void writeHitsBuff(Hit *, FILE *, FILE *, uint64_t, int, uint64_t *);
 

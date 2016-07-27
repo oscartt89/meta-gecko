@@ -207,6 +207,40 @@ int main(int ac, char **av) {
         return -1;
     }
 
+#pragma omp parallel num_threads(2)
+    {
+#pragma omp sections
+        {
+#pragma omp section
+            {
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, "\n\tFrags: Loading sequences of genome.\n");
+                fflush(stdout);
+                /////////////////////////// CHECKPOINT ///////////////////////////
+
+                // Load sequences
+                genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
+
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, "\t(Loaded) sequences of genome\n");
+                /////////////////////////// CHECKPOINT ///////////////////////////
+            }
+#pragma omp section
+            {
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, "\tFrags: Loading sequences of metagenome.\n");
+                fflush(stdout);
+                /////////////////////////// CHECKPOINT ///////////////////////////
+
+                metagenome = LoadMetagenome(av[2], &metagenomeLength);
+
+                /////////////////////////// CHECKPOINT ///////////////////////////
+                fprintf(stdout, "\t(Loaded) sequences of metagenome\n");
+                /////////////////////////// CHECKPOINT ///////////////////////////
+            }
+        }
+    }
+
     // Search hits
     // Prepare necessary variables
     HashEntry we[2]; // [0]-> Metagenome [1]-> Genome
@@ -231,7 +265,7 @@ int main(int ac, char **av) {
     if (readHashEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
 
     /////////////////////////// CHECKPOINT ///////////////////////////
-    fprintf(stdout, " (Done)\n");
+    fprintf(stdout, "\t(Done)\n");
     fprintf(stdout, "\tFrags: Generating seeds.");
     fflush(stdout);
     /////////////////////////// CHECKPOINT ///////////////////////////
@@ -243,7 +277,7 @@ int main(int ac, char **av) {
         while (!feof(mW) && !feof(gW)) {
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
                 if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize,
-                                 &buffersWritten) < 0)
+                                 &buffersWritten, genomeLength, metagenomeLength) < 0)
                     return -1;
                 fflush(stdout);
             }
@@ -263,7 +297,7 @@ int main(int ac, char **av) {
             // Check hit
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
                 if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize,
-                                 &buffersWritten) < 0)
+                                 &buffersWritten, genomeLength, metagenomeLength) < 0)
                     return -1;
                 if (firstmatch) {
                     lastFirstHit = ((uint64_t) ftello(gW) - size_of_HashEntry(BytesGenoWord));
@@ -336,40 +370,6 @@ int main(int ac, char **av) {
     fprintf(stdout, " (Generated)\n");
     /////////////////////////// CHECKPOINT ///////////////////////////
 
-#pragma omp parallel num_threads(2)
-    {
-#pragma omp sections
-        {
-#pragma omp section
-            {
-                /////////////////////////// CHECKPOINT ///////////////////////////
-                fprintf(stdout, "\tFrags: Loading sequences of genome.\n");
-                fflush(stdout);
-                /////////////////////////// CHECKPOINT ///////////////////////////
-
-                // Load sequences
-                genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
-
-                /////////////////////////// CHECKPOINT ///////////////////////////
-                fprintf(stdout, " (Loaded) sequences of genome\n");
-                /////////////////////////// CHECKPOINT ///////////////////////////
-            }
-#pragma omp section
-            {
-                /////////////////////////// CHECKPOINT ///////////////////////////
-                fprintf(stdout, "\tFrags: Loading sequences of metagenome.\n");
-                fflush(stdout);
-                /////////////////////////// CHECKPOINT ///////////////////////////
-
-                metagenome = LoadMetagenome(av[2], &metagenomeLength);
-
-                /////////////////////////// CHECKPOINT ///////////////////////////
-                fprintf(stdout, " (Loaded) sequences of metagenome\n");
-                /////////////////////////// CHECKPOINT ///////////////////////////
-            }
-        }
-    }
-
     // Write hits if there is only one buffer
     
     if(hitsInBuffer > 0 && buffersWritten <= 0) { // Only one buffer
@@ -429,18 +429,14 @@ int main(int ac, char **av) {
 
         // Generate fragments
         for (index = 1; index < hitsInBuffer; ++index) {
-            fprintf(stdout, "H=[%" PRId64 ", %" PRIu32 ", %" PRIu32 "\n", buffer[index].diag, buffer[index].seqX, buffer[index].seqY);
-            fprintf(stdout, "F=[%" PRId64 ", %" PRIu64 ", %" PRIu64 "\n", frag.diag, frag.seqX, frag.seqY);
             if (buffer[index].diag == frag.diag &&
                 buffer[index].seqX == frag.seqX &&
                 buffer[index].seqY == frag.seqY) { // Possible fragment
                 // Check if are collapsable
-                if (!filteredHit(buffer[index-1],buffer[index],prefixSize) && (buffer[index].posX - currRead->Lac) > frag.xEnd) { // Not collapsable by extension
+                if (!filteredHit(buffer[index-1],buffer[index],prefixSize) && (frag.strand != buffer[index].strandY || (buffer[index].posX - currRead->Lac) > frag.xEnd)) { // Not collapsable by extension
                     // Generate fragment
                     FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize,
                                 L_Threshold, S_Threshold);
-                } else {
-                    fprintf(stdout, "Collapsed\n");
                 }
             } else { // New fragment
                 // Check correct read index
@@ -637,7 +633,7 @@ int main(int ac, char **av) {
             hitsList->hits[hitsList->index].seqX == frag.seqX &&
             hitsList->hits[hitsList->index].seqY == frag.seqY) { // Possible fragment
             // Check if are collapsable
-            if ((hitsList->hits[hitsList->index].posX - currRead->Lac) > frag.xEnd) { // Not collapsable by xtension
+            if (frag.strand != hitsList->hits[hitsList->index].strandY || (hitsList->hits[hitsList->index].posX - currRead->Lac) > frag.xEnd) { // Not collapsable by xtension
                 // Generate fragment
                 FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
                             prefixSize, L_Threshold, S_Threshold);
