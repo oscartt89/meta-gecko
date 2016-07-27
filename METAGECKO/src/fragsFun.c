@@ -525,11 +525,6 @@ void checkOrder(node_H **list, bool discardFirst) {
  */
 int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t YLength, uint64_t nsy, FILE *fr,
                  unsigned int prefixSize, unsigned int L_Threshold, float S_Threshold) {
-	/*
-    if(hit->seqX < 10){
-	fprintf(stdout, "CURR SEQX : %"PRIu32"\n", hit->seqX);
-    }
-	*/
 
     // Declare variables
     int64_t forwardDiagLength, backwardDiagLength;
@@ -570,18 +565,8 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
         YMinIndex = YIndx_B - 1; // Minimum coordiantes on Y
     }
 
-    uint64_t offsetG2 = 3626+1853160;
 	
 
-	/*
-    if(hit->strandY == 'r'){
-	if(abs(((int64_t)hit->posY-offsetG2) - 346809 ) <= 220){
-		fprintf(stdout, "\n Found THE HIT!\n");
-		fprintf(stdout, "DIAG: %"PRId64"\nPOSX: %"PRIu64"\nPOSY: %"PRIu64"\nSEQX: %"PRIu32"\nSEQY: %"PRIu32"\nLEN: %"PRIu64"\nSTRA: %c%c\n", hit->diag, hit->posX, hit->posY, hit->seqX, hit->seqY, hit->length, hit->strandX, hit->strandY);
-		getchar();
-	}
-    }
-	*/
 
     XMaxIndex = XIndex; // Maximum coordiantes on X
     XMinIndex = XIndx_B + 1; // Minimum coordiantes on X
@@ -687,17 +672,6 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
     frag->seqX = (uint64_t) hit->seqX;
     frag->seqY = (uint64_t) hit->seqY;
     frag->strand = hit->strandY;
-
-/*
-	if(hit->strandY == 'r'){
-        	if(abs(((int64_t)frag->yEnd-offsetG2) - 346809 ) <= 220){
-                	fprintf(stdout, "\n (ON FRAG)Found THE HIT!\n");
-	                fprintf(stdout, "DIAG: %"PRId64"\nPOSX: %"PRIu64"\nPOSY: %"PRIu64"\nSEQX: %"PRIu32"\nSEQY: %"PRIu32"\nLEN: %"PRIu64"\nSTRA: %c%c\n", hit->diag, hit->posX, hit->posY, hit->seqX, hit->seqY, hit->length, hit->strandX, hit->strandY);
-			fprintf(stdout, "And frag is (%"PRIu64", %"PRIu64")\n", frag->xStart - seqX->Lac, frag->xEnd - seqX->Lac);
-	                getchar();
-	        }
-	}
-*/
 
 
 
