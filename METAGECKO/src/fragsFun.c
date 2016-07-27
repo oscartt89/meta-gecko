@@ -187,7 +187,7 @@ inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y, uint64_t genome
  * @return if it should be filtered
  */
 inline int filteredHit(Hit h1, Hit h2, int prefixSize){
-    return h2.strandY == h1.strandY && h2.diag == h1.diag && h2.seqX == h1.seqX && h2.seqY == h1.seqY && (h2.posX < (h1.posX + prefixSize));
+    return h2.strandY == h1.strandY && h2.diag == h1.diag && h2.seqX == h1.seqX && h2.seqY == h1.seqY && ((int64_t)h2.posX < (h1.posX + (h1.strandY == 'f') ?  prefixSize : -prefixSize));
 }
 
 
@@ -523,8 +523,14 @@ void checkOrder(node_H **list, bool discardFirst) {
  *  @param nsy is the seqY number (index).
  *  @param fr is the fragment output file. 
  */
-void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t YLength, uint64_t nsy, FILE *fr,
+int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t YLength, uint64_t nsy, FILE *fr,
                  unsigned int prefixSize, unsigned int L_Threshold, float S_Threshold) {
+	/*
+    if(hit->seqX < 10){
+	fprintf(stdout, "CURR SEQX : %"PRIu32"\n", hit->seqX);
+    }
+	*/
+
     // Declare variables
     int64_t forwardDiagLength, backwardDiagLength;
     int64_t XIndex, YIndex;
@@ -563,6 +569,19 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
         YIndx_B = hit->posY; // Init of seed Y
         YMinIndex = YIndx_B - 1; // Minimum coordiantes on Y
     }
+
+    uint64_t offsetG2 = 3626+1853160;
+	
+
+	/*
+    if(hit->strandY == 'r'){
+	if(abs(((int64_t)hit->posY-offsetG2) - 346809 ) <= 220){
+		fprintf(stdout, "\n Found THE HIT!\n");
+		fprintf(stdout, "DIAG: %"PRId64"\nPOSX: %"PRIu64"\nPOSY: %"PRIu64"\nSEQX: %"PRIu32"\nSEQY: %"PRIu32"\nLEN: %"PRIu64"\nSTRA: %c%c\n", hit->diag, hit->posX, hit->posY, hit->seqX, hit->seqY, hit->length, hit->strandX, hit->strandY);
+		getchar();
+	}
+    }
+	*/
 
     XMaxIndex = XIndex; // Maximum coordiantes on X
     XMinIndex = XIndx_B + 1; // Minimum coordiantes on X
@@ -669,11 +688,25 @@ void FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t
     frag->seqY = (uint64_t) hit->seqY;
     frag->strand = hit->strandY;
 
+/*
+	if(hit->strandY == 'r'){
+        	if(abs(((int64_t)frag->yEnd-offsetG2) - 346809 ) <= 220){
+                	fprintf(stdout, "\n (ON FRAG)Found THE HIT!\n");
+	                fprintf(stdout, "DIAG: %"PRId64"\nPOSX: %"PRIu64"\nPOSY: %"PRIu64"\nSEQX: %"PRIu32"\nSEQY: %"PRIu32"\nLEN: %"PRIu64"\nSTRA: %c%c\n", hit->diag, hit->posX, hit->posY, hit->seqX, hit->seqY, hit->length, hit->strandX, hit->strandY);
+			fprintf(stdout, "And frag is (%"PRIu64", %"PRIu64")\n", frag->xStart - seqX->Lac, frag->xEnd - seqX->Lac);
+	                getchar();
+	        }
+	}
+*/
+
+
+
     if (frag->length >= L_Threshold && frag->similarity >= S_Threshold) { // Correct fragment
         // Set the values of the FragFile
         writeFragment(*frag, fr);
-        return;
+        return 1;
     }//else -> Not good enough
+    return 0;
 }
 
 
@@ -932,6 +965,9 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
     fclose(metag);
 	free(readBuffer);
     // Return head
+
+    fprintf(stdout, "Did it die here with one read?\n");
+
     return head;
 }
 

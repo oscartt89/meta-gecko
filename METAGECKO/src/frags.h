@@ -57,7 +57,7 @@ void sortList(node_H **);
 
 void checkOrder(node_H **, bool);
 
-void FragFromHit(FragFile *, Hit *, Reads *, Sequence *, uint64_t, uint64_t, FILE *, unsigned int, unsigned int, float);
+int FragFromHit(FragFile *, Hit *, Reads *, Sequence *, uint64_t, uint64_t, FILE *, unsigned int, unsigned int, float);
 
 inline char getValueOnRead(Reads *r, uint64_t pos);
 

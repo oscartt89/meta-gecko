@@ -423,21 +423,100 @@ int main(int ac, char **av) {
         fflush(stdout);
         /////////////////////////// CHECKPOINT ///////////////////////////
 
+	int lastFragmentWasWritten;
+
         // Generate first fragment
-        FragFromHit(&frag, &buffer[0], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold,
+        lastFragmentWasWritten = FragFromHit(&frag, &buffer[0], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold,
                     S_Threshold);
 
         // Generate fragments
         for (index = 1; index < hitsInBuffer; ++index) {
+
+
+
+
+	    if(buffer[index].strandY == 'r'){
+	        if(abs(((int64_t)buffer[index].posY) - 346809 ) <= 220){
+        	        fprintf(stdout, "\n$$$ Found THE HIT!\n");
+                	fprintf(stdout, "DIAG: %"PRId64"\nPOSX: %"PRIu64"\nPOSY: %"PRIu64"\nSEQX: %"PRIu32"\nSEQY: %"PRIu32"\nLEN: %"PRIu64"\nSTRA: %c%c\n", buffer[index].diag, buffer[index].posX, buffer[index].posY, buffer[index].seqX, buffer[index].seqY, buffer[index].length, buffer[index].strandX, buffer[index].strandY);
+
+		}
+	}
+	/*
+		Hit * hit = &buffer[index];
+		uint64_t tmp;
+
+			fprintf(stdout, "[X] Start: %" PRIu64 " End: %" PRIu64 " Seq: %" PRIu64 "\n", frag.xStart, frag.xEnd, frag.seqX);
+
+    fprintf(stdout, "[Y] Start: %" PRIu64 " End: %" PRIu64 " Seq: %" PRIu64 "\n", frag.yStart, frag.yEnd, frag.seqY);
+
+    fprintf(stdout, "strand: %c\n", hit->strandY);
+
+
+
+    for(tmp=hit->posX;tmp<hit->posX+prefixSize;tmp++){
+
+        fprintf(stdout, "%c", getValueOnRead(currRead, tmp));
+
+    }
+
+    fprintf(stdout, "\n");
+
+
+
+    if(hit->strandY=='f'){
+
+        for(tmp=hit->posY;tmp<hit->posY+prefixSize;tmp++){
+
+            fprintf(stdout, "%c", getValue(genome, tmp, nStructs));
+
+        }
+
+    } else {
+
+        for(tmp=hit->posY;tmp>hit->posY-prefixSize;tmp--){
+
+            fprintf(stdout, "%c", complement(getValue(genome, tmp, nStructs)));
+
+        }
+
+    }
+
+    fprintf(stdout, "\n");
+
+	                getchar();
+	        }
+	    }
+	
+	*/
+
+	    
+		fprintf(stdout, "\nHIT Diag: %"PRId64"\nHit PosX: %"PRIu64"\nDiagFrag: %"PRId64"\nHit Strand: %c\nFrag Strand: %c\n Frag PosXStart %"PRIu64"\n Frag PosXEnd: %"PRIu64"\n", buffer[index].diag, buffer[index].posX, frag.diag, buffer[index].strandY, frag.strand, frag.xStart, frag.xEnd);
+
+		getchar();
+
             if (buffer[index].diag == frag.diag &&
                 buffer[index].seqX == frag.seqX &&
                 buffer[index].seqY == frag.seqY) { // Possible fragment
                 // Check if are collapsable
-                if (!filteredHit(buffer[index-1],buffer[index],prefixSize) && (frag.strand != buffer[index].strandY || (buffer[index].posX - currRead->Lac) > frag.xEnd)) { // Not collapsable by extension
-                    // Generate fragment
-                    FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize,
-                                L_Threshold, S_Threshold);
-                }
+
+		
+		fprintf(stdout, "Result of first if :: %d\n", !filteredHit(buffer[index-1],buffer[index],prefixSize));
+		fprintf(stdout, "Frag strand: %c\n", frag.strand);
+		fprintf(stdout, "Frag strand comp: %d\n", frag.strand != buffer[index].strandY);
+		fprintf(stdout, "Covering: %d\n", buffer[index].posX  > frag.xEnd);
+		fprintf(stdout, "Was last written?: %d\n", lastFragmentWasWritten);
+                
+
+		if(lastFragmentWasWritten && frag.strand == buffer[index].strandY && buffer[index].posX  <= frag.xEnd){
+			//Fragment collapses
+		}else{
+					
+                 	lastFragmentWasWritten = FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold, S_Threshold);
+		}
+
+
+		
             } else { // New fragment
                 // Check correct read index
                 if (currRead->seqIndex > buffer[index].seqX) currRead = metagenome;
@@ -449,7 +528,7 @@ int main(int ac, char **av) {
                     currRead = currRead->next;
                 }
                 // Generate new fragment
-                FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize,
+                lastFragmentWasWritten = FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize,
                             L_Threshold, S_Threshold);
             }
         }
@@ -598,7 +677,10 @@ int main(int ac, char **av) {
     }
 
     // Generate first fragment
-    FragFromHit(&frag, &hitsList->hits[0], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold,
+
+    int lastFragmentWasWritten;
+
+    lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[0], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold,
                 S_Threshold);
 
 
@@ -633,9 +715,9 @@ int main(int ac, char **av) {
             hitsList->hits[hitsList->index].seqX == frag.seqX &&
             hitsList->hits[hitsList->index].seqY == frag.seqY) { // Possible fragment
             // Check if are collapsable
-            if (frag.strand != hitsList->hits[hitsList->index].strandY || (hitsList->hits[hitsList->index].posX - currRead->Lac) > frag.xEnd) { // Not collapsable by xtension
+            if (lastFragmentWasWritten && (frag.strand != hitsList->hits[hitsList->index].strandY || (hitsList->hits[hitsList->index].posX ) > frag.xEnd)) { // Not collapsable by xtension
                 // Generate fragment
-                FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
+                lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
                             prefixSize, L_Threshold, S_Threshold);
             }
         } else { // Different diag or seq
@@ -649,7 +731,7 @@ int main(int ac, char **av) {
                 currRead = currRead->next;
             }
             // Generate new fragment
-            FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
+            lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
                         prefixSize, L_Threshold, S_Threshold);
         }
 
