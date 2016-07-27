@@ -286,10 +286,10 @@ int main(int ac, char **av) {
 
             // Load next word
             if (cmp <= 0) { // New metagenome word is necessary
-                if(!feof(mW))if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
+                if (!feof(mW)) if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
             }
             if (cmp >= 0) { // New genome word is necessary
-                if(!feof(gW))if (readHashEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
+                if (!feof(gW)) if (readHashEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
             }
         }
     } else {
@@ -371,8 +371,8 @@ int main(int ac, char **av) {
     /////////////////////////// CHECKPOINT ///////////////////////////
 
     // Write hits if there is only one buffer
-    
-    if(hitsInBuffer > 0 && buffersWritten <= 0) { // Only one buffer
+
+    if (hitsInBuffer > 0 && buffersWritten <= 0) { // Only one buffer
         // Sort buffer
         quicksort_H(buffer, 0, hitsInBuffer - 1);
 
@@ -401,7 +401,9 @@ int main(int ac, char **av) {
         currRead = metagenome;
         while (currRead->seqIndex != buffer[0].seqX) {
             if (currRead->next == NULL) {
-                fprintf(stderr, "Error searching first read %"PRIu32".\n", buffer[0].seqX);
+                fprintf(stderr, "Error searching first read %"
+                PRIu32
+                ".\n", buffer[0].seqX);
                 return -1;
             }
             currRead = currRead->next;
@@ -419,52 +421,39 @@ int main(int ac, char **av) {
         writeSequenceLength(&genomeLength, fr);
 
         /////////////////////////// CHECKPOINT ///////////////////////////
-        fprintf(stdout, "\tFrags: Extending seeds. [%"PRIu64"]", buffersWritten);
+        fprintf(stdout, "\tFrags: Extending seeds. [%"
+        PRIu64
+        "]", buffersWritten);
         fflush(stdout);
         /////////////////////////// CHECKPOINT ///////////////////////////
 
-	int lastFragmentWasWritten;
+        int lastFragmentWasWritten;
 
         // Generate first fragment
-        lastFragmentWasWritten = FragFromHit(&frag, &buffer[0], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold,
-                    S_Threshold);
+        lastFragmentWasWritten = FragFromHit(&frag, &buffer[0], currRead, genome, genomeLength, nStructs, fr,
+                                             prefixSize, L_Threshold,
+                                             S_Threshold);
 
         // Generate fragments
         for (index = 1; index < hitsInBuffer; ++index) {
-
-
-
-            if (buffer[index].diag == frag.diag &&
-                buffer[index].seqX == frag.seqX &&
-                buffer[index].seqY == frag.seqY) { // Possible fragment
-                // Check if are collapsable
-
-		
-                
-
-		if(lastFragmentWasWritten && frag.strand == buffer[index].strandY && buffer[index].posX  <= frag.xEnd){
-			//Fragment collapses
-		}else{
-					
-                 	lastFragmentWasWritten  = FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold, S_Threshold);
-		}
-
-
-		
-            } else { // New fragment
+            // Check if are collapsable
+            if (lastFragmentWasWritten && frag.strand == buffer[index].strandY && frag.diag == buffer[index].diag &&
+                buffer[index].posX <= frag.xEnd) {
+                //Fragment collapses
+            } else {
                 // Check correct read index
-                if (currRead->seqIndex > buffer[index].seqX) currRead = metagenome;
-                while (currRead->seqIndex != buffer[index].seqX) {
-                    if (currRead->next == NULL) {
+                if (currRead->seqIndex != buffer[index].seqX) {
+                    if (currRead->seqIndex > buffer[index].seqX) currRead = metagenome;
+                    while (currRead != NULL && currRead->seqIndex != buffer[index].seqX) {
+                        currRead = currRead->next;
+                    }
+                    if (currRead == NULL) {
                         fprintf(stderr, "Error searching read index.\n");
                         return -1;
                     }
-                    currRead = currRead->next;
                 }
-                // Generate new fragment
-                FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs, fr, prefixSize,
-                            L_Threshold, S_Threshold);
-		lastFragmentWasWritten = 0;
+                lastFragmentWasWritten = FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs,
+                                                     fr, prefixSize, L_Threshold, S_Threshold);
             }
         }
 
@@ -476,9 +465,9 @@ int main(int ac, char **av) {
         // Close output file
         fclose(fr);
 
-		freeReads(metagenome);
+        freeReads(metagenome);
 
-		freeGenomes(genome);
+        freeGenomes(genome);
 
         // Free unnecesary memory
         free(buffer);
@@ -611,15 +600,12 @@ int main(int ac, char **av) {
         currRead = currRead->next;
     }
 
-    // Generate first fragment
-
     int lastFragmentWasWritten;
 
-    lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[0], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold,
-                S_Threshold);
-
-
-
+    // Generate first fragment
+    lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[0], currRead, genome, genomeLength, nStructs, fr,
+                                         prefixSize, L_Threshold,
+                                         S_Threshold);
     // Move to next
     hitsList->index += 1;
     // Load new hit
@@ -646,48 +632,25 @@ int main(int ac, char **av) {
     // Search hits and generate fragmetents
     // Read hits & generate fragments
     while (activeBuffers > 0 && hitsList != NULL) {
-        if (hitsList->hits[hitsList->index].diag == frag.diag &&
-            hitsList->hits[hitsList->index].seqX == frag.seqX &&
-            hitsList->hits[hitsList->index].seqY == frag.seqY) { // Possible fragment
-            // Check if are collapsable
-
-
-
-	 
-                if(lastFragmentWasWritten && frag.strand == hitsList->hits[hitsList->index].strandY && hitsList->hits[hitsList->index].posX  <= frag.xEnd){
-                        //Fragment collapses
-                }else{
-
-			lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr, prefixSize, L_Threshold, S_Threshold);
-
-		}
-
-
-
-
-	/*
-            if (lastFragmentWasWritten && (frag.strand != hitsList->hits[hitsList->index].strandY || (hitsList->hits[hitsList->index].posX ) > frag.xEnd)) { // Not collapsable by xtension
-                // Generate fragment
-                lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
-                            prefixSize, L_Threshold, S_Threshold);
-            }
-	*/
-
-
-        } else { // Different diag or seq
+        // Check if are collapsable
+        if (lastFragmentWasWritten && frag.strand == hitsList->hits[hitsList->index].strandY &&
+            frag.diag == hitsList->hits[hitsList->index].diag &&
+            hitsList->hits[hitsList->index].posX <= frag.xEnd) {
+            //Fragment collapses
+        } else {
             // Check correct read index
-            if (currRead->seqIndex > hitsList->hits[hitsList->index].seqX) currRead = metagenome;
-            while (currRead->seqIndex != hitsList->hits[hitsList->index].seqX) {
-                if (currRead->next == NULL) {
+            if (currRead->seqIndex != hitsList->hits[hitsList->index].seqX) {
+                if (currRead->seqIndex > hitsList->hits[hitsList->index].seqX) currRead = metagenome;
+                while (currRead != NULL && currRead->seqIndex != hitsList->hits[hitsList->index].seqX) {
+                    currRead = currRead->next;
+                }
+                if (currRead == NULL) {
                     fprintf(stderr, "Error searching read index.\n");
                     return -1;
                 }
-                currRead = currRead->next;
             }
-            // Generate new fragment
-            FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome, genomeLength, nStructs, fr,
-                        prefixSize, L_Threshold, S_Threshold);
-	    lastFragmentWasWritten = 0;
+            lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome,
+                                                 genomeLength, nStructs, fr, prefixSize, L_Threshold, S_Threshold);
         }
 
         // Move to next

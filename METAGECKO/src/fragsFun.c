@@ -170,7 +170,8 @@ inline void loadLocationEntrance(LocationEntry *arr, FILE *PFile, uint32_t reps)
  *  @param Y location of hit.
  */
 inline void storeHit(Hit *hit, LocationEntry X, LocationEntry Y, uint64_t genomeLength, uint64_t metagenomeLength) {
-    hit->diag = (Y.strand=='f')?X.pos - Y.pos:(X.pos + Y.pos - (genomeLength < metagenomeLength)?genomeLength:metagenomeLength);
+    uint64_t minLength = (genomeLength < metagenomeLength) ? genomeLength : metagenomeLength;
+    hit->diag = (Y.strand == 'f') ? (X.pos - Y.pos) : (X.pos + Y.pos - minLength);
     hit->posX = X.pos;
     hit->seqX = X.seq;
     hit->posY = Y.pos;
@@ -661,7 +662,7 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
 
     // Calc length and similarity
     frag->diag = hit->diag;
-    frag->similarity = 100.0 * scoreMax / (frag->length * Eq_Value);
+    frag->similarity = scoreMax * 100.0 / (frag->length * Eq_Value);
     frag->xStart = (XMinIndex < 0)?0:XMinIndex;
     frag->yStart = (YMinIndex < 0)?0:YMinIndex;
     frag->xEnd = XMaxIndex;
