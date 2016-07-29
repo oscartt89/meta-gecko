@@ -933,16 +933,24 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
        	c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
        	//c=getc(metag);
     }
+    
 
+    // In case there is only one node
+    if(seqIndex == 0){
+	head = currRead;
+	lastRead = head;
+    }else{
+    	lastRead->next = currRead;
+    	lastRead = currRead;
+    }
     // Link last node
     currRead->seqIndex = seqIndex;
-    currRead->length = seqLen;
-    currRead->Lac = absoluteLength;
-    currRead->next = NULL;
-    lastRead->next = currRead;
-    lastRead = currRead;
-    absoluteLength += seqLen;
 
+    currRead->length = seqLen;
+    currRead->Lac = absoluteLength + seqIndex;
+    currRead->next = NULL;
+
+    absoluteLength += seqLen;
     *totalLength = absoluteLength;
 
     fclose(metag);
