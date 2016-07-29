@@ -252,7 +252,7 @@ int main(int ac, char **av) {
                 }
             }
             if (strandR) {
-                rev_temp.loc.pos = seqPos - 1; // Take position on read
+                rev_temp.loc.pos = seqPos - 2; // Take position on read
                 rev_temp.loc.seq = temp.loc.seq;
 
                 // Store the new word

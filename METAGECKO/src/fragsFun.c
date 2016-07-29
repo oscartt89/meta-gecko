@@ -541,17 +541,6 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
     char valueX, valueY;
     int score, scoreMax;
 
-    // Initialize values
-    // Diagonals info
-    if (hit->strandY == 'f') {
-        forwardDiagLength =
-                (seqX->length - (hit->posX - seqX->Lac)) > (YLength - hit->posY) ? (YLength - hit->posY) : (seqX->length - (hit->posX - seqX->Lac));
-        backwardDiagLength = (hit->posX - seqX->Lac) > hit->posY ? hit->posY : (hit->posX - seqX->Lac);
-    } else {
-        forwardDiagLength = ((seqX->length - (hit->posX - seqX->Lac)) > hit->posY) ? hit->posY : (seqX->length - (hit->posX - seqX->Lac));
-        backwardDiagLength = (hit->posX - seqX->Lac) > (YLength - hit->posY) ? (YLength - hit->posY) : (hit->posX - seqX->Lac);
-    }
-
     // Positions values
     XIndex = hit->posX + prefixSize; // End of the seed X
     XIndx_B = hit->posX - 1; // Init of the seed X
@@ -560,26 +549,35 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
         YIndex = hit->posY + prefixSize; // End of seed Y
         YIndx_B = hit->posY - 1; // Init of seed Y
         YMinIndex = YIndx_B + 1; // Minimum coordiantes on Y
+    	YMaxIndex = YIndex - 1; // Maximum coordiantes on Y
     } else { // Reverse strand
-        YIndex = hit->posY - prefixSize - 1; // End of seed (init in forward direction)
-        YIndx_B = hit->posY; // Init of seed Y
+        YIndex = hit->posY - prefixSize; // End of seed (init in forward direction)
+        YIndx_B = hit->posY + 1; // Init of seed Y
         YMinIndex = YIndx_B - 1; // Minimum coordiantes on Y
+    	YMaxIndex = YIndex + 1; // Maximum coordiantes on Y
     }
 
-	
+    // Initialize values
+    // Diagonals info
+    if (hit->strandY == 'f') {
+        forwardDiagLength = (seqX->length - (XIndex - seqX->Lac)) > (YLength - YIndex) ? (YLength - YIndex) : (seqX->length - (XIndex - seqX->Lac));
+        backwardDiagLength = (hit->posX - seqX->Lac) > (hit->posY) ? (hit->posY) : (hit->posX - seqX->Lac);
+    } else {
+        forwardDiagLength = (seqX->length - (XIndex - seqX->Lac)) > (hit->posY) ? (hit->posY) : (seqX->length - (XIndex - seqX->Lac)); 
+        backwardDiagLength = (hit->posX - seqX->Lac) > (YLength - YIndx_B) ? (YLength - YIndx_B) : (hit->posX - seqX->Lac) ;
+    }
 
-
-    XMaxIndex = XIndex; // Maximum coordiantes on X
+    XMaxIndex = XIndex - 1; // Maximum coordiantes on X
     XMinIndex = XIndx_B + 1; // Minimum coordiantes on X
-    YMaxIndex = YIndex; // Maximum coordiantes on Y
     // Scoring values
     identitites = maxIdentities = prefixSize;
     score = Eq_Value * prefixSize; // Init score
     scoreMax = score;
     // Seek forward
-    while (fragmentLength < forwardDiagLength) {
+    while ((fragmentLength - prefixSize) <= forwardDiagLength) {
         valueX = getValueOnRead(seqX, XIndex);
         valueY = getValue(seqY, YIndex, nsy);
+        
         if(hit->strandY == 'r') valueY = complement(valueY);
 
         // Check end of sequence
@@ -592,7 +590,7 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
             // Match
             score += Eq_Value;
             identitites++;
-            if (scoreMax <= score) {
+            if (score > scoreMax) {
                 scoreMax = score;
                 XMaxIndex = XIndex;
                 YMaxIndex = YIndex;
@@ -620,7 +618,14 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
 
     int64_t stillInSeqX = XIndx_B-seqX->Lac;
 
-    if (stillInSeqX >= 0 && YIndx_B >= 0) // Any coordinate are the init
+    int stillInGenome;
+    if(hit->strandY=='f'){
+        stillInGenome = YIndx_B >= 0;
+    } else { 
+        stillInGenome = ((int64_t)YLength - YIndx_B) >=0;
+    } 
+
+    if (stillInSeqX >= 0 && stillInGenome) // Any coordinate are the init
         while (stillInSeqX >=0 && fragmentLength < backwardDiagLength) {
             valueX = getValueOnRead(seqX, XIndx_B);
             valueY = getValue(seqY, YIndx_B, nsy);
@@ -658,23 +663,26 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
             if (score < Score_Threshold)
                 break;
             stillInSeqX = XIndx_B-seqX->Lac;
+            if(hit->strandY=='f'){
+                stillInGenome = YIndx_B >= 0;
+            } else { 
+                stillInGenome = ((int64_t)YLength - YIndx_B) >=0;
+            } 
         }
 
     // Calc length and similarity
     frag->diag = hit->diag;
-    frag->similarity = scoreMax * 100.0 / (frag->length * Eq_Value);
-    frag->xStart = (XMinIndex < 0)?0:XMinIndex;
-    frag->yStart = (YMinIndex < 0)?0:YMinIndex;
+    frag->xStart = XMinIndex;
+    frag->yStart = YMinIndex;
     frag->xEnd = XMaxIndex;
     frag->yEnd = YMaxIndex;
     frag->length = frag->xEnd - frag->xStart + 1;
+    frag->similarity = scoreMax * 100.0 / (frag->length * Eq_Value);
     frag->score = scoreMax;
     frag->ident = maxIdentities;
     frag->seqX = (uint64_t) hit->seqX;
     frag->seqY = (uint64_t) hit->seqY;
     frag->strand = hit->strandY;
-
-
 
     if (frag->length >= L_Threshold && frag->similarity >= S_Threshold) { // Correct fragment
         // Set the values of the FragFile
