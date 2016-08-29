@@ -957,7 +957,6 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
 	free(readBuffer);
     // Return head
 
-    fprintf(stdout, "Did it die here with one read?\n");
 
     return head;
 }
