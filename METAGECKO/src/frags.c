@@ -376,7 +376,7 @@ int main(int ac, char **av) {
         // Sort buffer
         //quicksort_H(buffer, 0, hitsInBuffer - 1);
         writeHitsBuff(buffer, hIndx, hts, hitsInBuffer, prefixSize, &buffersWritten);
-        printf("One buffer\n");
+        
         // Close unnecesary files
         fclose(mW);
         fclose(gW);
