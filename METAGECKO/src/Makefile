@@ -2,11 +2,13 @@ CC=gcc
 CFLAGS=-O3 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -Wall -Wextra -fopenmp
 BIN=../bin
 
-all: meta_gecko stats write
+all: meta_gecko stats write preselection
 
 stats: dictStats metagStats fragStats hdStat
 
-meta_gecko: dict frags dictMgMem
+meta_gecko: dict frags
+
+preselection: quickhits dbReduce
 
 dict: dict.c
 	$(CC) $(CFLAGS) -fopenmp dict.c dictFun.c common_functions.c -o $(BIN)/dict
@@ -14,8 +16,11 @@ dict: dict.c
 frags: frags.c
 	$(CC) $(CFLAGS) -fopenmp frags.c fragsFun.c common_functions.c -o $(BIN)/frag
 
-dictMgMem: dictMgMem.c
-	$(CC) $(CFLAGS) -fopenmp dictMgMem.c common.c common_functions.c -o $(BIN)/dictMgMem
+quickhits: quickhits.c
+	$(CC) $(CFLAGS) -fopenmp quickhits.c common.c common_functions.c -o $(BIN)/quickhits
+
+dbReduce: dbReduce.c
+	$(CC) $(CFLAGS) -fopenmp dbReduce.c common_functions.c -o $(BIN)/dbReduce
 
 combineFragments: combineFragments.c
 	$(CC) $(CFLAGS) combineFragments.c -o $(BIN)/combineFragments
