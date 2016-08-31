@@ -6,13 +6,16 @@ all: meta_gecko stats write
 
 stats: dictStats metagStats fragStats hdStat
 
-meta_gecko: dict frags
+meta_gecko: dict frags dictMgMem
 
 dict: dict.c
 	$(CC) $(CFLAGS) -fopenmp dict.c dictFun.c common_functions.c -o $(BIN)/dict
 
 frags: frags.c
 	$(CC) $(CFLAGS) -fopenmp frags.c fragsFun.c common_functions.c -o $(BIN)/frag
+
+dictMgMem: dictMgMem.c
+	$(CC) $(CFLAGS) -fopenmp dictMgMem.c common.c common_functions.c -o $(BIN)/dictMgMem
 
 combineFragments: combineFragments.c
 	$(CC) $(CFLAGS) combineFragments.c -o $(BIN)/combineFragments

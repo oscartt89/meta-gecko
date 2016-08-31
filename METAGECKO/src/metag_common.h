@@ -27,6 +27,7 @@
 #define MAXLS 100000000
 #define READBUF 100000
 #define PAR_THRESHOLD   10000
+#define BYTES_IN_32K_WORD 8
 
 // STRUCTS
 /* Structure used to store a sequence (k-mer) and its length.
