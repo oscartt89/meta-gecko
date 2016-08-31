@@ -65,7 +65,11 @@ char getValue(Sequence *, uint64_t, int);
 
 Sequence *LeeSeqDB(char *, uint64_t *, uint64_t *);
 
+void getSeqDBLength(char *, uint64_t *, uint64_t *);
+
 Reads *LoadMetagenome(char *, uint64_t *);
+
+void getMetagenomeLength(char *, uint64_t *);
 
 inline void freeReads(Reads *);
 

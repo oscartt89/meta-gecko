@@ -203,7 +203,7 @@ inline int filteredHit(Hit h1, Hit h2, int prefixSize){
  */
 void writeHitsBuff(Hit *buff, FILE *index, FILE *hits, uint64_t hitsInBuff, int prefix, uint64_t *buffersWritten) {
     // Sort buffer
-    quicksort_H(buff, 0, hitsInBuff - 1);
+    //quicksort_H(buff, 0, hitsInBuff - 1);
 	
     // Write info on index file
     uint64_t pos = (uint64_t) ftello(hits);
@@ -842,6 +842,96 @@ Sequence *LeeSeqDB(char *file, uint64_t *n, uint64_t *nStruct) {
 }
 
 
+void getSeqDBLength(char *file, uint64_t *n, uint64_t *nStruct) {
+    char c; // Aux to read
+    uint64_t length = 0, k = 0, ns;
+    uint64_t finalLength = 0;
+    
+
+    // Memory and variables for reading buffer
+    uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
+    char * readBuffer = (char *) malloc(READBUF*sizeof(char));
+    if(readBuffer == NULL) terror("Could not allocate memory for reading buffer");
+
+    // Open genome file
+    FILE *f;
+
+    if ((f = fopen(file, "rt")) == NULL) {
+        fprintf(stderr, "LeeSeqDB::Error opening genome file.\n");
+        exit(-1);
+    }
+
+    //Initialize
+    *n = 0;
+    *nStruct = 0;
+
+    //Memory
+    ns = 1;
+    
+
+    while ((c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f)) != '>' && (!feof(f) || (feof(f) &&  posBuffer < tReadBuffer ) )); //start seq
+    if (feof(f) && posBuffer >= tReadBuffer) {
+        // Close genome file
+        fclose(f);
+        exit(-1);
+    }
+
+    while ((c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f)) == ' ');
+
+    while (k < MAXLID && c != '\n' && c != ' ') {
+        if (feof(f) && posBuffer >= tReadBuffer) {
+            // Close genome file
+            fclose(f);
+            exit(-1);
+        }
+
+        k++;
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
+    }
+
+    
+    while (c != '\n')
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
+    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
+
+    
+    while (/*c!='*'&&*/!feof(f) || (feof(f) && posBuffer < tReadBuffer)) {
+        c = toupper(c);
+        if (c == '>') {
+            length++;
+            while (c != '\n') {
+                if (feof(f) && posBuffer >= tReadBuffer) {
+                    // Close genome file
+                    fclose(f);
+                    exit(-1);
+                }
+                c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
+            }
+            //break;
+        }
+        if (isupper(c))
+            length++;
+        if (c == '*') {
+            length++;
+        }
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, f);
+
+        //Check if the length is the end of this struct
+        if (length >= MAXLS) {
+            finalLength += length;
+            length = 0;
+            ns++;
+        }
+    }
+
+    finalLength += length;
+    *n = finalLength;
+
+    // Close genome file
+    fclose(f);
+}
+
+
 /* This function generate a read linked list with all reads of a metagenome file.
  *  @param metagFile is the absolute or relative path to metagenome file.
  *  @return the header of a reads linked list.
@@ -957,8 +1047,61 @@ Reads *LoadMetagenome(char *metagFile, uint64_t *totalLength) {
 	free(readBuffer);
     // Return head
 
-
     return head;
+}
+
+void getMetagenomeLength(char *metagFile, uint64_t *totalLength) {
+    // Variables
+
+    FILE *metag;
+    uint32_t seqIndex = -1, seqLen = 0;
+    char c;
+    uint64_t absoluteLength = 0;
+
+    // Memory and variables for reading buffer
+    uint64_t posBuffer = READBUF+1, tReadBuffer = 0;
+    char * readBuffer = (char *) malloc(READBUF*sizeof(char));
+    if(readBuffer == NULL) terror("Could not allocate memory for reading buffer");
+
+    // Open metagenome file
+    if ((metag = fopen(metagFile, "rt")) == NULL) {
+        fprintf(stderr, "LoadMetagenomeError opening metagenome file.\n");
+        exit(-1);
+    }
+
+    // Start to read
+    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+    //c=getc(metag);
+    while (!feof(metag) || (feof(metag) && posBuffer < tReadBuffer)) {
+        // Check if it's a special line
+        if (!isupper(toupper(c))) { // Comment, empty or quality (+) line
+            if (c == '>') { // Comment line
+                c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+                //c=getc(metag);
+                while (c != '\n' ) // Avoid comment line
+                    c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+                    //c=getc(metag);
+                // Update info
+                seqIndex++; // New sequence
+                absoluteLength += seqLen;
+                seqLen = 0; // Reset sequence length
+            }
+            c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag); // First char of next sequence
+            //c=getc(metag);
+            continue;
+        }
+        seqLen++;
+        // Next char
+        c = buffered_fgetc(readBuffer, &posBuffer, &tReadBuffer, metag);
+        //c=getc(metag);
+    }
+    
+    absoluteLength += seqLen;
+    *totalLength = absoluteLength;
+
+    fclose(metag);
+    free(readBuffer);
+
 }
 
 
