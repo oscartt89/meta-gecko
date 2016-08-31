@@ -45,6 +45,12 @@ void shift_byte_array_right(unsigned char * b, unsigned int bytes_to_check) {
     b[i] >>= 2;
 }
 
+/*  Sorts a vector of unsigned char bytes where each individual value takes up "bytes" bytes
+ *  @array: The unsigned char vector to sort
+    @x:     Starting position to sort the vector (use 0)
+    @y:     Ending position to sort
+    @bytes: How many bytes will be used for each individual value in the vector
+ */
 
 void QuickSortByteArray(unsigned char * array, uint64_t x, uint64_t y, unsigned int bytes) {
 
@@ -72,6 +78,12 @@ void QuickSortByteArray(unsigned char * array, uint64_t x, uint64_t y, unsigned 
     if (x1<y) QuickSortByteArray(array,x1,y,bytes);
 }
 
+/* Translates an unsigned char word of ACTG letters compressed in 2 bits to a readable char
+ *  @b: Unsigned array of chars compressed
+ *  @kmer: Char array to receive readable translation
+ *  @WORD_LENGTH: Length in bits of the word to translate
+ */
+
 void showByteArray(const unsigned char * b, char * kmer, uint16_t WORD_LENGTH) {
     char Alf[] = { 'A', 'C', 'G', 'T' };
     int i;
@@ -97,6 +109,15 @@ void showByteArray(const unsigned char * b, char * kmer, uint16_t WORD_LENGTH) {
     kmer[WORD_LENGTH]='\0';
 }
 
+/* Performs a binary search on an unsigned char array comparing "bytes" bytes at a time
+ *  @byteword:  A pointer to the word that will be compared
+ *  @bytearray: The vector holding the words
+ *  @bytes:     How many bytes per value
+    @nMers:     Total number of mers in the bytearray
+
+    Returns
+        The position of the byteword in the array if it was found, if not, -1 is returned
+ */
 
 int64_t binarySearchByteArray(unsigned char * byteword, unsigned char * bytearray, unsigned int bytes, uint64_t nMers) {
 
@@ -124,6 +145,12 @@ int64_t binarySearchByteArray(unsigned char * byteword, unsigned char * bytearra
     return -1;
 }
 
+/* Performs a binary search on an unsigned char array comparing "bytes" bytes at a time
+ *  @bytearray: The vector holding the words
+ *  @nSequences:    The length in bytes of the vector (sorry)
+ *  @bytes:     How many bytes per value
+    @out:       The file handler to where the table should be printed
+ */
 
 void printTable(unsigned char * array, uint64_t nSequences, unsigned int bytes, FILE * out){
     uint64_t i;

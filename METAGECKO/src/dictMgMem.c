@@ -1,3 +1,19 @@
+/*********
+
+File        dictMgMem.c
+Author      EPW <estebanpw@uma.es>
+Description Computes the in-memory dictionary of kmers for a metagenome, then searches for hits through the target database and
+            produces a histogram of sequences hits
+
+USAGE       <metagenome>            The .fasta file of the metagenome
+            <genomes_database>      The .fasta database containing the genomes
+            <sequence_hits_histogram>   The output binary file containing the amount of hits per sequence
+            <ksize[1=8,2=16,3=32]>  The size of the word, e.g. for k=32 use value 3
+
+
+**********/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
