@@ -6,6 +6,12 @@ Description	Cuts out a list of genomes from a database to reduce the comparison
 
 USAGE		<genomes_database>		The .fasta database containing the genomes
 			<sequence_hits_histogram>	The binary file containing the sequences histogram of hits produced by dictMgMem
+			<working_mode> <n>	Can be [1,2,3...] See below.
+
+WORKING MODES
+1	If it has at least n hits [DEFAULT]
+2	Select only those genomes with at least n% of hits from the total hits achieved by the most-hitted genome
+
 
 **********/
 
@@ -15,13 +21,15 @@ USAGE		<genomes_database>		The .fasta database containing the genomes
 #include <string.h>
 #include <inttypes.h>
 #include "metag_common.h"
+#include "common.h"
+
 
 //goes [a, b)
 
 #define LINE_BUFFER 5000
 
 int main(int argc, char ** av){
-	if(argc != 3) terror("USE: dbReduce <genome_database> <sequence_hits_histogram>");
+	if(argc != 5) terror("USE: dbReduce <genome_database> <sequence_hits_histogram> <working_mode> <n>");
 	FILE * f, * histdb, * dbout;
 	
 
@@ -31,6 +39,10 @@ int main(int argc, char ** av){
 
 	histdb = fopen64(av[2], "rb");
 	if(histdb == NULL) terror("Could not open histogram of sequences");
+
+	// Working mode selection
+	int workingMode = atoi(av[3]);
+	uint64_t workingMode_value = asciiToUint64(av[4]);
 
 	//Reading and writing variables
 	char buffer[LINE_BUFFER];
@@ -60,14 +72,39 @@ int main(int argc, char ** av){
 	uint64_t seqsRead = fread(seqHist, sizeof(uint64_t), nSeqs, histdb);
 	if(seqsRead != nSeqs) terror("Different amount of read sequences");
 
-	/*
-	//Only for display of values
+	//Create mask to tell which genomes are to be used
+	unsigned char * mask = (unsigned char *) malloc(seqsRead*sizeof(unsigned char));
+	if(mask == NULL) terror("Could not allocate mask");
+
+	//Fill mask depending on working mode
 	uint64_t i;
-	for(i=0;i<seqsRead;i++){
-		fprintf(stdout, "%"PRIu64" :->: %"PRIu64"\n", i, seqHist[i]);
+	switch(workingMode){
+		case 2: {
+			uint64_t maxFound = 0;
+			for(i=0;i<seqsRead;i++){
+				if(seqHist[i] > maxFound) maxFound = seqHist[i];
+			}
+			for(i=0;i<seqsRead;i++){
+				mask[i] = (((long double)seqHist[i]/maxFound > (long double) workingMode_value)) ? (1) : (0);
+			}
+		}
+		break;
+		//Default is also case 1
+		default: {
+			for(i=0;i<seqsRead;i++){
+				mask[i] = ((seqHist[i] >= workingMode_value)) ? (1) : (0);
+			}
+		}
 	}
-	exit(-1);
-	*/
+
+
+	
+	//Only for display of values
+	for(i=0;i<seqsRead;i++){
+		fprintf(stdout, "%"PRIu64" :->: %"PRIu64" [MASK:%d]\n", i, seqHist[i], (int) mask[i]);
+	}
+	
+	
 
 
 	//Read database
@@ -102,6 +139,7 @@ int main(int argc, char ** av){
 	fclose(dbout);
 
 	free(seqHist);
+	free(mask);
 	return 0;
 }
 

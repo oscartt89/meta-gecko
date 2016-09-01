@@ -10,3 +10,4 @@ void QuickSortByteArray(unsigned char * array, uint64_t x, uint64_t y, unsigned 
 void showByteArray(const unsigned char * b, char * kmer, uint16_t WORD_LENGTH);
 int64_t binarySearchByteArray(unsigned char * byteword, unsigned char * bytearray, unsigned int bytes, uint64_t nMers);
 void printTable(unsigned char * array, uint64_t nSequences, unsigned int bytes, FILE * out);
+uint64_t asciiToUint64(const char *text);

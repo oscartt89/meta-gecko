@@ -161,3 +161,18 @@ void printTable(unsigned char * array, uint64_t nSequences, unsigned int bytes, 
     }
 }
 
+/*  Converts ascii to uint64_t
+    @text:  The char vector containing the number in ASCII
+
+    Returns the value converted to uint64_t
+*/
+
+uint64_t asciiToUint64(const char *text){
+    uint64_t number=0;
+
+    for(;*text;text++){
+        char digit=*text-'0';           
+        number=(number*10)+digit;
+    }
+    return number;
+}
