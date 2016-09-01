@@ -85,7 +85,7 @@ int main(int argc, char ** av){
 				if(seqHist[i] > maxFound) maxFound = seqHist[i];
 			}
 			for(i=0;i<seqsRead;i++){
-				mask[i] = (((long double)100*seqHist[i]/maxFound > (long double) workingMode_value)) ? (1) : (0);
+				mask[i] = (((long double)100*seqHist[i]/maxFound >= (long double) workingMode_value)) ? (1) : (0);
 			}
 		}
 		break;
@@ -100,10 +100,11 @@ int main(int argc, char ** av){
 
 	
 	//Only for display of values
+	/*
 	for(i=0;i<seqsRead;i++){
 		fprintf(stdout, "%"PRIu64" :->: %"PRIu64" [MASK:%d]\n", i, seqHist[i], (int) mask[i]);
 	}
-	
+	*/
 	
 
 
@@ -115,8 +116,8 @@ int main(int argc, char ** av){
 		if(buffer[0]=='>'){ //If there is a sequence
 			genomeCounter++;
 
-			//If the genome satisfies de condition
-			if(seqHist[genomeCounter] > 0){ // TODO put condition here
+			//If the genome satisfies the previously calculated condition
+			if(mask[genomeCounter] == 1){ 
 
 				fprintf(dbout, "%s", buffer); //Skip first '>'
 				fgets(buffer, LINE_BUFFER, f);
