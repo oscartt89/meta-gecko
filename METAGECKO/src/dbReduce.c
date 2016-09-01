@@ -21,7 +21,7 @@ USAGE		<genomes_database>		The .fasta database containing the genomes
 #define LINE_BUFFER 5000
 
 int main(int argc, char ** av){
-	if(argc != 3) terror("USE: dbReduce <genome_database> <sequence_hits_histogram");
+	if(argc != 3) terror("USE: dbReduce <genome_database> <sequence_hits_histogram>");
 	FILE * f, * histdb, * dbout;
 	
 
@@ -40,7 +40,7 @@ int main(int argc, char ** av){
 
 
 	strcat(name_dbout, av[1]);
-	strcat(name_dbout, "_cut.fasta");
+	strcat(name_dbout, ".presec");
 	fprintf(stdout, "[INFO] Opening output file :%s\n", name_dbout);
 	dbout = fopen64(name_dbout, "wt");
 	

@@ -27,7 +27,7 @@ static uint32_t ksizeTables[4] = {0,2,4,8};
 
 int main(int argc, char ** av){
     
-    if(argc != 5) terror("USE: dictMgMem <metagenome> <database> <sequences_hits_histogram> <ksize[1=8,2=16,3=32]>");
+    if(argc != 5) terror("USE: quickhits <metagenome> <database> <sequences_hits_histogram> <ksize[1=8,2=16,3=32]>");
     
     
     
@@ -244,14 +244,17 @@ int main(int argc, char ** av){
 
     }
 
-    fprintf(stdout, "[INFO] Finished generated seeds\n");
+    fprintf(stdout, "[INFO] Finished generating seeds\n");
     fprintf(stdout, "[INFO] Writing sequences hits histogram\n");
 
-    
+    /*
+    //only for display
     uint64_t i;
     for(i=0;i<seqNum;i++){
         fprintf(stdout, "%"PRIu64"\t%"PRIu64"\n", i, seqHits[i]);
     }
+    */
+
     //Store the sequences as binary
     if(seqNum != fwrite(seqHits, sizeof(uint64_t), seqNum, histoSeqs)) terror("Could not write histogram");
 
