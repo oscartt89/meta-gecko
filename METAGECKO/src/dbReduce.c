@@ -85,7 +85,7 @@ int main(int argc, char ** av){
 				if(seqHist[i] > maxFound) maxFound = seqHist[i];
 			}
 			for(i=0;i<seqsRead;i++){
-				mask[i] = (((long double)seqHist[i]/maxFound > (long double) workingMode_value)) ? (1) : (0);
+				mask[i] = (((long double)100*seqHist[i]/maxFound > (long double) workingMode_value)) ? (1) : (0);
 			}
 		}
 		break;
