@@ -32,15 +32,17 @@ int main(int argc, char ** av){
 	histdb = fopen64(av[2], "rb");
 	if(histdb == NULL) terror("Could not open histogram of sequences");
 
+	//Reading and writing variables
 	char buffer[LINE_BUFFER];
-	int bufferIdx;
+	char name_dbout[LINE_BUFFER];
+	name_dbout[0] = '\0';
 
 
 
-	strcat(name, av[1]);
-	strcat(name, "_cut.fasta");
-	fprintf(stdout, "[INFO] Opening output file :%s\n", name);
-	dbout = fopen64(name, "wt");
+	strcat(name_dbout, av[1]);
+	strcat(name_dbout, "_cut.fasta");
+	fprintf(stdout, "[INFO] Opening output file :%s\n", name_dbout);
+	dbout = fopen64(name_dbout, "wt");
 	
 	//Get number of sequences
     fseeko64(histdb, 0L, SEEK_END);
@@ -58,22 +60,39 @@ int main(int argc, char ** av){
 	uint64_t seqsRead = fread(seqHist, sizeof(uint64_t), nSeqs, histdb);
 	if(seqsRead != nSeqs) terror("Different amount of read sequences");
 
+	/*
+	//Only for display of values
+	uint64_t i;
+	for(i=0;i<seqsRead;i++){
+		fprintf(stdout, "%"PRIu64" :->: %"PRIu64"\n", i, seqHist[i]);
+	}
+	exit(-1);
+	*/
+
 
 	//Read database
-	char c;
-	uint64_t position;
+	buffer[0] = 'N'; //Not a '>'
 	int64_t genomeCounter=-1;
-	c = getc(f);
 	while(!feof(f)){
 		
-		if(c=='>'){
+		if(buffer[0]=='>'){ //If there is a sequence
 			genomeCounter++;
-			position = ftell(f);
-			//If we want the genome CONDITION TODO
-			if(seqHist[genomeCounter] > 0){
-				//USE A BUFFER
+
+			//If the genome satisfies de condition
+			if(seqHist[genomeCounter] > 0){ // TODO put condition here
+
+				fprintf(dbout, "%s", buffer); //Skip first '>'
+				fgets(buffer, LINE_BUFFER, f);
+				while(buffer[0] != '>' && !feof(f)){
+					fprintf(dbout, "%s", buffer);
+					fgets(buffer, LINE_BUFFER, f);
+				}
+			}else{
+				fgets(buffer, LINE_BUFFER, f); //Skip the '>' if we dont want it				
 			}
 		}
+
+		if(buffer[0] != '>') fgets(buffer, LINE_BUFFER, f);
 	}
 	
 
@@ -83,7 +102,7 @@ int main(int argc, char ** av){
 	fclose(dbout);
 
 	free(seqHist);
-	
+	return 0;
 }
 
 
