@@ -141,7 +141,7 @@ int main(int argc, char ** av){
 
     }
     fprintf(stdout, "[INFO] Sequence of length %"PRIu64" has %"PRIu64" mers of size k=%d\n", pos, pos-ksizeTables[ksizeidx]*4, ksizeTables[ksizeidx]*4);
-    fprintf(stdout, "[INFO] Table of seeds used up %"PRIu64" bytes, which are %"PRIu64" MegaBytes\n", idx, idx/(1024*1024));
+    fprintf(stdout, "[INFO] Table of seeds used up %"PRIu64" bytes, which are %"PRIu64" MegaBytes\n", 2*idx, 2*idx/(1024*1024));
     
     fprintf(stdout, "[INFO] Sorting forward table\n");
     QuickSortByteArray(tableForward, 0, idx/ksizeTables[ksizeidx] - 1, ksizeTables[ksizeidx]);

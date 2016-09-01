@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-# This script compares a metagenome against a database of genomes
+# PRESELECTION VERSION
+
+# This script compares a metagenome against a PRESELECTED database of genomes
 # Input parameters:
 #  @param metagenome 	relative or absolute path to metagenome file.
 #  @param database 		relative or absolute path to database file.
@@ -69,7 +71,7 @@ BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Finding seeds for database reduction"
 ${BINDIR}/quickhits ${metagenome}.${metagExt} ${genome}.${genoExt} dictionaries/${genome}.hseq 3
-${BINDIR}/dbReduce ${genome}.${genoExt} dictionaries/${genome}.hseq
+${BINDIR}/dbReduce ${genome}.${genoExt} dictionaries/${genome}.hseq 2 10
 
 # Set new extension
 genoExt=${genoExt}.presec
