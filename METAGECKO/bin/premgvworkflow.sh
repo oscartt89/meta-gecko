@@ -71,9 +71,10 @@ BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Finding seeds for database reduction"
 ${BINDIR}/quickhits ${metagenome}.${metagExt} ${genome}.${genoExt} dictionaries/${genome}.hseq 3
-${BINDIR}/dbReduce ${genome}.${genoExt} dictionaries/${genome}.hseq 2 10
+${BINDIR}/dbReduce ${genome}.${genoExt} dictionaries/${genome}.hseq 2 5
 
 # Set new extension
+oldGenoExt=${genoExt}
 genoExt=${genoExt}.presec
 
 
@@ -99,5 +100,6 @@ if [[ ! -f fragments/${metagenome}-${genome}-f.frags ]];	then
 fi
 
 rm -rf ${metagenome}.${metagExt}
-rm -rf ${genome}.${genoExt}
+rm -rf ${genome}.${oldGenoExt}
+#rm -rf ${genome}.${genoExt}
 

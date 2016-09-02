@@ -100,13 +100,12 @@ int main(int argc, char ** av){
 
 	
 	//Only for display of values
-	/*
+	/*	
 	for(i=0;i<seqsRead;i++){
 		fprintf(stdout, "%"PRIu64" :->: %"PRIu64" [MASK:%d]\n", i, seqHist[i], (int) mask[i]);
 	}
 	*/
 	
-
 
 	//Read database
 	buffer[0] = 'N'; //Not a '>'

@@ -113,14 +113,18 @@ int main(int ac, char **av) {
     // Variables
     FILE *mW, *mP, *gW, *gP; // Dictionaries
     FILE *hIndx, *hts; // Intermediate files
+    FILE *fr; // Fragments file
     Hit *buffer;
     uint64_t hitsInBuffer = 0, genomeLength, nStructs, metagenomeLength;
     uint16_t mWL, gWL;
     uint16_t BytesGenoWord = 8, BytesMetagWord;
     uint64_t buffersWritten = 0; // Init global variable (frags.h)1
-    
+    float S_Threshold = atof(av[6]); // Similarity threshold
+    int L_Threshold = atoi(av[7]); // Length threshold
     prefixSize = atoi(av[8]); // Prefix array length
-    bool removeIntermediataFiles = false; // Internal variable to delete intermediate files
+    Sequence *genome; // Sequence for genome
+    Reads *metagenome; // Short sequence array for metagenome
+    bool removeIntermediataFiles = true; // Internal variable to delete intermediate files
 
     // Allocate necessary memory
     // Memory for buffer
@@ -203,8 +207,6 @@ int main(int ac, char **av) {
         return -1;
     }
 
-    
-
 #pragma omp parallel num_threads(2)
     {
 #pragma omp sections
@@ -212,13 +214,12 @@ int main(int ac, char **av) {
 #pragma omp section
             {
                 /////////////////////////// CHECKPOINT ///////////////////////////
-                fprintf(    stdout, "\n\tFrags: Loading sequences of genome.\n");
+                fprintf(stdout, "\n\tFrags: Loading sequences of genome.\n");
                 fflush(stdout);
                 /////////////////////////// CHECKPOINT ///////////////////////////
 
                 // Load sequences
-                getSeqDBLength(av[4], &genomeLength, &nStructs);
-                fprintf(stdout, "{REPORT} Genome DB has length %"PRIu64"\n", genomeLength);
+                genome = LeeSeqDB(av[4], &genomeLength, &nStructs);
 
                 /////////////////////////// CHECKPOINT ///////////////////////////
                 fprintf(stdout, "\t(Loaded) sequences of genome\n");
@@ -231,8 +232,7 @@ int main(int ac, char **av) {
                 fflush(stdout);
                 /////////////////////////// CHECKPOINT ///////////////////////////
 
-                LoadMetagenome(av[2], &metagenomeLength);
-                fprintf(stdout, "{REPORT} Metagenome has length %"PRIu64"\n", metagenomeLength);
+                metagenome = LoadMetagenome(av[2], &metagenomeLength);
 
                 /////////////////////////// CHECKPOINT ///////////////////////////
                 fprintf(stdout, "\t(Loaded) sequences of metagenome\n");
@@ -240,7 +240,7 @@ int main(int ac, char **av) {
             }
         }
     }
-    
+
     // Search hits
     // Prepare necessary variables
     HashEntry we[2]; // [0]-> Metagenome [1]-> Genome
@@ -374,9 +374,8 @@ int main(int ac, char **av) {
 
     if (hitsInBuffer > 0 && buffersWritten <= 0) { // Only one buffer
         // Sort buffer
-        //quicksort_H(buffer, 0, hitsInBuffer - 1);
-        writeHitsBuff(buffer, hIndx, hts, hitsInBuffer, prefixSize, &buffersWritten);
-        
+        quicksort_H(buffer, 0, hitsInBuffer - 1);
+
         // Close unnecesary files
         fclose(mW);
         fclose(gW);
@@ -388,11 +387,324 @@ int main(int ac, char **av) {
         // Free unnecesary variables
         free(we[0].seq);
         free(we[1].seq);
+
+        // Declare necessary variables
+        FragFile frag;
+        uint64_t index;
+
+        // Init first fragment
+        frag.block = 0;
+
+        // Write first fragment
+        Reads *currRead;
+        // Search first read
+        currRead = metagenome;
+        while (currRead->seqIndex != buffer[0].seqX) {
+            if (currRead->next == NULL) {
+                fprintf(stderr, "Error searching first read %"
+                PRIu32
+                ".\n", buffer[0].seqX);
+                return -1;
+            }
+            currRead = currRead->next;
+        }
+        // Open final files
+        // Open final fragments file
+        strcpy(fname, av[5]); // Copy outDic name
+        if ((fr = fopen(strcat(fname, ".frags"), "wb")) == NULL) {
+            fprintf(stderr, "Error opening fragments final file.\n");
+            return -1;
+        }
+
+        // Write headers
+        writeSequenceLength(&metagenomeLength, fr);
+        writeSequenceLength(&genomeLength, fr);
+
+        /////////////////////////// CHECKPOINT ///////////////////////////
+        fprintf(stdout, "\tFrags: Extending seeds. [%"
+        PRIu64
+        "]", buffersWritten);
+        fflush(stdout);
+        /////////////////////////// CHECKPOINT ///////////////////////////
+
+        int lastFragmentWasWritten;
+
+        // Generate first fragment
+        lastFragmentWasWritten = FragFromHit(&frag, &buffer[0], currRead, genome, genomeLength, nStructs, fr,
+                                             prefixSize, L_Threshold,
+                                             S_Threshold);
+
+        // Generate fragments
+        for (index = 1; index < hitsInBuffer; ++index) {
+            // Check if are collapsable
+            if (lastFragmentWasWritten && frag.strand == buffer[index].strandY && frag.diag == buffer[index].diag &&
+                buffer[index].posX <= frag.xEnd) {
+                //Fragment collapses
+            } else {
+                // Check correct read index
+                if (currRead->seqIndex != buffer[index].seqX) {
+                    if (currRead->seqIndex > buffer[index].seqX) currRead = metagenome;
+                    while (currRead != NULL && currRead->seqIndex != buffer[index].seqX) {
+                        currRead = currRead->next;
+                    }
+                    if (currRead == NULL) {
+                        fprintf(stderr, "Error searching read index.\n");
+                        return -1;
+                    }
+                }
+                lastFragmentWasWritten = FragFromHit(&frag, &buffer[index], currRead, genome, genomeLength, nStructs,
+                                                     fr, prefixSize, L_Threshold, S_Threshold);
+            }
+        }
+
+        /////////////////////////// CHECKPOINT ///////////////////////////
+        fprintf(stdout, " (Generated)\n");
+        fprintf(stdout, "\tFrags: Closing the program.\n");
+        /////////////////////////// CHECKPOINT ///////////////////////////
+
+        // Close output file
+        fclose(fr);
+
+        freeReads(metagenome);
+
+        freeGenomes(genome);
+
+        // Free unnecesary memory
+        free(buffer);
+        // Remove intermediate files
+        if (removeIntermediataFiles) {
+            strcpy(fname, av[5]);
+            remove(strcat(fname, ".hts"));
+            strcpy(fname, av[5]);
+            remove(strcat(fname, ".hindx"));
+        }
+
+        free(fname);
+
+        // End program
+        return 0;
+    }
+
+    // Free auxiliar buffers
+    free(we[0].seq);
+    free(we[1].seq);
+    free(buffer);
+
+    // Close files
+    fclose(mW);
+    fclose(gW);
+    fclose(mP);
+    fclose(gP);
+    fclose(hIndx);
+    fclose(hts);
+
+    // Open necessary files
+    // Open intermediate files
+    // Index file
+    strcpy(fname, av[5]); // Copy outDic name
+    if ((hIndx = fopen(strcat(fname, ".hindx"), "rb")) == NULL) {
+        fprintf(stderr, "Error opening buffer index file (read).\n");
+        return -1;
+    }
+
+    // Open hits repo
+    strcpy(fname, av[5]);
+    if ((hts = fopen(strcat(fname, ".hts"), "rb")) == NULL) {
+        fprintf(stderr, "Error opening hits repository (read).\n");
+        return -1;
+    }
+
+    // Open final fragments file
+    strcpy(fname, av[5]); // Copy outDic name
+    if ((fr = fopen(strcat(fname, ".frags"), "wb")) == NULL) {
+        fprintf(stderr, "Error opening fragments final file.\n");
+        return -1;
+    }
+
+    // Write header
+    writeSequenceLength(&metagenomeLength, fr);
+    writeSequenceLength(&genomeLength, fr);
+
+    // Prepare necessary variables
+    node_H *hitsList = NULL;
+    uint64_t hitsUnread[buffersWritten];
+    uint64_t positions[buffersWritten];
+    uint64_t lastLoaded = -1, activeBuffers = buffersWritten;
+    Hit *HitsBlock;
+    FragFile frag;
+
+    // Take memory for hits
+    if ((HitsBlock = (Hit *) malloc(sizeof(Hit) * activeBuffers * READ_BUFF_LENGTH)) == NULL) {
+        fprintf(stderr, "Error allocating memory for hits block.\n");
+        return -1;
+    }
+
+    // Read buffers info
+    uint64_t i = 0;
+    do {
+        if (fread(&positions[i], sizeof(uint64_t), 1, hIndx) != 1) { // Take position on hits file
+            fprintf(stderr, "Error reading position at hIndx file.\n");
+            return -1;
+        }
+        if (fread(&hitsUnread[i], sizeof(uint64_t), 1, hIndx) != 1) {
+            fprintf(stderr, "Error reading hits in buffer at hIndx file.\n");
+            return -1;
+        }
+        ++i;
+    } while (i < activeBuffers);
+
+    // Load first hits
+    node_H *currNode = NULL;
+    uint64_t read, blockIndex = 0;
+    for (i = 0; i < activeBuffers; ++i, blockIndex += READ_BUFF_LENGTH) {
+        currNode = (node_H *) malloc(sizeof(node_H));
+        currNode->next = hitsList;
+        currNode->hits = &HitsBlock[blockIndex];
+        currNode->buff = i;
+        fseeko(hts, positions[i], SEEK_SET);
+        read = loadHit(currNode->hits, hts, hitsUnread[i]);
+        currNode->index = 0;
+        currNode->hits_loaded = read;
+        // Update info
+        positions[i] = (uint64_t) ftello(hts);
+        hitsUnread[i] -= read;
+        lastLoaded = i;
+        hitsList = currNode;
+    }
+    // Assign head
+    hitsList = currNode;
+
+    // Sort hits
+    sortList(&hitsList);
+
+    /////////////////////////// CHECKPOINT ///////////////////////////
+    fprintf(stdout, "\tFrags: Extending seeds. [%"
+    PRIu64
+    "]", buffersWritten);
+    fflush(stdout);
+    /////////////////////////// CHECKPOINT ///////////////////////////
+
+    // Init fragment info
+    frag.block = 0;
+    frag.strand = av[8][0];
+
+    // Write first fragment
+    Reads *currRead;
+    // Search first read
+    currRead = metagenome;
+    while (currRead->seqIndex != hitsList->hits[0].seqX) {
+        if (currRead->next == NULL) {
+            fprintf(stderr, "Error searching first read.\n");
+            return -1;
+        }
+        currRead = currRead->next;
+    }
+
+    int lastFragmentWasWritten;
+
+    // Generate first fragment
+    lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[0], currRead, genome, genomeLength, nStructs, fr,
+                                         prefixSize, L_Threshold,
+                                         S_Threshold);
+    // Move to next
+    hitsList->index += 1;
+    // Load new hit
+    if (hitsList->index >= hitsList->hits_loaded) {
+        if (hitsUnread[hitsList->buff] > 0) {
+            if (hitsList->buff != lastLoaded) {
+                fseeko(hts, positions[hitsList->buff], SEEK_SET);
+                lastLoaded = hitsList->buff;
+            }
+            read = loadHit(hitsList->hits, hts, hitsUnread[hitsList->buff]);
+            hitsList->index = 0;
+            hitsList->hits_loaded = read;
+            positions[hitsList->buff] = (uint64_t) ftello(hts);
+            hitsUnread[hitsList->buff] -= read;
+            checkOrder(&hitsList, false);
+        } else {
+            checkOrder(&hitsList, true);
+            activeBuffers--;
+        }
+    } else {
+        checkOrder(&hitsList, false);
+    }
+
+    // Search hits and generate fragmetents
+    // Read hits & generate fragments
+    while (activeBuffers > 0 && hitsList != NULL) {
+        // Check if are collapsable
+        if (lastFragmentWasWritten && frag.strand == hitsList->hits[hitsList->index].strandY &&
+            frag.diag == hitsList->hits[hitsList->index].diag &&
+            hitsList->hits[hitsList->index].posX <= frag.xEnd) {
+            //Fragment collapses
+        } else {
+            // Check correct read index
+            if (currRead->seqIndex != hitsList->hits[hitsList->index].seqX) {
+                if (currRead->seqIndex > hitsList->hits[hitsList->index].seqX) currRead = metagenome;
+                while (currRead != NULL && currRead->seqIndex != hitsList->hits[hitsList->index].seqX) {
+                    currRead = currRead->next;
+                }
+                if (currRead == NULL) {
+                    fprintf(stderr, "Error searching read index.\n");
+                    return -1;
+                }
+            }
+            lastFragmentWasWritten = FragFromHit(&frag, &hitsList->hits[hitsList->index], currRead, genome,
+                                                 genomeLength, nStructs, fr, prefixSize, L_Threshold, S_Threshold);
+        }
+
+        // Move to next
+        hitsList->index += 1;
+        // Load new hit
+        if (hitsList->index >= hitsList->hits_loaded) {
+            if (hitsUnread[hitsList->buff] > 0) {
+                if (hitsList->buff != lastLoaded) {
+                    fseeko(hts, positions[hitsList->buff], SEEK_SET);
+                    lastLoaded = hitsList->buff;
+                }
+                read = loadHit(hitsList->hits, hts, hitsUnread[hitsList->buff]);
+                hitsList->index = 0;
+                hitsList->hits_loaded = read;
+                positions[hitsList->buff] = (uint64_t) ftello(hts);
+                hitsUnread[hitsList->buff] -= read;
+                checkOrder(&hitsList, false);
+            } else {
+                checkOrder(&hitsList, true);
+                activeBuffers--;
+            }
+        } else {
+            checkOrder(&hitsList, false);
+        }
+    }
+
+    /////////////////////////// CHECKPOINT ///////////////////////////
+    fprintf(stdout, " (Generated)\n");
+    /////////////////////////// CHECKPOINT ///////////////////////////
+
+    /////////////////////////// CHECKPOINT ///////////////////////////
+    fprintf(stdout, "\tFrags: Closing the program.\n");
+    /////////////////////////// CHECKPOINT ///////////////////////////
+
+    // Close files
+    fclose(hIndx);
+    fclose(hts);
+    fclose(fr);
+
+    // Remove intermediate files
+    if (removeIntermediataFiles) {
+        strcpy(fname, av[5]);
+        remove(strcat(fname, ".hts"));
+        strcpy(fname, av[5]);
+        remove(strcat(fname, ".hindx"));
     }
 
     // Free malloc blocks
+    free(HitsBlock);
     free(fname);
 
+    // Free linked list
+    freeReads(metagenome);
+    freeGenomes(genome);
 
     // Everything finished OK
     return 0;
