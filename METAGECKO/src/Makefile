@@ -20,7 +20,7 @@ quickhits: quickhits.c
 	$(CC) $(CFLAGS) -fopenmp quickhits.c common.c common_functions.c -o $(BIN)/quickhits
 
 dbReduce: dbReduce.c
-	$(CC) $(CFLAGS) -fopenmp dbReduce.c common.c common_functions.c -o $(BIN)/dbReduce
+	$(CC) $(CFLAGS) -fopenmp dbReduce.c -lm common.c common_functions.c -o $(BIN)/dbReduce
 
 combineFragments: combineFragments.c
 	$(CC) $(CFLAGS) combineFragments.c -o $(BIN)/combineFragments
