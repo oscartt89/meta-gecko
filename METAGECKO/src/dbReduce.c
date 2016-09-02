@@ -129,7 +129,7 @@ int main(int argc, char ** av){
 			log10average = log10l((long double) average);
 
 			for(i=0;i<seqsRead;i++){
-				mask[i] = ((log10l((long double)seqHist[i]) >=  log10average)) ? (1) : (0);
+				if(seqHist[i] > 0) mask[i] = ((log10l((long double)seqHist[i]) >=  log10average)) ? (1) : (0); else mask[i] = 0;
 			}
 
 		}
