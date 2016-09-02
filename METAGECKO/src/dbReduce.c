@@ -14,8 +14,8 @@ WORKING MODES
 3	Select only the sequences with hits number n times above the average hits [Default 1]
 4	Select only the sequences who satisfy the following expression:
 				Be 'Al' the average of the log10 of the hits. Then, a sequence 'Si' will be selected if 
-				the Log10 of its hits 'Hi' is higher or equal than 'Al'. Therefore:
-					f(Si) 	|	log10(Hi)  >= Al(Hi) 		1
+				the Log2 of its hits 'Hi' is higher or equal than 'Al'. Therefore:
+					f(Si) 	|	log2(Hi)  >= Al(Hi) 		1
 							|	otherwise 					0
 				Note that n is not used.
 
@@ -117,20 +117,26 @@ int main(int argc, char ** av){
 		}
 		break;
 
-		//4	Select only if log10 of the hits is higher than log10 of average hits
+		//4	Select only if log2 of the hits is higher than log10 of average hits
 		case 4: {
-			long double log10average;
+			long double log2average;
 			uint64_t hitSum = 0;
 			uint64_t average;
+			uint64_t * computedValues = (uint64_t *) malloc(seqsRead*sizeof(uint64_t));
 			for(i=0;i<seqsRead;i++){
-				hitSum += seqHist[i];
+				computedValues[i] = 0;
+				if(seqHist[i] > 0){
+					computedValues[i] = (uint64_t) log2l((long double)seqHist[i]);
+				}
+				hitSum += computedValues[i];
 			}
 			average = hitSum / seqsRead;
-			log10average = log10l((long double) average);
+			log2average = log2l((long double) average);
 
 			for(i=0;i<seqsRead;i++){
-				if(seqHist[i] > 0) mask[i] = ((log10l((long double)seqHist[i]) >=  log10average)) ? (1) : (0); else mask[i] = 0;
+				if(seqHist[i] > 0) mask[i] = (( computedValues[i] >=  log2average)) ? (1) : (0); else mask[i] = 0;
 			}
+			free(computedValues);
 
 		}
 		break;
