@@ -9,8 +9,15 @@ USAGE		<genomes_database>		The .fasta database containing the genomes
 			<working_mode> <n>	Can be [1,2,3...] See below.
 
 WORKING MODES
-1	If it has at least n hits [DEFAULT]
-2	Select only those genomes with at least n% of hits from the total hits achieved by the most-hitted genome
+1	If it has at least n hits [DEFAULT OPTION; Default value n=100]
+2	Select only those genomes with at least n% of hits from the total hits achieved by the most-hitted genome [Default n=2]
+3	Select only the sequences with hits number n times above the average hits [Default 1]
+4	Select only the sequences who satisfy the following expression:
+				Be 'Al' the average of the log10 of the hits. Then, a sequence 'Si' will be selected if 
+				the Log10 of its hits 'Hi' is higher or equal than 'Al'. Therefore:
+					f(Si) 	|	log10(Hi)  >= Al(Hi) 		1
+							|	otherwise 					0
+				Note that n is not used.
 
 
 **********/
@@ -29,7 +36,7 @@ WORKING MODES
 #define LINE_BUFFER 5000
 
 int main(int argc, char ** av){
-	if(argc != 5) terror("USE: dbReduce <genome_database> <sequence_hits_histogram> <working_mode> <n>");
+	if(argc != 4) terror("USE: dbReduce <genome_database> <sequence_hits_histogram> <working_mode> <n>");
 	FILE * f, * histdb, * dbout;
 	
 
@@ -79,8 +86,11 @@ int main(int argc, char ** av){
 	//Fill mask depending on working mode
 	uint64_t i;
 	switch(workingMode){
+
+		//2	Select only those genomes with at least n% of hits from the total hits achieved by the most-hitted genome
 		case 2: {
 			uint64_t maxFound = 0;
+			if(argc == 4) workingMode_value = 2;
 			for(i=0;i<seqsRead;i++){
 				if(seqHist[i] > maxFound) maxFound = seqHist[i];
 			}
@@ -89,8 +99,44 @@ int main(int argc, char ** av){
 			}
 		}
 		break;
-		//Default is also case 1
+
+		//3	Select only the sequences with hits number above the average hits
+		case 3: {
+			uint64_t hitSum = 0;
+			uint64_t average;
+			if(argc == 4) workingMode_value = 1;
+			workingMode_value = ((workingMode_value != 1)) ? (workingMode_value) : (1);
+			for(i=0;i<seqsRead;i++){
+				hitSum += seqHist[i];
+			}
+			average = hitSum / seqsRead;
+			for(i=0;i<seqsRead;i++){
+				mask[i] = ((seqHist[i] >=  average*workingMode_value)) ? (1) : (0);
+			}
+		}
+		break;
+
+		//4	Select only if log10 of the hits is higher than log10 of average hits
+		case 4: {
+			long double log10average;
+			uint64_t hitSum = 0;
+			uint64_t average;
+			for(i=0;i<seqsRead;i++){
+				hitSum += seqHist[i];
+			}
+			average = hitSum / seqsRead;
+			log10average = log10l((long double) average);
+
+			for(i=0;i<seqsRead;i++){
+				mask[i] = ((log10l((long double)seqHist[i]) >=  log10average)) ? (1) : (0);
+			}
+
+		}
+		break;
+
+		//1	If it has at least n hits [DEFAULT]
 		default: {
+			if(argc == 4) workingMode_value = 100;
 			for(i=0;i<seqsRead;i++){
 				mask[i] = ((seqHist[i] >= workingMode_value)) ? (1) : (0);
 			}
@@ -100,12 +146,13 @@ int main(int argc, char ** av){
 
 	
 	//Only for display of values
-	/*	
+	/*
 	for(i=0;i<seqsRead;i++){
 		fprintf(stdout, "%"PRIu64" :->: %"PRIu64" [MASK:%d]\n", i, seqHist[i], (int) mask[i]);
 	}
 	*/
 	
+
 
 	//Read database
 	buffer[0] = 'N'; //Not a '>'
