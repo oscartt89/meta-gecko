@@ -72,7 +72,6 @@ int main(int argc, char ** av){
 
     unsigned char b[8], br[8];
     memset(b, 0, ksizeTables[ksizeidx]);
-    memset(br, 0, ksizeTables[ksizeidx]);
     
     //Variables to account for positions
     int strandF = 1, strandR = 1;
@@ -81,7 +80,7 @@ int main(int argc, char ** av){
     uint64_t nAlloc = 1; //Times sequence histogram heap was allocated
     
     //Print info
-    fprintf(stdout, "[INFO] Computing tree of mers\n");
+    fprintf(stdout, "[INFO] Computing table of seeds\n");
     
     c = fgetc(metagenome);
     while(!feof(metagenome)){
@@ -99,27 +98,23 @@ int main(int argc, char ** av){
             continue;
         }
         
-        if (strandF) shift_byte_array_left(b, ksizeTables[ksizeidx]); // Shift bits sequence
-        if (strandR) shift_byte_array_right(br, ksizeTables[ksizeidx]); // Shift bits sequence
+        shift_byte_array_left(b, ksizeTables[ksizeidx]); // Shift bits sequence
 
         // Add new nucleotide
         switch (c) {
             case 'A': // A = 00
                 crrSeqL++;
-                if (strandR) br[0] |= 192;
                 break;
             case 'C': // C = 01
-                if (strandF) b[ksizeTables[ksizeidx] - 1] |= 1;
-                if (strandR) br[0] |= 128;
+                b[ksizeTables[ksizeidx] - 1] |= 1;
                 crrSeqL++;
                 break;
             case 'G': // G = 10
-                if (strandF) b[ksizeTables[ksizeidx] - 1] |= 2;
-                if (strandR) br[0] |= 64;
+                b[ksizeTables[ksizeidx] - 1] |= 2;
                 crrSeqL++;
                 break;
             case 'T': // T = 11
-                if (strandF) b[ksizeTables[ksizeidx] - 1] |= 3;
+                b[ksizeTables[ksizeidx] - 1] |= 3;
                 crrSeqL++;
                 break;
             default : // Bad formed sequence
