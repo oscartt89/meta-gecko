@@ -18,6 +18,8 @@ WORKING MODES
 					f(Si) 	|	log2(Hi)  >= Al(Hi) 		1
 							|	otherwise 					0
 				Note that n is not used.
+5 	Use a normal distribution of mean being the average and standard deviation computed from the sample. Use n as minimum
+	pvalue to filter genomes
 
 
 **********/
@@ -31,13 +33,21 @@ WORKING MODES
 #include "metag_common.h"
 #include "common.h"
 
+// Returns the probability of x, given the distribution described by mu and sigma.
+long double pdf(long double x, long double mu, long double sigma){
+	return expl( -1 * (x - mu) * (x - mu) / (2 * sigma * sigma)) / (sigma * sqrt(2 * M_PI));
+}
 
-//goes [a, b)
+// Computes the (approximated) cumulative distribution function in the interval [-inf,x] of a gaussian distribution
+long double cdf(long double x, long double mu, long double sigma){
+	return 0.5 * (1 + erfl((x - mu) / (sigma * sqrtl(2.))));
+}
+
 
 #define LINE_BUFFER 5000
 
 int main(int argc, char ** av){
-	if(argc != 4) terror("USE: dbReduce <genome_database> <sequence_hits_histogram> <working_mode> <n>");
+	if(argc < 4) terror("USE: dbReduce <genome_database> <sequence_hits_histogram> <working_mode> <n>");
 	FILE * f, * histdb, * dbout;
 	
 
@@ -50,7 +60,16 @@ int main(int argc, char ** av){
 
 	// Working mode selection
 	int workingMode = atoi(av[3]);
-	uint64_t workingMode_value = asciiToUint64(av[4]);
+	uint64_t workingMode_value;
+	long double workingMode_value_float;
+
+	if(workingMode == 5){ //N is a probability in this case
+		workingMode_value_float = atof(av[4]);
+		workingMode_value = 1; //To skip warnings...
+	}else{ //All other cases use unsigned integers
+		workingMode_value = asciiToUint64(av[4]);
+		workingMode_value_float = 1.0; //To skip warnings...
+	}
 
 	//Reading and writing variables
 	char buffer[LINE_BUFFER];
@@ -139,6 +158,48 @@ int main(int argc, char ** av){
 			free(computedValues);
 
 		}
+		break;
+
+		case 5: {
+			long double stdev = 0;
+			long double average = 0;
+			for(i=0;i<seqsRead;i++){
+				average += (long double) seqHist[i];
+			}
+			average /= seqsRead;
+			for(i=0;i<seqsRead;i++){
+				stdev += ((long double)seqHist[i]-average)*((long double)seqHist[i]-average); 
+			}
+			stdev *= (1/(long double)seqsRead);
+			stdev = sqrtl(stdev);
+
+			long double pvalue;
+
+			for(i=0;i<seqsRead;i++){
+
+
+				//Bryc, W., 2002. “A Uniform Approximation to the Right Normal Tail Integral,” Applied Mathematics and Computation, Vol. 127, 365-374
+				//pvalue = (zscore + 3.333) / (  sqrtl(2*M_PI*zscore*zscore) + 7.32 * zscore + 6.666 ) * expl( - (zscore*zscore) / 2 );
+
+				//Zogheib, Bashar, and Myron Hlynka. Approximations of the Standard Normal Distribution. University of Windsor, Department of Mathematics and Statistics, 2009.
+				//pvalue = (0.5 - 0.398942*zscore - 0.066490*zscore*zscore*zscore + 0.09974*zscore*zscore*zscore*zscore*zscore);
+
+
+				//A Poisson distribution can be approximated using a normal if lambda is sufficiently large
+				pvalue = cdf(seqHist[i], average, sqrtl(average));
+
+				if(pvalue >= workingMode_value_float){
+					//TODO store the smallest number of hits that has bigger pvalue and compare to this (look up table)
+					mask[i] = 1;
+				}else{
+					mask[i] = 0;
+				}
+
+
+			}
+
+		}
+
 		break;
 
 		//1	If it has at least n hits [DEFAULT]
