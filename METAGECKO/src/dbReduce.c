@@ -174,6 +174,7 @@ int main(int argc, char ** av){
 			stdev = sqrtl(stdev);
 
 			long double pvalue;
+			uint64_t minHits = 0xFFFFFFFFFFFFFFFF; //Max in uint64_t
 
 			for(i=0;i<seqsRead;i++){
 
@@ -188,9 +189,14 @@ int main(int argc, char ** av){
 				//A Poisson distribution can be approximated using a normal if lambda is sufficiently large
 				pvalue = cdf(seqHist[i], average, sqrtl(average));
 
+				if(minHits < seqHist[i]){
+					mask[i] = 1; //If a smaller amount of hits yielded a cdf bigger than the filter in a previous occasion, we can use this to skip the calculation again
+					continue;
+				}
+
 				if(pvalue >= workingMode_value_float){
-					//TODO store the smallest number of hits that has bigger pvalue and compare to this (look up table)
 					mask[i] = 1;
+					if(minHits > seqHist[i]) minHits = seqHist[i]; //Look-up table
 				}else{
 					mask[i] = 0;
 				}
