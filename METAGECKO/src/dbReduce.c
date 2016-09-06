@@ -186,12 +186,14 @@ int main(int argc, char ** av){
 				//pvalue = (0.5 - 0.398942*zscore - 0.066490*zscore*zscore*zscore + 0.09974*zscore*zscore*zscore*zscore*zscore);
 
 
-				//A Poisson distribution can be approximated using a normal if lambda is sufficiently large
-				pvalue = cdf(seqHist[i], average, sqrtl(average));
+				
 
 				if(minHits < seqHist[i]){
 					mask[i] = 1; //If a smaller amount of hits yielded a cdf bigger than the filter in a previous occasion, we can use this to skip the calculation again
 					continue;
+				}else{
+					//A Poisson distribution can be approximated using a normal if lambda is sufficiently large
+					pvalue = cdf(seqHist[i], average, sqrtl(average));
 				}
 
 				if(pvalue >= workingMode_value_float){
@@ -200,8 +202,6 @@ int main(int argc, char ** av){
 				}else{
 					mask[i] = 0;
 				}
-
-
 			}
 
 		}
