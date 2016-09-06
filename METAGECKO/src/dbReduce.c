@@ -77,7 +77,10 @@ int main(int argc, char ** av){
 	name_dbout[0] = '\0';
 
 
+	//Variable to account how many sequences were excluded
+	uint64_t keptSeqs = 0;
 
+	//Opening output db file
 	strcat(name_dbout, av[1]);
 	strcat(name_dbout, ".presec");
 	fprintf(stdout, "[INFO] Opening output file :%s\n", name_dbout);
@@ -190,6 +193,7 @@ int main(int argc, char ** av){
 
 				if(minHits < seqHist[i]){
 					mask[i] = 1; //If a smaller amount of hits yielded a cdf bigger than the filter in a previous occasion, we can use this to skip the calculation again
+					keptSeqs++;
 					continue;
 				}else{
 					//A Poisson distribution can be approximated using a normal if lambda is sufficiently large
@@ -198,6 +202,7 @@ int main(int argc, char ** av){
 
 				if(pvalue >= workingMode_value_float){
 					mask[i] = 1;
+					keptSeqs++;
 					if(minHits > seqHist[i]) minHits = seqHist[i]; //Look-up table
 				}else{
 					mask[i] = 0;
@@ -225,7 +230,7 @@ int main(int argc, char ** av){
 		fprintf(stdout, "%"PRIu64" :->: %"PRIu64" [MASK:%d]\n", i, seqHist[i], (int) mask[i]);
 	}
 	*/
-	
+	fprintf(stdout, "[INFO] Total sequences: %"PRIu64"; Number of kept sequences: %"PRIu64"; Discarded sequences: %"PRIu64"\n", seqsRead, keptSeqs, seqsRead-keptSeqs);
 
 
 	//Read database
