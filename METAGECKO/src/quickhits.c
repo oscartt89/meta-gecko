@@ -62,9 +62,9 @@ int main(int argc, char ** av){
     
     //Allocate memory, as much as the size of the file for a table that will be sorted
     unsigned char * tableForward = (unsigned char *) malloc(ksizeTables[ksizeidx]*totalSize);
-    unsigned char * tableReverse = (unsigned char *) malloc(ksizeTables[ksizeidx]*totalSize);
+    //unsigned char * tableReverse = (unsigned char *) malloc(ksizeTables[ksizeidx]*totalSize);
     if(tableForward == NULL) terror("Could not allocate memory for forward table");
-    if(tableReverse == NULL) terror("Could not allocate memory for reverse table");
+    //if(tableReverse == NULL) terror("Could not allocate memory for reverse table");
     
     
     //Variables to read kmers
@@ -128,12 +128,15 @@ int main(int argc, char ** av){
         }
         pos++;
         if (crrSeqL >= (uint64_t) ksizeTables[ksizeidx]*4) { // Full well formed sequence
+            memcpy(tableForward+idx, b, ksizeTables[ksizeidx]);
+            /*
             if(strandF){
                 memcpy(tableForward+idx, b, ksizeTables[ksizeidx]);
             }
             if(strandR){
                 memcpy(tableReverse+idx, b, ksizeTables[ksizeidx]);
             }
+            */
             idx += ksizeTables[ksizeidx];
             
         }
@@ -141,12 +144,12 @@ int main(int argc, char ** av){
 
     }
     fprintf(stdout, "[INFO] Sequence of length %"PRIu64" has %"PRIu64" mers of size k=%d\n", pos, pos-ksizeTables[ksizeidx]*4, ksizeTables[ksizeidx]*4);
-    fprintf(stdout, "[INFO] Table of seeds used up %"PRIu64" bytes, which are %"PRIu64" MegaBytes\n", 2*idx, 2*idx/(1024*1024));
+    fprintf(stdout, "[INFO] Table of seeds used up %"PRIu64" bytes, which are %"PRIu64" MegaBytes\n", idx, idx/(1024*1024));
     
     fprintf(stdout, "[INFO] Sorting forward table\n");
     QuickSortByteArray(tableForward, 0, idx/ksizeTables[ksizeidx] - 1, ksizeTables[ksizeidx]);
-    fprintf(stdout, "[INFO] Sorting reverse table\n");
-    QuickSortByteArray(tableReverse, 0, idx/ksizeTables[ksizeidx] - 1, ksizeTables[ksizeidx]);
+    //fprintf(stdout, "[INFO] Sorting reverse table\n");
+    //QuickSortByteArray(tableReverse, 0, idx/ksizeTables[ksizeidx] - 1, ksizeTables[ksizeidx]);
 
 
     //printTable(tableForward, idx/ksizeTables[ksizeidx], ksizeTables[ksizeidx], stdout);
@@ -228,7 +231,7 @@ int main(int argc, char ** av){
             }
             if(strandR){
                 //Binary Search
-                found = binarySearchByteArray(br, tableReverse, ksizeTables[ksizeidx], nMers);
+                found = binarySearchByteArray(br, tableForward, ksizeTables[ksizeidx], nMers);
                 if(found >= 0){
                     if(seqNum > nAlloc*STARTING_SEQS){
                         nAlloc++;
@@ -266,7 +269,7 @@ int main(int argc, char ** av){
 
     free(seqHits);
     free(tableForward);
-    free(tableReverse);
+    //free(tableReverse);
     
     
     

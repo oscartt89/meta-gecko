@@ -20,6 +20,7 @@ int wordcmpbytearray(const unsigned char *w1, const unsigned char *w2, int bytes
 	return 0;
 }
 
+
 /* 	This function is used to shift left bits in a unsigned char array
  *	@b: char array representing the word using compressed 2-bit characters
  */
@@ -106,7 +107,7 @@ void showByteArray(const unsigned char * b, char * kmer, uint16_t WORD_LENGTH) {
         c = c >> 6;
         kmer[4*i+3] = Alf[(int) c];
     }
-    kmer[WORD_LENGTH]='\0';
+    kmer[32]='\0';
 }
 
 /* Performs a binary search on an unsigned char array comparing "bytes" bytes at a time
@@ -145,11 +146,15 @@ int64_t binarySearchByteArray(unsigned char * byteword, unsigned char * bytearra
     return -1;
 }
 
-/* Performs a binary search on an unsigned char array comparing "bytes" bytes at a time
- *  @bytearray: The vector holding the words
- *  @nSequences:    The length in bytes of the vector (sorry)
- *  @bytes:     How many bytes per value
-    @out:       The file handler to where the table should be printed
+
+
+
+/* Prints the kmer table values converted to readable format (ascii)
+ *  @array: The vector holding the words
+    @nSequences:    The number of words
+    @bytes: Bytes per word
+    @out:   File handler to where printing will be redirected
+ *  
  */
 
 void printTable(unsigned char * array, uint64_t nSequences, unsigned int bytes, FILE * out){
