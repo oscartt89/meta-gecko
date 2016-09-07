@@ -114,29 +114,32 @@ void showByteArray(const unsigned char * b, char * kmer, uint16_t WORD_LENGTH) {
  *  @byteword:  A pointer to the word that will be compared
  *  @bytearray: The vector holding the words
  *  @bytes:     How many bytes per value
-    @nMers:     Total number of mers in the bytearray
+    @t_first:     index (multiplied by the number of bytes) of the first kmer
+    @t_last:      index (multiplied by the number of bytes) of the last kmer
 
     Returns
         The position of the byteword in the array if it was found, if not, -1 is returned
  */
 
-int64_t binarySearchByteArray(unsigned char * byteword, unsigned char * bytearray, unsigned int bytes, uint64_t nMers) {
+int64_t binarySearchByteArray(unsigned char * byteword, unsigned char * bytearray, unsigned int bytes, uint64_t t_first, uint64_t t_last) {
 
     //char kmer1[32], kmer2[32];
+    //showByteArray(byteword, kmer1, 32);
 
-    int64_t first = 0;
-    int64_t last = nMers - 1;
+
+    int64_t first = t_first;
+    int64_t last = t_last - 1;
     int64_t middle = (first+last)/2;
     int compare;
 
     while (first <= last) {
-        //showByteArray(byteword, kmer1, 32);
+        
         //showByteArray(bytearray+(middle*bytes), kmer2, 32);
+
         //printf("Comparing:\n%s\n%s  ", kmer1, kmer2);
         //printf("accessing %"PRIu64" first:%"PRIu64", last: %"PRIu64"\n", middle*bytes, first, last);
         compare = wordcmpbytearray(byteword, bytearray+(middle*bytes), bytes);
         //printf("yields: %d\n", compare);
-
         if (compare == 0) return middle;
         if (compare < 0) last=middle - 1; 
         else first = middle + 1;
@@ -160,9 +163,9 @@ int64_t binarySearchByteArray(unsigned char * byteword, unsigned char * bytearra
 void printTable(unsigned char * array, uint64_t nSequences, unsigned int bytes, FILE * out){
     uint64_t i;
     char kmer[32];
-    for(i=0;i<nSequences/bytes;i++){
+    for(i=0;i<nSequences;i++){
         showByteArray((unsigned char *)array+(i*bytes), kmer, 32);
-        fprintf(out, "%s\n", kmer);
+        fprintf(out, "%s->%"PRIu64"\n", kmer, i);
     }
 }
 
@@ -181,3 +184,4 @@ uint64_t asciiToUint64(const char *text){
     }
     return number;
 }
+

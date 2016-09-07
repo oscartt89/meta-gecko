@@ -9,6 +9,10 @@ USAGE       <metagenome>            The .fasta file of the metagenome
             <genomes_database>      The .fasta database containing the genomes
             <sequence_hits_histogram>   The output binary file containing the amount of hits per sequence
             <ksize[1=8,2=16,3=32]>  The size of the word, e.g. for k=32 use value 3
+[OPTIONAL]
+            <indexes_number_sorted_table>   [TODO] How many indexes will be stored for reducing the search space in the binary
+                                            search function. E.g. if set to 2, it will store indexes for AA, AC, .. CA, CC, up to TG, TT.
+                                            The default is 4.
 
 
 **********/
@@ -20,7 +24,7 @@ USAGE       <metagenome>            The .fasta file of the metagenome
 #include "common.h"
 #include "metag_common.h"
 
-
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define STARTING_SEQS 1000
 static uint32_t ksizeTables[4] = {0,2,4,8};
 
@@ -50,6 +54,14 @@ int main(int argc, char ** av){
     //Ksize for seeds
     uint32_t ksizeidx = (uint32_t) atoi(av[4]);
     
+    //If the number of indexes was specified
+    uint64_t n_sort_idx = 3, n_sort_idx_table_size;
+    if(argc == 6) n_sort_idx = asciiToUint64(av[5]);
+    n_sort_idx_table_size = 4;
+    uint64_t i;
+    for(i=0;i<n_sort_idx;i++){
+        n_sort_idx_table_size *= 4; //4 to the power of n_sort_idx
+    }
 
     //Allocate memory for the sequences histogram
     uint64_t * seqHits = (uint64_t *) calloc(STARTING_SEQS, sizeof(uint64_t));
@@ -66,7 +78,10 @@ int main(int argc, char ** av){
     if(tableForward == NULL) terror("Could not allocate memory for forward table");
     //if(tableReverse == NULL) terror("Could not allocate memory for reverse table");
     
-    
+    //Indexes table
+    uint64_t * idx_sorted_t_from = (uint64_t *) malloc(n_sort_idx_table_size*sizeof(uint64_t));
+    if(idx_sorted_t_from == NULL) terror("Could not allocate memory for sorted indexes");
+
     //Variables to read kmers
     char c = 'N'; //Char to read characters
 
@@ -143,11 +158,53 @@ int main(int argc, char ** av){
     
     fprintf(stdout, "[INFO] Sorting forward table\n");
     QuickSortByteArray(tableForward, 0, idx/ksizeTables[ksizeidx] - 1, ksizeTables[ksizeidx]);
+
+    fprintf(stdout, "[INFO] Computing sorted table index\n");
+
+    //b_comp will hild the current kmer we are looking for to index
+    unsigned char b_comp = 0;
+    uint64_t k = 0; //k is the index to go through the table
+    i = 1;
+    idx_sorted_t_from[0] = 0; //First kmer starts on zero, independtly of which one it is
+
+
+    while(k < idx && i < n_sort_idx_table_size - 1){ //Go through the forward table
+
+        if(b_comp < (unsigned char)tableForward[k]){
+            idx_sorted_t_from[i] = (k)/ksizeTables[ksizeidx];
+            b_comp += 1;
+            i++;
+        }else if(b_comp == (unsigned char)tableForward[k]){
+            idx_sorted_t_from[i] = (k)/ksizeTables[ksizeidx];
+            k+= ksizeTables[ksizeidx];
+        }else{
+            k+= ksizeTables[ksizeidx];
+        }
+        
+    }
+    //If some are missing at the end, just fill with the max
+    i++;
+    while(i < n_sort_idx_table_size){
+        idx_sorted_t_from[i] = (idx/ksizeTables[ksizeidx]) - 1;
+        i++;
+    }
+
+    /*
+    for(i=0;i<25;i++){
+        printf("Printing kmer %"PRIu64" -> %"PRIu64", %"PRIu64"\n", i, idx_sorted_t_from[i], idx_sorted_t_from[i+1]);    
+    }
+    */
+
     //fprintf(stdout, "[INFO] Sorting reverse table\n");
     //QuickSortByteArray(tableReverse, 0, idx/ksizeTables[ksizeidx] - 1, ksizeTables[ksizeidx]);
 
-
-    //printTable(tableForward, idx/ksizeTables[ksizeidx], ksizeTables[ksizeidx], stdout);
+    
+    printTable(tableForward, idx/ksizeTables[ksizeidx], ksizeTables[ksizeidx], stdout);
+    /*
+    for(i=0;i<n_sort_idx_table_size;i++){
+        fprintf(stdout, "%"PRIu64"\n", idx_sorted_t_from[i]);
+    }
+    */
     //printTable(tableReverse, idx/ksizeTables[ksizeidx], ksizeTables[ksizeidx], stdout);
 
 
@@ -163,7 +220,7 @@ int main(int argc, char ** av){
 
     c = 'N';
     pos = 0, crrSeqL = 0; //total length, current sequence length
-    uint64_t seqNum = 0, nMers = idx/ksizeTables[ksizeidx]; // current sequence index, total number of k-mers
+    uint64_t seqNum = 0; // current sequence index
     int64_t found; // If the binary search function has found the kmer
 
     c = fgetc(database);
@@ -213,7 +270,8 @@ int main(int argc, char ** av){
         if (crrSeqL >= (uint64_t) ksizeTables[ksizeidx]*4) { // Full well formed sequence
             if(strandF){
                 //Binary Search
-                found = binarySearchByteArray(b, tableForward, ksizeTables[ksizeidx], nMers);
+                found = binarySearchByteArray(b, tableForward, ksizeTables[ksizeidx], idx_sorted_t_from[b[0]], idx_sorted_t_from[b[0]+1]);
+                //found = binarySearchByteArray(b, tableForward, ksizeTables[ksizeidx], 0, idx/ksizeTables[ksizeidx]);
                 
                 if(found >= 0){
                     if(seqNum > nAlloc*STARTING_SEQS){
@@ -226,7 +284,9 @@ int main(int argc, char ** av){
             }
             if(strandR){
                 //Binary Search
-                found = binarySearchByteArray(br, tableForward, ksizeTables[ksizeidx], nMers);
+                found = binarySearchByteArray(br, tableForward, ksizeTables[ksizeidx], idx_sorted_t_from[br[0]], idx_sorted_t_from[br[0]+1]);
+                //found = binarySearchByteArray(br, tableForward, ksizeTables[ksizeidx], 0, idx/ksizeTables[ksizeidx]);
+                
                 if(found >= 0){
                     if(seqNum > nAlloc*STARTING_SEQS){
                         nAlloc++;
@@ -264,6 +324,7 @@ int main(int argc, char ** av){
 
     free(seqHits);
     free(tableForward);
+    free(idx_sorted_t_from);
     //free(tableReverse);
     
     
