@@ -199,7 +199,7 @@ int main(int argc, char ** av){
     //QuickSortByteArray(tableReverse, 0, idx/ksizeTables[ksizeidx] - 1, ksizeTables[ksizeidx]);
 
     
-    printTable(tableForward, idx/ksizeTables[ksizeidx], ksizeTables[ksizeidx], stdout);
+    //printTable(tableForward, idx/ksizeTables[ksizeidx], ksizeTables[ksizeidx], stdout);
     /*
     for(i=0;i<n_sort_idx_table_size;i++){
         fprintf(stdout, "%"PRIu64"\n", idx_sorted_t_from[i]);
