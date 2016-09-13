@@ -243,6 +243,20 @@ int main(int ac, char **av) {
 
     // Search hits
     // Prepare necessary variables
+    uint64_t currHitMW = BYTE_BUFFER_N_HITS+1, currHitGW = BYTE_BUFFER_N_HITS+1; //Variables to know if we need to load a new buffer
+    uint64_t maxHitMW, maxHitGW; //To know when we reach FEOF
+    //Load a buffer capable of holding up to BYTE_BUFFER_N_HITS hits
+    char * byteBufferHitsMW = (char *) malloc(BYTE_BUFFER_N_HITS*getSizeOfHit(BytesMetagWord)*sizeof(char));
+    char * byteBufferHitsGW = (char *) malloc(BYTE_BUFFER_N_HITS*getSizeOfHit(BytesMetagWord)*sizeof(char));
+    if(byteBufferHitsMW == NULL){
+        fprintf(stderr, "Could not allocate memory the metagenome buffered hits reader\n");
+        exit(-1);
+    }
+    if(byteBufferHitsGW == NULL){
+        fprintf(stderr, "Could not allocate memory the database buffered hits reader\n");
+        exit(-1);
+    }
+
     HashEntry we[2]; // [0]-> Metagenome [1]-> Genome
     uint64_t lastFirstHit = (uint64_t) ftello(gW);
     bool firstmatch = true;
@@ -260,9 +274,11 @@ int main(int ac, char **av) {
     } else we[1].WB = BytesGenoWord;
 
     // Read first entrances
-    if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
 
-    if (readHashEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
+
+    maxHitMW = readHashEntrance(&we[0], mW, BytesMetagWord, byteBufferHitsMW, 0, &currHitMW, 0);
+
+    maxHitGW = readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 0, &currHitGW, 0);
 
     /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, "\t(Done)\n");
@@ -270,11 +286,12 @@ int main(int ac, char **av) {
     fflush(stdout);
     /////////////////////////// CHECKPOINT ///////////////////////////
 
+    //readHashEntrance(..., char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom)
 
     // Search
     if (prefixSize == BytesMetagWord * 4 && prefixSize == BytesGenoWord * 4) {
 
-        while (!feof(mW) && !feof(gW)) {
+        while ((!feof(mW) || (feof(mW) && currHitMW < maxHitMW)) && (!feof(gW) || (feof(gW) && currHitGW < maxHitGW))) {
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
                 if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize,
                                  &buffersWritten, genomeLength, metagenomeLength) < 0)
@@ -286,14 +303,14 @@ int main(int ac, char **av) {
 
             // Load next word
             if (cmp <= 0) { // New metagenome word is necessary
-                if (!feof(mW)) if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
+                if ((!feof(mW) || (feof(mW) && currHitMW < maxHitMW))) maxHitMW = readHashEntrance(&we[0], mW, BytesMetagWord, byteBufferHitsMW, 0, &currHitMW, 0);
             }
             if (cmp >= 0) { // New genome word is necessary
-                if (!feof(gW)) if (readHashEntrance(&we[1], gW, BytesGenoWord) < 0) return -1;
+                if ((!feof(gW) || (feof(gW) && currHitGW < maxHitGW))) maxHitGW = readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 0, &currHitGW, 0);
             }
         }
     } else {
-        while (!feof(mW)) {
+        while ((!feof(mW) || (feof(mW) && currHitMW < maxHitMW))) {
             // Check hit
             if ((cmp = wordcmp(we[0].seq, we[1].seq, prefixSize)) == 0) { // Hit
                 if (generateHits(buffer, we[0], we[1], mP, gP, hIndx, hts, &hitsInBuffer, prefixSize,
@@ -307,25 +324,31 @@ int main(int ac, char **av) {
             // Check if could be more
             if (cmp >= 0) { // Could be more
                 // Load next genome word
-                readHashEntrance(&we[1], gW, BytesGenoWord);
-                if (feof(gW)) { // End of genome file
+                maxHitGW = readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 0, &currHitGW, 0);
+                if (((feof(gW) && currHitGW >= maxHitGW))) { // End of genome file
                     // Load next metagenome word
-                    if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
+                    maxHitMW = readHashEntrance(&we[0], mW, BytesMetagWord, byteBufferHitsMW, 0, &currHitMW, 0);
                     // Reset values and come back at dict
                     firstmatch = true;
-                    fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
-                    readHashEntrance(&we[1], gW, BytesGenoWord);
+                    //fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
+                    //readHashEntrance(&we[1], gW, BytesGenoWord);
+                    maxHitGW = readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 1, &currHitGW, lastFirstHit);
                 }
             } else if (cmp < 0) { // No more matches, take next metag word
                 // Load next metagenome word
-                if (readHashEntrance(&we[0], mW, BytesMetagWord) < 0) return -1;
+                maxHitMW = readHashEntrance(&we[0], mW, BytesMetagWord, byteBufferHitsMW, 0, &currHitMW, 0);
                 // Reset values and come back at dict
                 firstmatch = true;
-                fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
-                readHashEntrance(&we[1], gW, BytesGenoWord);
+                //fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
+                //readHashEntrance(&we[1], gW, BytesGenoWord);
+                maxHitGW = readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 1, &currHitGW, lastFirstHit);
             }
         }
     }
+
+    //Free hits reader
+    free(byteBufferHitsMW);
+    free(byteBufferHitsGW);
 
     //If there are NO hits at all
     if (hitsInBuffer == 0 && buffersWritten == 0) {

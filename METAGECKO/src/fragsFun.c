@@ -65,28 +65,55 @@ int HComparer(Hit h1, Hit h2) {
  * store it in a wordEntry.
  *  @param we word entry where info will be stored.
  *  @param wD dictionary file.
- *  @return zero if everything finished well or a negative number in other cases.
+    @byteBufferHits allocated buffer of bytes to read hits at once
+    @nextMWorGW a variable that takes the following values depending on what should be read:
+        0 -> read next hit
+        1 -> Load byte buffer at position "loadFrom"
+    @currHit    The current hit number in the BUFFER [MUST BE BYTE_BUFFER_N_HITS+1 AT START!!!!!!!!!!]
+    @loadFrom   The position from where the buffer should be read
+ *  @return     The maximum currHit to be read (if it is less than BYTE_BUFFER_N_HITS then its the file's feof)
  */
-int readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes) {
-    // Read sequence
-    if (fread(we->seq, sizeof(unsigned char), SeqBytes, wD) != SeqBytes) {
-        if(feof(wD)){
-            return 1;
+uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom) {
+
+    uint64_t tRead = 0;
+
+    switch(nextMWorGW){
+        case 0: {
+            //Read next hit
+            //If we need to load the next byte buffer ...
+            if((*currHit+1)*getSizeOfHit(SeqBytes) >  BYTE_BUFFER_N_HITS*getSizeOfHit(SeqBytes)){
+                tRead=fread(byteBufferHits, getSizeOfHit(SeqBytes), BYTE_BUFFER_N_HITS, wD);
+                if( tRead == 0 && !feof(wD)){
+                    fprintf(stderr, "readHashEntrance:: Could not read hits\n");
+                    exit(-1);
+                }
+                *currHit = 0; //Reset current hit to 1
+            }
         }
-        fprintf(stderr, "readHashEntrance:: Error loading sequence\n");
-        exit(-1);
+        break;
+
+        case 1: {
+            //Read buffer from "loadFrom" position
+            fseeko(wD, loadFrom, SEEK_SET);
+            tRead=fread(byteBufferHits, getSizeOfHit(we->WB), BYTE_BUFFER_N_HITS, wD);
+            if(tRead == 0 && !feof(wD)){
+                fprintf(stderr, "readHashEntrance:: Could not read hits\n");
+                exit(-1);
+            }
+            *currHit = 0; //Reset
+
+
+        }
+        break;
     }
-    // Read position
-    if (fread(&we->pos, sizeof(uint64_t), 1, wD) != 1) {
-        fprintf(stderr, "readHashEntrance:: Error loading position.\n");
-        exit(-1);
-    }
-    // Read repetitions
-    if (fread(&we->reps, sizeof(uint32_t), 1, wD) != 1) {
-        fprintf(stderr, "readHashEntrance:: Error loading repetitions.\n");
-        exit(-1);
-    }
-    return 0;
+
+    //Copy the seq to we
+    memcpy(we->seq, byteBufferHits+*currHit+sizeof(uint16_t), SeqBytes);
+    memcpy(&we->pos, byteBufferHits+*currHit+sizeof(uint16_t)+SeqBytes, sizeof(uint64_t));
+    memcpy(&we->reps, byteBufferHits+*currHit+sizeof(uint16_t)+SeqBytes+sizeof(uint64_t), sizeof(uint32_t));
+    *currHit = *currHit + 1;
+
+    return tRead;
 }
 
 
@@ -1018,7 +1045,15 @@ void endianessConversion(char *source, char *target, int numberOfBytes) {
     }
 }
 
+/*
+    Returns the size of the current Hit Structure (depends on bytesInWord)
+    @WB     The number of bytes for each word
 
+*/
+
+inline uint32_t getSizeOfHit(uint16_t WB){
+    return sizeof(uint16_t) + sizeof(uint64_t) + sizeof(uint32_t) + WB;
+}
 
 
 

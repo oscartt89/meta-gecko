@@ -23,7 +23,7 @@
 int HComparer(Hit w1, Hit w2);
 
 
-int readHashEntrance(HashEntry *, FILE *, uint16_t);
+uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom);
 
 int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, uint64_t *, uint64_t, uint64_t);
 
@@ -76,3 +76,5 @@ void writeSequenceLength(uint64_t *, FILE *);
 void endianessConversion(char *, char *, int);
 
 inline int filteredHit(Hit h1, Hit h2, int prefixSize);
+
+inline uint32_t getSizeOfHit(uint16_t WB);
