@@ -77,4 +77,4 @@ void endianessConversion(char *, char *, int);
 
 inline int filteredHit(Hit h1, Hit h2, int prefixSize);
 
-inline uint32_t getSizeOfHit(uint16_t WB);
+inline uint32_t getSizeOfIndexEntry(uint16_t WB);

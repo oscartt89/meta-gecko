@@ -77,42 +77,39 @@ uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byt
 
     uint64_t tRead = 0;
 
-    switch(nextMWorGW){
-        case 0: {
-            //Read next hit
-            //If we need to load the next byte buffer ...
-            if((*currHit+1)*getSizeOfHit(SeqBytes) >  BYTE_BUFFER_N_HITS*getSizeOfHit(SeqBytes)){
-                tRead=fread(byteBufferHits, getSizeOfHit(SeqBytes), BYTE_BUFFER_N_HITS, wD);
-                if( tRead == 0 && !feof(wD)){
-                    fprintf(stderr, "readHashEntrance:: Could not read hits\n");
-                    exit(-1);
-                }
-                *currHit = 0; //Reset current hit to 1
-            }
-        }
-        break;
-
-        case 1: {
-            //Read buffer from "loadFrom" position
-            fseeko(wD, loadFrom, SEEK_SET);
-            tRead=fread(byteBufferHits, getSizeOfHit(we->WB), BYTE_BUFFER_N_HITS, wD);
-            if(tRead == 0 && !feof(wD)){
+    if(nextMWorGW == 0){
+        //Read next hit
+        //If we need to load the next byte buffer ...
+        if(*currHit >=  BYTE_BUFFER_N_HITS){
+            tRead=fread(byteBufferHits, getSizeOfIndexEntry(SeqBytes), BYTE_BUFFER_N_HITS, wD);
+            //printf("Read %"PRIu64" hits\n", tRead);
+            if( tRead == 0 && !feof(wD)){
                 fprintf(stderr, "readHashEntrance:: Could not read hits\n");
                 exit(-1);
             }
-            *currHit = 0; //Reset
-
-
+            *currHit = 0; //Reset current hit to 1
         }
-        break;
+    }
+    else if(nextMWorGW == 1){
+        //Read buffer from "loadFrom" position
+        fseeko(wD, loadFrom, SEEK_SET);
+        tRead=fread(byteBufferHits, getSizeOfIndexEntry(SeqBytes), BYTE_BUFFER_N_HITS, wD);
+        //printf("Switched block\n");
+        if(tRead == 0 && !feof(wD)){
+            fprintf(stderr, "readHashEntrance:: Could not read hits\n");
+            exit(-1);
+        }
+        *currHit = 0; //Reset
     }
 
     //Copy the seq to we
-    memcpy(we->seq, byteBufferHits+*currHit+sizeof(uint16_t), SeqBytes);
-    memcpy(&we->pos, byteBufferHits+*currHit+sizeof(uint16_t)+SeqBytes, sizeof(uint64_t));
-    memcpy(&we->reps, byteBufferHits+*currHit+sizeof(uint16_t)+SeqBytes+sizeof(uint64_t), sizeof(uint32_t));
+    memcpy(we->seq, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes)), SeqBytes);
+    memcpy(&we->pos, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes))+SeqBytes, sizeof(uint64_t));
+    memcpy(&we->reps, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes))+SeqBytes+sizeof(uint64_t), sizeof(uint32_t));
     *currHit = *currHit + 1;
 
+    //printf("Value of pos and reps: %"PRIu64", %"PRIu32"\n", we->pos, we->reps);
+    //getchar();
     return tRead;
 }
 
@@ -1051,8 +1048,8 @@ void endianessConversion(char *source, char *target, int numberOfBytes) {
 
 */
 
-inline uint32_t getSizeOfHit(uint16_t WB){
-    return sizeof(uint16_t) + sizeof(uint64_t) + sizeof(uint32_t) + WB;
+inline uint32_t getSizeOfIndexEntry(uint16_t WB){
+    return sizeof(uint64_t) + sizeof(uint32_t) + WB;
 }
 
 

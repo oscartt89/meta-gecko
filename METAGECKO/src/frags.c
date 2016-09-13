@@ -246,8 +246,8 @@ int main(int ac, char **av) {
     uint64_t currHitMW = BYTE_BUFFER_N_HITS+1, currHitGW = BYTE_BUFFER_N_HITS+1; //Variables to know if we need to load a new buffer
     uint64_t maxHitMW, maxHitGW; //To know when we reach FEOF
     //Load a buffer capable of holding up to BYTE_BUFFER_N_HITS hits
-    char * byteBufferHitsMW = (char *) malloc(BYTE_BUFFER_N_HITS*getSizeOfHit(BytesMetagWord)*sizeof(char));
-    char * byteBufferHitsGW = (char *) malloc(BYTE_BUFFER_N_HITS*getSizeOfHit(BytesMetagWord)*sizeof(char));
+    char * byteBufferHitsMW = (char *) malloc(BYTE_BUFFER_N_HITS*getSizeOfIndexEntry(BytesMetagWord)*sizeof(char));
+    char * byteBufferHitsGW = (char *) malloc(BYTE_BUFFER_N_HITS*getSizeOfIndexEntry(BytesGenoWord)*sizeof(char));
     if(byteBufferHitsMW == NULL){
         fprintf(stderr, "Could not allocate memory the metagenome buffered hits reader\n");
         exit(-1);
@@ -282,7 +282,7 @@ int main(int ac, char **av) {
 
     /////////////////////////// CHECKPOINT ///////////////////////////
     fprintf(stdout, "\t(Done)\n");
-    fprintf(stdout, "\tFrags: Generating seeds.");
+    fprintf(stdout, "\tFrags: Generating seeds. [>1 buffer]");
     fflush(stdout);
     /////////////////////////// CHECKPOINT ///////////////////////////
 
