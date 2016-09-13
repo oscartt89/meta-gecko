@@ -23,7 +23,7 @@
 int HComparer(Hit w1, Hit w2);
 
 
-uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom);
+uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom, uint64_t * tRead);
 
 int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, uint64_t *, uint64_t, uint64_t);
 
