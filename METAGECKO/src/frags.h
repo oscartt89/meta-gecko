@@ -7,9 +7,9 @@
 #include "metag_common.h"
 
 // VARAIBLES
-#define MAX_BUFF 10000000
+#define MAX_BUFF 1000000
 #define MAX_FILE_LENGTH 1024
-#define READ_BUFF_LENGTH 1000000
+#define READ_BUFF_LENGTH 100000
 #define Eq_Value 4
 #define Dif_Value -4
 #define Score_Threshold 0
@@ -23,7 +23,7 @@
 int HComparer(Hit w1, Hit w2);
 
 
-uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom, uint64_t * tRead);
+uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom, uint64_t * tRead, uint64_t * globalRead);
 
 int generateHits(Hit *, HashEntry, HashEntry, FILE *, FILE *, FILE *, FILE *, uint64_t *, int, uint64_t *, uint64_t, uint64_t);
 
