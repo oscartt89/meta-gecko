@@ -10,7 +10,7 @@
 #define BUFFER_LENGTH 10000000
 #define MAX_FILE_LENGTH 1024
 #define FLAG 0
-#define READ_BUFF_LENGTH 10000
+#define READ_BUFF_LENGTH 1000000
 
 // INLINE FUNCTIONS
 #define SWAP_W(a, b, t) t=a; a=b; b=t;

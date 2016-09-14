@@ -9,7 +9,7 @@
 // VARAIBLES
 #define MAX_BUFF 10000000
 #define MAX_FILE_LENGTH 1024
-#define READ_BUFF_LENGTH 10000
+#define READ_BUFF_LENGTH 1000000
 #define Eq_Value 4
 #define Dif_Value -4
 #define Score_Threshold 0

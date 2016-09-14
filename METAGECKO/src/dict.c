@@ -369,7 +369,7 @@ int main(int ac, char **av) {
         } else numBuffWritten++;
     } else if (wordsInBuffer == 0 && numBuffWritten == 0) { // Special case
         /////////////////////////// CHECKPOINT ///////////////////////////
-        fprintf(stdout, "\tDict: Any k-mer found.\n");
+        fprintf(stdout, "\tDict: No k-mer found.\n");
         fprintf(stdout, "\tDict: Closing the program.\n");
         /////////////////////////// CHECKPOINT ///////////////////////////
 
@@ -467,6 +467,9 @@ int main(int ac, char **av) {
     // Read info about buffers
     i = 0;
     uint64_t aux64;
+
+    
+    
     do {
         if (fread(&arrPos[i], sizeof(uint64_t), 1, bIndx) != 1) { // Position on words file
             fprintf(stderr, "Error reading position on P file.\n");
