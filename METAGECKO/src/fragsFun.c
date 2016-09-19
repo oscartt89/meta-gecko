@@ -112,19 +112,20 @@ uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byt
             *globalRead = loadFrom + (*tRead * getSizeOfIndexEntry(SeqBytes));
             
             if(*tRead == 0 && !feof(wD)){
-                fprintf(stderr, "readHashEntrance:: Could not read hits\n");
+                fprintf(stderr, "readHashEntrance:: Could not read hash entrance\n");
                 exit(-1);
             }
             *currHit = 0; //Reset
+
 
         }else{
             //Set reader in buffer to new position
             //printf("\nDiff: %"PRIu64" Diff in Hits: %"PRIu64"\n", *globalRead - loadFrom, (*globalRead - loadFrom)/getSizeOfIndexEntry(SeqBytes) );
             //printf("LoadFrom: %"PRIu64" ", loadFrom);
-            //printf("Buffer helped: New HEAD from %"PRIu64" ", *currHit * getSizeOfIndexEntry(SeqBytes));
+            //printf("Buffer helped: New HEAD from %"PRIu64" ", *currHit);
             uint64_t diff = loadFrom - (*globalRead - ( *tRead * getSizeOfIndexEntry(SeqBytes)));
             *currHit = diff/(getSizeOfIndexEntry(SeqBytes));
-            //printf(" to %"PRIu64"\n", *currHit * getSizeOfIndexEntry(SeqBytes));
+            //printf(" to %"PRIu64"\n", *currHit);
         }
 
     }
@@ -134,6 +135,14 @@ uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byt
     memcpy(we->seq, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes)), SeqBytes);
     memcpy(&we->pos, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes))+SeqBytes, sizeof(uint64_t));
     memcpy(&we->reps, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes))+SeqBytes+sizeof(uint64_t), sizeof(uint32_t));
+
+    /*
+    if(nextMWorGW == 1){
+        fprintf(stdout, "Gone back to: %"PRIu64" and obtained: [%"PRIu64", %"PRIu32"]\n", loadFrom, we->pos, we->reps);
+        getchar();
+    }
+    */
+
     *currHit = *currHit + 1;
     
 
