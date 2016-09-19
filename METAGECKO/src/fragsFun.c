@@ -1080,6 +1080,7 @@ void endianessConversion(char *source, char *target, int numberOfBytes) {
     }
 }
 
+
 /*
     Returns the size of the current Hit Structure (depends on bytesInWord)
     @WB     The number of bytes for each word
@@ -1089,6 +1090,3 @@ void endianessConversion(char *source, char *target, int numberOfBytes) {
 inline uint32_t getSizeOfIndexEntry(uint16_t WB){
     return sizeof(uint64_t) + sizeof(uint32_t) + WB;
 }
-
-
-
