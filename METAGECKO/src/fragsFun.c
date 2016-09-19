@@ -65,27 +65,89 @@ int HComparer(Hit h1, Hit h2) {
  * store it in a wordEntry.
  *  @param we word entry where info will be stored.
  *  @param wD dictionary file.
- *  @return zero if everything finished well or a negative number in other cases.
+    @byteBufferHits allocated buffer of bytes to read hits at once
+    @nextMWorGW a variable that takes the following values depending on what should be read:
+        0 -> read next hit
+        1 -> Load byte buffer at position "loadFrom"
+    @currHit    The current hit number in the BUFFER [MUST BE BYTE_BUFFER_N_HITS+1 AT START!!!!!!!!!!]
+    @loadFrom   The position from where the buffer should be read
+    @tRead      The total amount of read hits
+ *  @return     0
  */
-int readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes) {
-    // Read sequence
-    if (fread(we->seq, sizeof(unsigned char), SeqBytes, wD) != SeqBytes) {
-        if(feof(wD)){
-            return 1;
+uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom, uint64_t * tRead, uint64_t * globalRead) {
+
+    //Because of word byte size written in file
+    //loadFrom = loadFrom - 2;
+
+    if(nextMWorGW == 0){
+        //Read next hit
+        //If we need to load the next byte buffer ...
+        if(*currHit >=  BYTE_BUFFER_N_HITS){
+
+            *tRead=fread(byteBufferHits, getSizeOfIndexEntry(SeqBytes), BYTE_BUFFER_N_HITS, wD);
+            //Total number of bytes read relative to the file
+            *globalRead = *globalRead + (*tRead * getSizeOfIndexEntry(SeqBytes));
+            //printf("New buffer @%"PRIu64"\n", *globalRead);
+            //getchar();
+            if( *tRead == 0 && !feof(wD)){
+                fprintf(stderr, "readHashEntrance:: Could not read hits\n");
+                exit(-1);
+            }
+            *currHit = 0; //Reset current hit to 1
         }
-        fprintf(stderr, "readHashEntrance:: Error loading sequence\n");
-        exit(-1);
     }
-    // Read position
-    if (fread(&we->pos, sizeof(uint64_t), 1, wD) != 1) {
-        fprintf(stderr, "readHashEntrance:: Error loading position.\n");
-        exit(-1);
+    else if(nextMWorGW == 1){
+        //Read buffer from "loadFrom" position
+
+        //Only rewind if the needed word is out of reach
+        if(loadFrom < (*globalRead - (*tRead *getSizeOfIndexEntry(SeqBytes)))){
+
+
+            //printf("Switched block because LOADFROM=%"PRIu64" global-Buffer=%"PRIu64"\n", loadFrom, (*globalRead - BYTE_BUFFER_N_HITS*getSizeOfIndexEntry(SeqBytes)));
+            //getchar();
+            fseeko(wD, loadFrom, SEEK_SET);
+            //Update track of where we are at the file
+            
+            *tRead=fread(byteBufferHits, getSizeOfIndexEntry(SeqBytes), BYTE_BUFFER_N_HITS, wD);
+            *globalRead = loadFrom + (*tRead * getSizeOfIndexEntry(SeqBytes));
+            
+            if(*tRead == 0 && !feof(wD)){
+                fprintf(stderr, "readHashEntrance:: Could not read hash entrance\n");
+                exit(-1);
+            }
+            *currHit = 0; //Reset
+
+
+        }else{
+            //Set reader in buffer to new position
+            //printf("\nDiff: %"PRIu64" Diff in Hits: %"PRIu64"\n", *globalRead - loadFrom, (*globalRead - loadFrom)/getSizeOfIndexEntry(SeqBytes) );
+            //printf("LoadFrom: %"PRIu64" ", loadFrom);
+            //printf("Buffer helped: New HEAD from %"PRIu64" ", *currHit);
+            uint64_t diff = loadFrom - (*globalRead - ( *tRead * getSizeOfIndexEntry(SeqBytes)));
+            *currHit = diff/(getSizeOfIndexEntry(SeqBytes));
+            //printf(" to %"PRIu64"\n", *currHit);
+        }
+
     }
-    // Read repetitions
-    if (fread(&we->reps, sizeof(uint32_t), 1, wD) != 1) {
-        fprintf(stderr, "readHashEntrance:: Error loading repetitions.\n");
-        exit(-1);
+
+
+    //Copy the seq to we
+    memcpy(we->seq, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes)), SeqBytes);
+    memcpy(&we->pos, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes))+SeqBytes, sizeof(uint64_t));
+    memcpy(&we->reps, byteBufferHits+(*currHit*getSizeOfIndexEntry(SeqBytes))+SeqBytes+sizeof(uint64_t), sizeof(uint32_t));
+
+    /*
+    if(nextMWorGW == 1){
+        fprintf(stdout, "Gone back to: %"PRIu64" and obtained: [%"PRIu64", %"PRIu32"]\n", loadFrom, we->pos, we->reps);
+        getchar();
     }
+    */
+
+    *currHit = *currHit + 1;
+    
+
+    //printf("Value of pos and reps: %"PRIu64", %"PRIu32"\n", we->pos, we->reps);
+    //getchar();
     return 0;
 }
 
@@ -1018,3 +1080,13 @@ void endianessConversion(char *source, char *target, int numberOfBytes) {
     }
 }
 
+
+/*
+    Returns the size of the current Hit Structure (depends on bytesInWord)
+    @WB     The number of bytes for each word
+
+*/
+
+inline uint32_t getSizeOfIndexEntry(uint16_t WB){
+    return sizeof(uint64_t) + sizeof(uint32_t) + WB;
+}

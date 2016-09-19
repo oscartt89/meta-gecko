@@ -7,7 +7,7 @@
 #include "metag_common.h"
 
 // VARIABLES
-#define BUFFER_LENGTH 10000000
+#define BUFFER_LENGTH 100000
 #define MAX_FILE_LENGTH 1024
 #define FLAG 0
 #define READ_BUFF_LENGTH 10000
