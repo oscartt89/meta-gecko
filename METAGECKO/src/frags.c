@@ -258,6 +258,10 @@ int main(int ac, char **av) {
         exit(-1);
     }
 
+    //Words to check if it is needed to go back in the genome file when the prefix is different
+    unsigned char w_prefix_previous[BytesMetagWord/2];
+    unsigned char w_prefix_current[BytesMetagWord/2];
+
     HashEntry we[2]; // [0]-> Metagenome [1]-> Genome
     uint64_t lastFirstHit = (uint64_t) ftello(gW);
     bool firstmatch = true;
@@ -278,6 +282,8 @@ int main(int ac, char **av) {
 
 
     readHashEntrance(&we[0], mW, BytesMetagWord, byteBufferHitsMW, 0, &currHitMW, 0, &maxHitMW, &globalReadMW);
+    memcpy(&w_prefix_current, we[0].seq, BytesMetagWord/2);
+    memcpy(&w_prefix_previous, we[0].seq, BytesMetagWord/2);
 
     readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 0, &currHitGW, 0, &maxHitGW, &globalReadGW);
 
@@ -340,24 +346,32 @@ int main(int ac, char **av) {
                 //n_iteras++;
                 if (((feof(gW) && currHitGW >= maxHitGW))) { // End of genome file
                     // Load next metagenome word
+                    memcpy(&w_prefix_previous, &w_prefix_current, BytesMetagWord/2);
                     readHashEntrance(&we[0], mW, BytesMetagWord, byteBufferHitsMW, 0, &currHitMW, 0, &maxHitMW, &globalReadMW);
+                    memcpy(&w_prefix_current, we[0].seq, BytesMetagWord/2);
                     //n_iteras++;
                     // Reset values and come back at dict
                     firstmatch = true;
                     //fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
                     //readHashEntrance(&we[1], gW, BytesGenoWord);
-                    readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 1, &currHitGW, lastFirstHit, &maxHitGW, &globalReadGW);
+                    if(wordcmp(w_prefix_current, w_prefix_previous, BytesMetagWord/2) == 0){
+                        readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 1, &currHitGW, lastFirstHit, &maxHitGW, &globalReadGW);
+                    }
                     //n_iteras++;
                 }
             } else if (cmp < 0) { // No more matches, take next metag word
                 // Load next metagenome word
+                memcpy(&w_prefix_previous, &w_prefix_current, BytesMetagWord/2);
                 readHashEntrance(&we[0], mW, BytesMetagWord, byteBufferHitsMW, 0, &currHitMW, 0, &maxHitMW, &globalReadMW);
+                memcpy(&w_prefix_current, we[0].seq, BytesMetagWord/2);
                 //n_iteras++;
                 // Reset values and come back at dict
                 firstmatch = true;
                 //fseeko(gW, lastFirstHit, SEEK_SET); // Reset geno dict
                 //readHashEntrance(&we[1], gW, BytesGenoWord);
-                readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 1, &currHitGW, lastFirstHit, &maxHitGW, &globalReadGW);
+                if(wordcmp(w_prefix_current, w_prefix_previous, BytesMetagWord/2) == 0){
+                    readHashEntrance(&we[1], gW, BytesGenoWord, byteBufferHitsGW, 1, &currHitGW, lastFirstHit, &maxHitGW, &globalReadGW);
+                }
                 //n_iteras++;
             }
         }
