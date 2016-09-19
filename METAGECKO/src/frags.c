@@ -244,7 +244,7 @@ int main(int ac, char **av) {
     // Search hits
     // Prepare necessary variables
     uint64_t currHitMW = BYTE_BUFFER_N_HITS+1, currHitGW = BYTE_BUFFER_N_HITS+1; //Variables to know if we need to load a new buffer
-    uint64_t globalReadMW = 0, globalReadGW = 0; //Variables to tell if we need to do an Fseeko or we can skip it
+    uint64_t globalReadMW = 2, globalReadGW = 2; //Variables to tell if we need to do an Fseeko or we can skip it
     uint64_t maxHitMW, maxHitGW; //To know when we reach FEOF
     //Load a buffer capable of holding up to BYTE_BUFFER_N_HITS hits
     char * byteBufferHitsMW = (char *) malloc(BYTE_BUFFER_N_HITS*getSizeOfIndexEntry(BytesMetagWord)*sizeof(char));

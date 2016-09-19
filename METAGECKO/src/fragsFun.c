@@ -77,7 +77,7 @@ int HComparer(Hit h1, Hit h2) {
 uint64_t readHashEntrance(HashEntry *we, FILE *wD, uint16_t SeqBytes, char * byteBufferHits, int nextMWorGW, uint64_t * currHit, uint64_t loadFrom, uint64_t * tRead, uint64_t * globalRead) {
 
     //Because of word byte size written in file
-    loadFrom = loadFrom - 2;
+    //loadFrom = loadFrom - 2;
 
     if(nextMWorGW == 0){
         //Read next hit
