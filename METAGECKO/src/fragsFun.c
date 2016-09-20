@@ -625,8 +625,9 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
         forwardDiagLength = (seqX->length - (XIndex - seqX->Lac)) > (YLength - YIndex) ? (YLength - YIndex) : (seqX->length - (XIndex - seqX->Lac));
         backwardDiagLength = (hit->posX - seqX->Lac) > (hit->posY) ? (hit->posY) : (hit->posX - seqX->Lac);
     } else {
-        forwardDiagLength = (seqX->length - (XIndex - seqX->Lac)) > (hit->posY) ? (hit->posY) : (seqX->length - (XIndex - seqX->Lac)); 
+        forwardDiagLength = (seqX->length - (XIndex - seqX->Lac)) > (hit->posY - prefixSize) ? (hit->posY - prefixSize) : (seqX->length - (XIndex - seqX->Lac)); 
         backwardDiagLength = (hit->posX - seqX->Lac) > (YLength - YIndx_B) ? (YLength - YIndx_B) : (hit->posX - seqX->Lac) ;
+
     }
 
     XMaxIndex = XIndex - 1; // Maximum coordiantes on X
@@ -636,8 +637,9 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
     score = Eq_Value * prefixSize; // Init score
     scoreMax = score;
     // Seek forward
-    while ((fragmentLength - prefixSize) <= forwardDiagLength) {
+    while ((fragmentLength - prefixSize) < forwardDiagLength) {
         valueX = getValueOnRead(seqX, XIndex);
+        
         valueY = getValue(seqY, YIndex, nsy);
         
         if(hit->strandY == 'r') valueY = complement(valueY);
@@ -664,8 +666,7 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
 
         // Move forward
         XIndex++;
-        if (hit->strandY == 'f') YIndex++;
-        else YIndex--;
+        if (hit->strandY == 'f') YIndex++; else YIndex--;
 
         fragmentLength++;
         // Check minimum score
@@ -690,6 +691,7 @@ int FragFromHit(FragFile *frag, Hit *hit, Reads *seqX, Sequence *seqY, uint64_t 
     if (stillInSeqX >= 0 && stillInGenome) // Any coordinate are the init
         while (stillInSeqX >=0 && fragmentLength < backwardDiagLength) {
             valueX = getValueOnRead(seqX, XIndx_B);
+            
             valueY = getValue(seqY, YIndx_B, nsy);
 
             if(hit->strandY == 'r') valueY = complement(valueY);
@@ -775,6 +777,8 @@ char getValue(Sequence *s, uint64_t pos, int ns) {
     Sequence *aux = s;
     int nActual = 1;
 
+    
+    //I think this is old and should not be used anymore
     while (pos >= MAXLS) {
         aux++;
         pos -= MAXLS;
@@ -784,6 +788,7 @@ char getValue(Sequence *s, uint64_t pos, int ns) {
             return '\0'; // Return null
         }
     }
+    
 
     return aux->datos[pos];
 }
