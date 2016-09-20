@@ -9,6 +9,7 @@
 #  @param S 			minimum similarity to report a fragment.
 #  @param L 			minimum length to report a fragment.
 #  @param prefix		size of mers to look for.
+#  @param pval          minimum pvalue to filter sequences when preselecting
 #
 # This script will generate the following files and folders:
 #  @file {genome}-revercomp 				The reverse complementary of the genome.
@@ -29,8 +30,8 @@
 
 
 # Check arguments
-if [ $# != 5 ]; then
-        echo "***ERROR*** Use: $0 metagenome genome S L prefix "
+if [ $# != 6 ]; then
+        echo "***ERROR*** Use: $0 metagenome genome S L prefix pval"
         exit -1
 fi
 
@@ -61,6 +62,7 @@ mkdir -p ${MGDIR}/fragments
 
 L=$4
 S=$3
+PVAL=$6
 
 
 
@@ -71,7 +73,7 @@ BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Finding seeds for database reduction"
 ${BINDIR}/quickhits ${metagenome}.${metagExt} ${genome}.${genoExt} dictionaries/${genome}.hseq 3
-${BINDIR}/dbReduce ${genome}.${genoExt} dictionaries/${genome}.hseq 2 5
+${BINDIR}/dbReduce ${genome}.${genoExt} dictionaries/${genome}.hseq 5 $6
 
 # Set new extension
 oldGenoExt=${genoExt}
